@@ -1,0 +1,14 @@
+.box {
+  border:1px solid #339;
+  margin-top:5px;
+}
+
+.box_header {
+  background-color: #339;
+  color: #eef;
+  font-weight: bold;
+}
+
+.box_content {
+  padding:5px;
+}

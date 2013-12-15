@@ -1,0 +1,3 @@
+
+class MultipleGenomeSequenceAligner(object):
+  pass
