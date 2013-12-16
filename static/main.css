@@ -12,3 +12,11 @@
 .box_content {
   padding:5px;
 }
+
+#sequence {
+  font-weight: bold;
+}
+
+#genomes {
+  font-weight: bold;
+}

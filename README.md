@@ -8,5 +8,5 @@ Included Files
 * static/ - included static files for the web based UI
 * state/ - details of current web based session
 * cmd.py - command line based interface
-* mgsa.py - sequence aligner
+* mgsa.py - multi genome sequence aligner
 

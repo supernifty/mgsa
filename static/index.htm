@@ -15,7 +15,7 @@
     <div class="box_content">
       <div id="genomes">No genomes added</div>
       <form enctype="multipart/form-data" method="POST" action="add_genome">
-        Add genome
+        Add genome (.fasta)
         <input type="file" name="upload"/><br/>
         <input type="submit" value="Upload"/>
       </form>
@@ -26,9 +26,10 @@
     <div class="box_header">Reads</div>
     <div class="box_content">
       <div id="sequence">No sequence file added</div>
-      <form>
-        Sequence file
-        <input type="file">
+      <form enctype="multipart/form-data" method="POST" action="add_sequence">
+        Sequence file (.sam)
+        <input type="file" name="upload"/><br/>
+        <input type="submit" value="Upload"/>
       </form>
     </div>
   </div>
@@ -36,6 +37,15 @@
   <div class="box">
     <div class="box_header">Status</div>
     <div class="box_content">
+      <table><tr><td>
+      <form method="POST" action="start">
+        <input type="submit" value="Start"/>
+      </form>
+      </td><td>
+      <form method="POST" action="stop">
+        <input type="submit" value="Stop"/>
+      </form>
+      </td></tr></table>
       <div id="status">Nothing processed</div>
     </div>
   </div>

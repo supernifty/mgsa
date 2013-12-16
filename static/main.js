@@ -24,7 +24,7 @@ var main = function () {
       if ( 'log' in data ) {
         text = '';
         for ( i in data['log'] ) {
-          text += "<li>" + data['log'][i]['what'] + "</li>";
+          text += "<li>" + data['log'][i]['when'] + " " + data['log'][i]['what'] + "</li>";
         }
         $('#log').html( "<ul>" + text + "</ul>" );
       }
