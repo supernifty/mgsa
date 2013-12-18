@@ -7,16 +7,16 @@ class MultipleGenomeSequenceAlignerThread(threading.Thread):
     Threaded wrapper to MultipleGenomeSequenceAligner
   '''
 
-  def __init__(self, genomes, sequence):
+  def __init__(self, genomes, sequences):
     threading.Thread.__init__(self)
     self.worker = MultipleGenomeSequenceAligner(genomes)
-    self.sequence = sequence
+    self.sequences = sequences
     self.status = []
     self.running = True
     self.start()
 
   def run(self):
-    self.worker.align(self.sequence, self)
+    self.worker.align(self.sequences, self)
     self.running = False
 
   def stop_align(self):
@@ -49,7 +49,7 @@ class MultipleGenomeSequenceAligner(object):
       if not result:
         raise InterruptedError
 
-  def align(self, sequence, status):
+  def align(self, sequences, status):
     self.status = status
     try:
       self._update_status( 0, "starting..." ) 
@@ -57,3 +57,4 @@ class MultipleGenomeSequenceAligner(object):
       self._update_status( 100, "finished" )
     except InterruptedError:
       pass
+

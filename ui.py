@@ -48,12 +48,14 @@ class Session(object):
     self.log( 'added genome "%s" as "%s"' % ( title, location ) )
 
   def add_sequence(self, fh, title):
+    if 'sequences' not in self.state:
+      self.state['sequences'] = []
     # save data
     location = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     f = open( 'state/%s.seq' % location, 'w' )
     f.write( fh.read() ) 
     # remember
-    self.state['sequence'] = {'title': title, 'location': location }
+    self.state['sequences'].append( {'title': title, 'location': location } )
     # log
     self.log( 'added sequence "%s" as "%s"' % ( title, location ) )
 
@@ -61,7 +63,7 @@ class Session(object):
     if Session.processor is not None and Session.processor.running:
       self.log( 'ERROR: processor is already running' )
     else:
-      Session.processor = mgsa.MultipleGenomeSequenceAlignerThread(self.state['genomes'], self.state['sequence'])
+      Session.processor = mgsa.MultipleGenomeSequenceAlignerThread(self.state['genomes'], self.state['sequences'])
       self.log( 'started sequence alignment' )
 
   def stop(self):

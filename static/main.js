@@ -14,11 +14,15 @@ var main = function () {
         $('#genomes').html( "No genomes" );
       }
       // sequence
-      if ( 'sequence' in data ) {
-        $('#sequence').html( data['sequence']['title'] );
+      if ( 'sequences' in data ) {
+        text = '';
+        for ( i in data['sequences'] ) {
+          text += "<li>" + data['sequences'][i]['title'] + "</li>";
+        }
+        $('#sequences').html( "<ul>" + text + "</ul>" );
       }
       else {
-        $('#sequence').html( "No sequence" );
+        $('#sequences').html( "No sequence" );
       }
       // log
       if ( 'log' in data ) {
