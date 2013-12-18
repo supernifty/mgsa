@@ -8,8 +8,8 @@ class CommandLine(object):
     return True
 
   def align(self, genomes, sequences):
-    aligner = mgsa.MultipleGenomeSequenceAligner(args.genomes)
-    aligner.align( args.sequences, self )
+    aligner = mgsa.MultipleGenomeSequenceAligner(args.genomes, args.sequences, self)
+    aligner.align()
 
 parser = argparse.ArgumentParser(description='Assemble sequence reads against multiple genomes')
 parser.add_argument('-s', '--sequences', nargs=2, type=file, required=True,
