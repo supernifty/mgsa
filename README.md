@@ -10,3 +10,7 @@ Included Files
 * static/ - included static files for the web based UI
 * state/ - details of current web based session
 
+Example Usage
+-------------
+python cmd.py -s ../data/tiny_r1.fastq ../data/tiny_r2.fastq -g ../data/tiny_reference.fasta
+
