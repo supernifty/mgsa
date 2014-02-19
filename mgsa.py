@@ -2,6 +2,8 @@ import threading
 import datetime
 import time
 
+import bio
+
 class MultipleGenomeSequenceAlignerThread(threading.Thread):
   '''
     Threaded wrapper to MultipleGenomeSequenceAligner
@@ -39,7 +41,7 @@ class MultipleGenomeSequenceAligner(object):
   '''
 
   def __init__(self, genomes, sequences, status):
-    self.genomes = [ FastaReader(genome) for genome in genomes ]
+    self.genomes = [ bio.FastaReader(genome) for genome in genomes ]
     self.sequences = PairedFastqReader(sequences)
     self.status = status
 
@@ -147,32 +149,6 @@ class PairedFastqReader(object):
         fragment = Fragment( sequence.readline().strip() )
         return fragment
     return None
-
-class FastaReader(object):
-  '''
-    yields fragments from a fasta file object
->>> import StringIO
->>> g = StringIO.StringIO( '>\nabc\ndef' )
->>> p = mgsa.FastaReader( g )
->>> [ f for f in p.items() ]
-['abc', 'def']
-  '''
-  def __init__(self, genome):
-    self.genome = genome
-
-  def items(self):
-    while True:
-      fragment = self.next_item()
-      if fragment is None:
-        break
-      yield fragment
-
-  def next_item(self):
-    for line in self.genome:
-      if not line.startswith( '>' ):
-        return line.strip()
-    return None
-
 
 if __name__ == "__main__":
   #import doctest
