@@ -6,6 +6,10 @@ import sys
 
 DELETE_BASE = '-'
 
+def log_stderr(msg):
+  when = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+  sys.stderr.write( '%s: %s\n' % ( when, msg ) )
+
 class ProbabilisticFasta(object):
   '''
     generate fasta with probabilities attached from mapped fragments
@@ -95,14 +99,18 @@ class ProbabilisticFasta(object):
       if best_insertion is not None and best_insertion_value > ( coverage - insertion_coverage ):
         result += best_insertion
         self.inserted[i] = best_insertion
-        self.log( 'included insertion %s at %i' % (best_insertion, i) )
+        if self.log:
+          self.log( 'included insertion %s at ref %i' % (best_insertion, i) )
         move += len(best_insertion)
       else:
-        pass#self.log( 'skipped insertion at %i with val %f with noinsert %f' % ( i, best_insertion_value, coverage - insertion_coverage ) )
+        pass
+        if self.log:
+          pass #self.log( 'skipped insertion at %i with val %f with noinsert %f' % ( i, best_insertion_value, coverage - insertion_coverage ) )
     # include base if not deleted
     if best == DELETE_BASE:
       self.deleted.add(i)
-      self.log( 'deletion at %i' % (i) )
+      if self.log:
+        self.log( 'deletion at %i' % (i) )
     else:
       result += best
       move += 1
@@ -112,6 +120,8 @@ class ProbabilisticFasta(object):
   def consensus_count( self, start=1, count=1 ):
     '''
       get the next count characters from start
+      can return more than count if insertions at the end of the segment
+      can return less than count if at end of string
     '''
     result = ''
     total_move = 0
@@ -144,13 +154,18 @@ class FastaMutate(object):
   '''
   probabilities = 'AAACCTTGGG'
 
-  def __init__( self, reader, log, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01 ):
+  def __init__( self, reader, log=log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, max_insert_len=1, probabilistic=True ):
+    '''
+      reader: FastaReader
+    '''
     self.reader = reader
     self.snp_prob = snp_prob
     self.insert_prob = insert_prob
     self.delete_prob = delete_prob
+    self.max_insert_len = max_insert_len
     self.mutations = 0
     self.vcf_file = vcf_file
+    self.probabilistic = probabilistic
     if vcf_file is not None:
       self.vcf = VCF( writer=VCFWriter(vcf_file) )
     else:
@@ -174,30 +189,38 @@ class FastaMutate(object):
   def mutate(self, fragment):
     result = ''
     for c in fragment:
-      # snp
-      if random.uniform(0, 1) < self.snp_prob:
-        new_c = self.probabilities[random.randint(0, len(self.probabilities)-1)]
-        if new_c != c:
+      if self.probabilistic:
+        # snp
+        if random.uniform(0, 1) < self.snp_prob:
+          new_c = self.probabilities[random.randint(0, len(self.probabilities)-1)]
+          while new_c == c:
+            new_c = self.probabilities[random.randint(0, len(self.probabilities)-1)]
           self.mutations += 1
           if self.vcf is not None:
             self.vcf.snp( self.pos, c, new_c )
-        result += new_c
-      # insert
-      elif random.uniform(0, 1) < self.insert_prob:
-        new_c = self.probabilities[random.randint(0, len(self.probabilities)-1)]
-        self.mutations += 1
-        if self.vcf is not None:
-          self.vcf.indel( self.pos, c, new_c + c )
-        result += new_c + c
-      
-      elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob: # delete
-        self.mutations += 1
-        if self.vcf is not None:
-          self.vcf.indel( self.pos - 1, self.previous + c, c )
-
-      else: # no mutation
-        result += c
-
+          result += new_c
+        # insert
+        elif random.uniform(0, 1) < self.insert_prob:
+          insert_len = random.uniform(1, self.max_insert_len)
+          new_c = ''
+          while insert_len > 0:
+            insert_len -= 1
+            new_c += self.probabilities[random.randint(0, len(self.probabilities)-1)]
+          self.mutations += 1
+          if self.vcf is not None:
+            self.vcf.indel( self.pos, self.previous + c, self.previous + new_c + c )
+          result += new_c + c
+        # delete
+        elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob: 
+          self.mutations += 1
+          if self.vcf is not None:
+            self.vcf.indel( self.pos - 1, self.previous + c, c )
+        # no mutation
+        else: 
+          result += c
+      else: # deterministic
+        pass
+  
       self.pos += 1
       self.previous = c
     return result
@@ -230,21 +253,65 @@ class VCF(object):
           self.indel_list.append( { 'pos': int(pos), 'before': ref, 'after': alt } )
 
   def snp( self, pos, ref, alt ):
+    '''
+      adds a snp
+    '''
     self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt } )
     if self.writer is not None:
       self.writer.snp( pos, ref, alt )
 
   def indel( self, pos, before, after ):
+    '''
+      adds an indel
+    '''
     self.indel_list.append( { 'pos': pos, 'before': before, 'after': after } )
     if self.writer is not None:
       self.writer.indel( pos, before, after )
 
   def write_all( self, writer ):
+    '''
+      writes a .vcf to the writer handle
+    '''
     vcf_writer = VCFWriter(writer)
     for snp in self.snp_list:
       vcf_writer.snp( snp['pos'], snp['ref'], snp['alt'] )
     for indel in self.indel_list:
       vcf_writer.indel( indel['pos'], indel['before'], indel['after'] )
+
+  def net_insertions(self, position):
+    '''
+      returns the net change in position
+    '''
+    net = 0
+    for indel in self.indel_list:
+      if indel['pos'] < position:
+        net += len(indel['after']) - len(indel['before'])
+      else:
+        break # assume indel_list is ordered
+    return net
+
+  def find_indel( self, pos ):
+    for indel in self.indel_list:
+      if pos == indel['pos']:
+        return indel
+    return None
+
+  def variations(self, start, end, include_start=False ):
+    result = set()
+    for snp in self.snp_list:
+      if start < snp['pos'] < end or include_start and start == snp['pos']:
+        result.add( 'S%i' % ( snp['pos'] - start ) )
+        #print snp
+    for indel in self.indel_list:
+      if start < indel['pos'] < end or include_start and start == indel['pos']:
+        net = len(indel['after']) - len(indel['before'])
+        if net < 0: # deletion
+          result.add( 'D%i' % ( indel['pos'] - start ) )
+        elif net > 0: # insertion
+          indel_pos = indel['pos']
+          result.add( 'I%i' % ( indel_pos - start ) )
+    #print result, " for", start, "", end
+    return result
 
 class VCFWriter(object):
   '''
@@ -329,31 +396,49 @@ class FastaDiff(object):
     compare fastas
   '''
 
-  def __init__( self, reader, candidate, log ):
-    pos = 1
-    last_log_pos = 0
+  def __init__( self, reader, candidate, log, vcf=None ):
+    '''
+      @reader: FastaReader
+      @candidate: ProbabilisticFasta
+      @vcf: use to keep fastas properly aligned
+    '''
+    self.candidate_pos = 1
+    self.last_log_pos = 0
+    self.last_error_total_logged = 0
     self.errors = {}
     self.error_positions = set() # set of incorrect positions
     self.error_total = 0
     self.candidate = candidate
     self.log = log
+    self.vcf = vcf
+    candidate_remainder = ''
     for item in reader.items():
-      move, candidate_item = candidate.consensus_count( pos, len(item) )
+      # gets the corresponding segment from the candidate
+      move, candidate_item = candidate.consensus_count( self.candidate_pos, len(item) )
+      candidate_item = candidate_remainder + candidate_item
+      candidate_remainder = candidate_item[len(item):]
+      #self.log( 'truth: %s pred:  %s' % ( item, candidate_item ) ) # debug
       if candidate_item != item:
         # find differences
-        self.find_differences( item, candidate_item, pos )
-      pos += move #len(item)
-      if pos < 10000 and pos - last_log_pos >= 1000 or pos - last_log_pos >= 10000:
-        self.log( 'processed %i items - %i errors' % ( pos, self.error_total ) )
-        last_log_pos = pos
+        self.find_differences( item, candidate_item, self.candidate_pos )
+      self.candidate_pos += move #len(item)
+      if self.candidate_pos < 10000 and self.candidate_pos - self.last_log_pos >= 1000 or self.candidate_pos - self.last_log_pos >= 10000:
+        self.log_error()
+
+  def log_error( self, i=0 ):
+    self.log( 'processed cand %i items - %i errors' % ( self.candidate_pos + i, self.error_total ) )
+    self.last_log_pos = self.candidate_pos
+    self.last_error_total_logged = self.error_total
 
   def find_differences( self, item, candidate, start ):
     for i in xrange(0, min(len(item), len(candidate))):
       if item[i] != candidate[i]:
         self.error_total += 1
+        if self.error_total < 100 and self.error_total != self.last_error_total_logged:
+          self.log_error(i)
         key = '%s->%s' % ( item[i], candidate[i] )
-        if self.error_total < 10 or self.error_total % 1000 == 0:
-          self.log( 'error: actual->predicted %s at %i: counts %s' % ( key, start + i, self.candidate.count( start + i ) ) )
+        if self.error_total < 100 or self.error_total % 1000 == 0:
+          self.log( 'error: actual->predicted %s at cand %i + %i (%i): counts %s\ntruth: %s\npred:  %s' % ( key, start, i, start + i, self.candidate.count( start + i ), item, candidate ) )
         if key not in self.errors:
           self.errors[key] = 0
         self.errors[key] += 1
@@ -482,10 +567,132 @@ class SamToFasta(object):
       else:
         self.stats['unknown_mapping'] += 1
 
-#def log(msg):
-#  when = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-#  sys.stderr.write( '%s: %s\n' % ( when, msg ) )
+class FastaStats(object):
+  '''calculate some overall stats for a fasta file'''
+  def __init__( self, fasta, log=log_stderr ):
+    self.stats = { 'count': 0 }
+    for line in fasta:
+      line = line.strip()
+      if not line.startswith( '>' ):
+        self.stats['count'] += len(line)
+    log( self.stats )
 
+class SamAccuracyEvaluator(object):
+  '''
+    evaluate sam accuracy given the correct sequence marker
+  '''  
+  def __init__( self, sam, log=log_stderr ):
+    self.log = log
+    self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0, 'correct': 0, 'incorrect': 0, 'soft_clipping': 0, 'hard_clipping': 0, 'matched': 0, 'correct_mapq': 0.0, 'incorrect_mapq': 0.0 }
+    self.incorrect = []
+    self.incorrect_diff = {}
+    for line in sam:
+      self.parse_line( line.strip() )
+      self.stats['lines'] += 1
+      if self.stats['lines'] < 5000 and self.stats['lines'] % 1000 == 0 or self.stats['lines'] % 10000 == 0:
+        self.log( '%i lines processed' % self.stats['lines'] )
+    if self.stats['correct'] > 0:
+      self.stats['correct_mapq'] /= self.stats['correct']
+    if self.stats['incorrect'] > 0:
+      self.stats['incorrect_mapq'] /= self.stats['incorrect']
+
+  def parse_line( self, line ):
+    #0 SimSeq_1101 => qname
+    #1 163 => flag
+    #2 gi|205355313|ref|NZ_ABGQ01000001.1| => rname
+    #3 1 => pos
+    #4 44 => mapq
+    #5 100M => cigar
+    #6 =
+    #7 227
+    #8 326
+    #9 AAATGTCTTCATTACTTACTTTATATATAAATCCTATGTTTATTTTTATTGTTGTTTTAGATGATACTTAGAATCGTGTTTAAAAAAAAGTTTCCTGCTG
+    #10 BGG=77FGBGG?GDGB7GED@CEGECDA?EG3D8:D.??06GB?-GCDGCA9G#AG?=AAEFBFFG=@DAAD#EBD;EC5#GD#5DE##A#BF#B#?=##
+    #AS:i:192 #XN:i:0 #XM:i:2 #XO:i:0 #XG:i:0 #NM:i:2 #MD:Z:87G5G6 #YS:i:200 #YT:Z:CP
+    if line.startswith( '@' ): # skip header
+      pass
+    else:
+      fields = line.split()
+      flag = int(fields[1])
+      #if self.stats['lines'] < 100:
+      #  log( 'flag is %i' % flag )
+      if flag & 0x04 != 0: # unmapped
+        self.stats['unmapped'] += 1
+      else:
+        if flag & 0x02 != 0: # mapped
+          self.stats['mapped'] += 1
+        else:
+          self.stats['unknown_mapping'] += 1 # but still try to map
+        pos = int(fields[3]) # pos in genome
+        cigar = fields[5]
+        prematch = True
+        correct_pos = int(re.sub( 'mgsa_seq_([0-9]*).*', '\\1', fields[0] ))
+        if 'variation_' in fields[0]:
+          variations = re.sub( '.*variation_([SID0-9,]*).*', '\\1', fields[0] ).split(',')
+          #print "field %s -> %s" % ( fields[0], variations )
+        else:
+          variations = ()
+        for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ):
+          cigar_len = int(cigar_match[0])
+          if cigar_match[1] == 'M': # match
+            prematch = False
+            self.stats['matched'] += cigar_len
+
+          if cigar_match[1] == 'S': # soft clipping
+            self.stats['soft_clipping'] += cigar_len
+            if prematch:
+              indel_offset = 0
+              for variation in variations:
+                variation_pos = int(variation[1:])
+                # migrate insertion to start of pattern
+                while variation_pos > 0 and fields[9][variation_pos-1] == fields[9][variation_pos]:
+                  variation_pos -= 1
+                  print "variation %s at read %i migrated from %s to %i slen %i" % ( variation, correct_pos, variation[1:], variation_pos, cigar_len )
+                if variation_pos <= cigar_len: # variant in clipped region
+                  print "included", variation
+                  if variation[0] == 'I':
+                    indel_offset -= 1
+                  if variation[0] == 'D':
+                    indel_offset += 1
+                else:
+                  print "ignored", variation
+              pos -= cigar_len + indel_offset
+              print "newpos %i cigarlen %i offset %i" % ( pos, cigar_len, indel_offset )
+
+          if cigar_match[1] == 'H': # hard clipping
+            self.stats['hard_clipping'] += cigar_len
+            if prematch:
+              indel_offset = 0
+              for variation in variations:
+                variation_pos = int(variation[1:])
+                if variation_pos <= cigar_len:
+                  if variation[0] == 'I':
+                    indel_offset -= 1
+                  if variation[0] == 'D':
+                    indel_offset += 1
+              pos -= cigar_len + indel_offset
+
+        #print "variations", variations
+        if correct_pos == pos:
+          self.stats['correct'] += 1
+          self.stats['correct_mapq'] += int(fields[4])
+          for c in variations:
+            if 'correct_%s' % c[0] not in self.stats:
+              self.stats['correct_%s' % c[0] ] = 0
+            self.stats['correct_%s' % c[0] ] += 1
+        else:
+          self.stats['incorrect'] += 1
+          self.stats['incorrect_mapq'] += int(fields[4])
+          for c in variations:
+            if 'incorrect_%s' % c[0] not in self.stats:
+              self.stats['incorrect_%s' % c[0] ] = 0
+            self.stats['incorrect_%s' % c[0] ] += 1
+          self.incorrect.append( { 'correct_pos': correct_pos, 'provided_pos': pos, 'mapq': fields[4] } )
+          diff = pos - correct_pos
+          if diff not in self.incorrect_diff:
+            self.incorrect_diff[ diff ] = 0
+          self.incorrect_diff[ diff ] += 1
+ 
 if __name__ == "__main__":
   #s = SamToFasta( sys.stdin, log )
   #log( 'size is %i' % s.fasta.size )
