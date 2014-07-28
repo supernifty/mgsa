@@ -10,6 +10,48 @@ def log_stderr(msg):
   when = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
   sys.stderr.write( '%s: %s\n' % ( when, msg ) )
 
+class Config(object):
+  '''
+    generates configuration dictionary from a line config spec
+    e.g. snp_prob 0.03, insert_prob 0, delete_prob 0, fasta hiv, mapper baseline, read_length 50
+  '''
+  floats = ( 'insert_prob', 'delete_prob', 'snp_prob', 'error_prob' )
+  ints = ( 'max_insertion_len', 'max_deletion_len', 'read_length', 'coverage', 'mult')
+
+  def __init__( self ):
+    pass
+
+  def read_config_line( self, line ):
+    cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 50, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0 }
+    for option in line.split( ',' ):
+      key, value = option.strip().split()
+      if key in Config.floats:
+        cfg[key] = float(value)
+      elif key in Config.ints:
+        cfg[key] = int(value)
+      else:
+        cfg[key] = value
+      # generate brief description
+      if key in ( 'insert_prob', 'delete_prob', 'snp_prob' ):
+        cfg['mutation_type'] = cfg['mutation_type'] + '_' + key[:3]
+      if key in ( 'max_insertion_len', 'max_deletion_len' ):
+        cfg['mutation_type'] = cfg['mutation_type'] + '_' + value
+    return cfg
+
+  def read_config_file( self, fh ):
+    cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 50, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0 }
+    for line in fh:
+      if line.startswith( '#' ):
+        continue
+      key, value = line.strip().split()
+      if key in Config.floats:
+        cfg[key] = float(value)
+      elif key in Config.ints:
+        cfg[key] = int(value)
+      else:
+        cfg[key] = value
+    return cfg
+
 class ProbabilisticFasta(object):
   '''
     generate fasta with probabilities attached from mapped fragments
@@ -26,6 +68,9 @@ class ProbabilisticFasta(object):
     self.log = log
 
   def add( self, fragment, start, confidence=1.0 ):
+    '''
+      process a mapped fragment of dna
+    '''
     for i in xrange(0, len(fragment) ):
       value = fragment[i]
       position = start + i
@@ -154,7 +199,7 @@ class FastaMutate(object):
   '''
   probabilities = 'AAACCTTGGG'
 
-  def __init__( self, reader, log=log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, max_insert_len=1, probabilistic=True ):
+  def __init__( self, reader, log=log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, max_insert_len=1, max_delete_len=1, probabilistic=True ):
     '''
       reader: FastaReader
     '''
@@ -163,6 +208,8 @@ class FastaMutate(object):
     self.insert_prob = insert_prob
     self.delete_prob = delete_prob
     self.max_insert_len = max_insert_len
+    self.max_delete_len = max_delete_len
+    self.deletion_remain = 0
     self.mutations = 0
     self.vcf_file = vcf_file
     self.probabilistic = probabilistic
@@ -180,41 +227,72 @@ class FastaMutate(object):
   def items(self):
     while True:
       fragment = self.reader.next_item()
-      if fragment is None:
+      if fragment is None: # no more fragments
+        if self.deletion_remain > 0:
+          self.end_deletion()
         break
       # apply mutations
       fragment = self.mutate( fragment )
       yield fragment
 
+  def add_snp(self, c):
+    '''
+      generates a single snp, adds to vcf, returns new base
+    '''
+    new_c = self.probabilities[random.randint(0, len(self.probabilities)-1)]
+    while new_c == c:
+      new_c = self.probabilities[random.randint(0, len(self.probabilities)-1)]
+    self.mutations += 1
+    if self.vcf is not None:
+      self.vcf.snp( self.pos, c, new_c )
+    return new_c
+
+  def add_insertion(self, c):
+    insert_len = random.randint(1, self.max_insert_len)
+    new_c = ''
+    while insert_len > 0:
+      insert_len -= 1
+      new_c += self.probabilities[random.randint(0, len(self.probabilities)-1)]
+    self.mutations += 1
+    if self.vcf is not None:
+      self.vcf.indel( self.pos, self.previous + c, self.previous + new_c + c )
+    return new_c
+
+  def add_deletion(self, c):
+    self.mutations += 1
+    self.deletion_remain = random.randint(1, self.max_delete_len)
+    self.deleted = ''
+    self.deletion_start = self.pos
+    self.deletion_previous = self.previous
+    self.continue_deletion( c )
+
+  def continue_deletion(self, c):
+    self.deletion_remain -= 1
+    self.deleted += c
+    if self.deletion_remain == 0:
+      self.end_deletion()
+
+  def end_deletion(self):
+      if self.vcf is not None:
+        self.vcf.indel( self.deletion_start - 1, self.deletion_previous + self.deleted, self.deletion_previous )
+
   def mutate(self, fragment):
     result = ''
     for c in fragment:
-      if self.probabilistic:
+      if self.deletion_remain > 0:
+        self.continue_deletion( c )
+      elif self.probabilistic:
         # snp
         if random.uniform(0, 1) < self.snp_prob:
-          new_c = self.probabilities[random.randint(0, len(self.probabilities)-1)]
-          while new_c == c:
-            new_c = self.probabilities[random.randint(0, len(self.probabilities)-1)]
-          self.mutations += 1
-          if self.vcf is not None:
-            self.vcf.snp( self.pos, c, new_c )
+          new_c = self.add_snp( c )
           result += new_c
         # insert
-        elif random.uniform(0, 1) < self.insert_prob:
-          insert_len = random.uniform(1, self.max_insert_len)
-          new_c = ''
-          while insert_len > 0:
-            insert_len -= 1
-            new_c += self.probabilities[random.randint(0, len(self.probabilities)-1)]
-          self.mutations += 1
-          if self.vcf is not None:
-            self.vcf.indel( self.pos, self.previous + c, self.previous + new_c + c )
+        elif random.uniform(0, 1) < self.insert_prob and self.pos > self.max_insert_len: # TODO reads can get -ve reference
+          new_c = self.add_insertion( c )
           result += new_c + c
         # delete
         elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob: 
-          self.mutations += 1
-          if self.vcf is not None:
-            self.vcf.indel( self.pos - 1, self.previous + c, c )
+          self.add_deletion(c)
         # no mutation
         else: 
           result += c
@@ -235,7 +313,9 @@ class VCF(object):
       @writer: VCFWriter object
     '''
     self.snp_list = []
+    self.snp_map = {} # maps pos snp
     self.indel_list = []
+    self.indel_map = {} # maps pos to indel
     self.writer = writer
     if reader is not None:
       self.load( reader )
@@ -244,18 +324,21 @@ class VCF(object):
     for line in reader:
       fields = line.split()
       if len(fields) > 5:
-        pos = fields[1]
+        pos = fields[1] # vcf file is 1-based; bio uses 0-based
         ref = fields[3]
         alt = fields[4]
         if len(ref) == 1 and len(alt) == 1:
-          self.snp_list.append( { 'pos': int(pos), 'ref': ref, 'alt': alt } )
+          self.snp_map[pos] = len(self.snp_list)
+          self.snp_list.append( { 'pos': int(pos) - 1, 'ref': ref, 'alt': alt } )
         else:
-          self.indel_list.append( { 'pos': int(pos), 'before': ref, 'after': alt } )
+          self.indel_map[pos] = len(self.indel_list)
+          self.indel_list.append( { 'pos': int(pos) - 1, 'before': ref, 'after': alt } )
 
   def snp( self, pos, ref, alt ):
     '''
       adds a snp
     '''
+    self.snp_map[pos] = len(self.snp_list)
     self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt } )
     if self.writer is not None:
       self.writer.snp( pos, ref, alt )
@@ -264,6 +347,7 @@ class VCF(object):
     '''
       adds an indel
     '''
+    self.indel_map[pos] = len(self.indel_list)
     self.indel_list.append( { 'pos': pos, 'before': before, 'after': after } )
     if self.writer is not None:
       self.writer.indel( pos, before, after )
@@ -291,25 +375,36 @@ class VCF(object):
     return net
 
   def find_indel( self, pos ):
+    '''
+      any indel on this position?
+    '''
+    # TODO need a better search
     for indel in self.indel_list:
-      if pos == indel['pos']:
+      if indel['pos'] <= pos <= ( indel['pos'] + len(indel['after']) - len(indel['before']) ):
         return indel
     return None
+    #if pos in self.indel_map:
+    #  return self.indel_list[self.indel_map[pos]]
+    #else:
+    #  return None
 
   def variations(self, start, end, include_start=False ):
+    '''
+      returns a string representation of all variations within the specified range
+    '''
     result = set()
     for snp in self.snp_list:
       if start < snp['pos'] < end or include_start and start == snp['pos']:
-        result.add( 'S%i' % ( snp['pos'] - start ) )
+        result.add( 'S%i-0' % ( snp['pos'] - start ) )
         #print snp
     for indel in self.indel_list:
       if start < indel['pos'] < end or include_start and start == indel['pos']:
         net = len(indel['after']) - len(indel['before'])
         if net < 0: # deletion
-          result.add( 'D%i' % ( indel['pos'] - start ) )
+          result.add( 'D%i-%i' % ( indel['pos'] - start, -net ) )
         elif net > 0: # insertion
           indel_pos = indel['pos']
-          result.add( 'I%i' % ( indel_pos - start ) )
+          result.add( 'I%i-%i' % ( indel_pos - start, net ) )
     #print result, " for", start, "", end
     return result
 
@@ -323,18 +418,22 @@ class VCFWriter(object):
     self.writer.write( '''##fileformat=VCFv4.1
 ##fileDate=%s
 ##source=SuperniftyMutationSimulator
+##chr\tpos\tid\tref\talt\tqual\tfilter\tinfo
 ''' % datetime.datetime.now().strftime("%Y%m%d") )
 
   def snp( self, pos, ref, alt ):
+    '''
+      note that pos in a vcf is 1-based
+    '''
     self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\t%s\n' % (
         # chrom, pos, id, ref, alt, qual, filter, info
-        '.', pos, '.', ref, alt, '.', 'PASS', 'DP=100'
+        '.', (pos + 1), '.', ref, alt, '.', 'PASS', 'DP=100'
       ) )
 
   def indel( self, pos, before, after ):
     self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\t%s\n' % (
         # chrom, pos, id, ref, alt, qual, filter, info
-        '.', pos, '.', before, after, '.', 'PASS', 'DP=100'
+        '.', (pos + 1), '.', before, after, '.', 'PASS', 'DP=100'
       ) )
 
 class VCFDiff(object):
@@ -398,8 +497,8 @@ class FastaDiff(object):
 
   def __init__( self, reader, candidate, log, vcf=None ):
     '''
-      @reader: FastaReader
-      @candidate: ProbabilisticFasta
+      @reader: FastaReader of known donor
+      @candidate: ProbabilisticFasta of imputed genome
       @vcf: use to keep fastas properly aligned
     '''
     self.candidate_pos = 1
@@ -475,9 +574,16 @@ class FastaReader(object):
         return line.strip()
     return None
 
+class SamToVCF(object):
+  '''
+    TODO similar to SamToFasta but use a reference to only get variants
+  '''
+  pass
+
 class SamToFasta(object):
   '''
     read and evaluate assembler data
+    takes a sam file and builds an imputed genome
   '''  
 
   def __init__( self, sam, log, allow_indels=True ):
@@ -581,8 +687,10 @@ class SamAccuracyEvaluator(object):
   '''
     evaluate sam accuracy given the correct sequence marker
   '''  
-  def __init__( self, sam, log=log_stderr ):
+  def __init__( self, sam, variation_map=None, log=log_stderr, verbose=False ):
+    self.variation_map = self.parse_variation_map( variation_map )
     self.log = log
+    self.verbose = verbose
     self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0, 'correct': 0, 'incorrect': 0, 'soft_clipping': 0, 'hard_clipping': 0, 'matched': 0, 'correct_mapq': 0.0, 'incorrect_mapq': 0.0 }
     self.incorrect = []
     self.incorrect_diff = {}
@@ -595,6 +703,14 @@ class SamAccuracyEvaluator(object):
       self.stats['correct_mapq'] /= self.stats['correct']
     if self.stats['incorrect'] > 0:
       self.stats['incorrect_mapq'] /= self.stats['incorrect']
+
+  def parse_variation_map( self, vmap ):
+    if vmap is None:
+      return None
+    result = {}
+    for line in vmap:
+      key, value = line.strip().split()
+    return result
 
   def parse_line( self, line ):
     #0 SimSeq_1101 => qname
@@ -625,17 +741,30 @@ class SamAccuracyEvaluator(object):
           self.stats['unknown_mapping'] += 1 # but still try to map
         pos = int(fields[3]) # pos in genome
         cigar = fields[5]
-        prematch = True
+        prematch = True # clipping at start
         correct_pos = int(re.sub( 'mgsa_seq_([0-9]*).*', '\\1', fields[0] ))
         if 'variation_' in fields[0]:
-          variations = re.sub( '.*variation_([SID0-9,]*).*', '\\1', fields[0] ).split(',')
+          variations = re.sub( '.*variation_([SID0-9,-]*).*', '\\1', fields[0] ).split(',')
           #print "field %s -> %s" % ( fields[0], variations )
+        elif self.variation_map is not None and fields[0] in self.variation_map:
+          variations = re.sub( '([SID0-9,-]*).*', '\\1', self.variation_map[fields[0]] ).split(',')
         else:
           variations = ()
-        for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ):
+        for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ): # match description
           cigar_len = int(cigar_match[0])
           if cigar_match[1] == 'M': # match
-            prematch = False
+            if prematch:
+              indel_offset = 0
+              for variation in variations:
+                variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
+                if variation_pos <= 0:
+                  if variation[0] == 'I':
+                    indel_offset -= variation_length
+                  if variation[0] == 'D':
+                    indel_offset += variation_length
+              pos -= indel_offset
+
+            prematch = False # no pre clipping
             self.stats['matched'] += cigar_len
 
           if cigar_match[1] == 'S': # soft clipping
@@ -643,33 +772,33 @@ class SamAccuracyEvaluator(object):
             if prematch:
               indel_offset = 0
               for variation in variations:
-                variation_pos = int(variation[1:])
+                variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
                 # migrate insertion to start of pattern
                 while variation_pos > 0 and fields[9][variation_pos-1] == fields[9][variation_pos]:
                   variation_pos -= 1
-                  print "variation %s at read %i migrated from %s to %i slen %i" % ( variation, correct_pos, variation[1:], variation_pos, cigar_len )
-                if variation_pos <= cigar_len: # variant in clipped region
-                  print "included", variation
+                  #print "variation %s at read %i migrated from %s to %i slen %i" % ( variation, correct_pos, variation[1:], variation_pos, cigar_len )
+                if variation_pos <= cigar_len: # variant in clipped region TODO variant could be partially in clipped area
+                  #print "included", variation
                   if variation[0] == 'I':
-                    indel_offset -= 1
+                    indel_offset -= variation_length
                   if variation[0] == 'D':
-                    indel_offset += 1
+                    indel_offset += variation_length
                 else:
-                  print "ignored", variation
+                  pass #print "ignored", variation
               pos -= cigar_len + indel_offset
-              print "newpos %i cigarlen %i offset %i" % ( pos, cigar_len, indel_offset )
+              #print "newpos %i cigarlen %i offset %i" % ( pos, cigar_len, indel_offset )
 
           if cigar_match[1] == 'H': # hard clipping
             self.stats['hard_clipping'] += cigar_len
             if prematch:
               indel_offset = 0
               for variation in variations:
-                variation_pos = int(variation[1:])
+                variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
                 if variation_pos <= cigar_len:
                   if variation[0] == 'I':
-                    indel_offset -= 1
+                    indel_offset -= variation_length
                   if variation[0] == 'D':
-                    indel_offset += 1
+                    indel_offset += variation_length
               pos -= cigar_len + indel_offset
 
         #print "variations", variations
@@ -687,12 +816,65 @@ class SamAccuracyEvaluator(object):
             if 'incorrect_%s' % c[0] not in self.stats:
               self.stats['incorrect_%s' % c[0] ] = 0
             self.stats['incorrect_%s' % c[0] ] += 1
-          self.incorrect.append( { 'correct_pos': correct_pos, 'provided_pos': pos, 'mapq': fields[4] } )
+          if self.verbose:
+            self.incorrect.append( { 
+              'correct_pos': correct_pos, 
+              'provided_pos': pos, 
+              'mapq': fields[4],
+              'cigar': cigar,
+              'label': fields[0],
+              'read': fields[9][:10]
+            } )
+          else:
+            self.incorrect.append( { 'correct_pos': correct_pos, 'provided_pos': pos, 'mapq': fields[4] } )
           diff = pos - correct_pos
           if diff not in self.incorrect_diff:
             self.incorrect_diff[ diff ] = 0
           self.incorrect_diff[ diff ] += 1
  
+class SamWriter(object):
+  def __init__( self, fh ):
+    self._fh = fh
+
+  def write_header( self, fasta ):
+    self._fh.write( '@HD\tVN:1.0\tSO:unsorted\n@SQ\tSN:generated\tLN:%i\n@PG\tID:baseline\tPN:baseline\tVN:1.0.0\n' % len(fasta) )
+
+  def write_no_match( self, name, dna, extra, confidence ):
+    # mge  4   *            0   0   *   *   0   0  CTGAAG ~~~ YT:Z:UU
+    self._fh.write( '%s\t%i\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%s\t%s\t%s\n' % ( name[1:], 4, '*', 0, 0, '*', '*', 0, 0, dna, confidence, '' ) )
+
+  def write_match( self, name, dna, extra, confidence, match ):
+    '''
+      match is 0-based
+    '''
+    # mge  0   generated 3177 42 40M3D10M * 0 0 CGC ~~~ AS:i:86 XN:i:0  XM:i:0  XO:i:1  XG:i:3  NM:i:3  MD:Z:40^CAA10   YT:Z:UU
+    self._fh.write( '%s\t%i\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%s\t%s\t%s\n' % ( name[1:], 2, 'generated', match + 1, 44, '%iM' % len(dna), '*', 0, 0, dna, confidence, '' ) )
+
+  def write_multi_match( self, name, dna, extra, confidence, matches ):
+    # choose a random match
+    match = matches[ random.randint( 0, len(matches) - 1 ) ]
+    self._fh.write( '%s\t%i\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%s\t%s\t%s\n' % ( name[1:], 0, 'generated', match + 1, 1, '%iM' % len(dna), '*', 0, 0, dna, confidence, '' ) )
+
+class ErrorGenerator(object):
+  def __init__( self, error_profile ):
+    self.error_profile = error_profile
+
+  def apply_errors( self, dna ):
+    result = []
+    for x in dna:
+      result.append( self.error_profile( x ) )
+    return ''.join( result )
+
+  @staticmethod
+  def create_uniform_error_profile( error_prob ):
+    transitions = { 'A': 'TGC', 'T': 'GCA', 'G': 'ACT', 'C': 'AGT', 'N': 'N' }
+    def uniform_error_profile( bp ):
+      if random.random() < error_prob:
+        return transitions[bp][random.randint(0, len(transitions[bp]) - 1)]
+      else:
+        return bp
+    return uniform_error_profile
+
 if __name__ == "__main__":
   #s = SamToFasta( sys.stdin, log )
   #log( 'size is %i' % s.fasta.size )

@@ -20,3 +20,4 @@ for line in sys.stdin:
 print "finding duplicates in fasta with k=%i, n=%i" % ( k, len(s) )
 duplicates = helpers.repeats( s, k )
 print "%i duplicates" % duplicates
+print "%f%%" % ( 100. * duplicates / len(s) )

@@ -1,7 +1,45 @@
 
 import collections
 import math
+import sys
 import zlib
+
+#def python_plot_from_pipeline_batch( h ):
+#  '''
+#    given a pipeline batch result file, return a list of result arrays
+#  '''
+#  last = None
+#  current = None
+#  result = []
+#  for line in h:
+#    fields = line.strip().split()
+#    definition = fields[:-4]
+#    results = fields[-4:]
+#    if last is None or count_changes( definition ) > 1:
+#      if current is not None:
+#        result.append( current )
+#      # add to current
+#      current = [ results[-1] ] # recall
+#    else:
+#      current.append( results[-1] )
+#  return result
+
+def add_f1_to_batch_results(h):
+  '''
+    given batch file from pipeline_batch, add f1-score as a new column
+  '''
+  for line in h:
+    if line.startswith( '#' ):
+      sys.stdout.write( line )
+    else:
+      fields = line.strip().split( ',' )
+      precision = float( fields[-2] ) / 100.
+      recall = float( fields[-1] ) / 100.
+      if precision != 0 or recall != 0:
+        f1 = 2 * ( precision * recall ) / ( precision + recall ) * 100
+      else:
+        f1 = 0
+      sys.stdout.write( '%s,%f\n' % ( line.strip(), f1 ) )
 
 def repeats( s, k ):
   '''
@@ -111,6 +149,10 @@ def chance_of_repeats( n, k, r ):
   #return math.exp( math.log( combinations ) - math.log( total_combinations ) )
 
 if __name__ == '__main__':
-  import doctest
-  doctest.testmod()
-  print "done"
+  #import doctest
+  #doctest.testmod()
+  #print "done"
+
+  #python_plot_from_pipeline_batch( open( 'pipeline_batch_read_length.out' ) )
+  add_f1_to_batch_results( sys.stdin )
+  

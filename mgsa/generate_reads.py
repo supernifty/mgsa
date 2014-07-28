@@ -2,8 +2,9 @@
 # generate reads from a fasta file
 # includes tags in each sequence comment of the correct position
 #
-# python generate_reads.py 50 10 mutations.vcf < donor.fasta > donor.fastq
-#
+# python generate_reads.py config_file mutations.vcf variations.map < donor.fasta > donor.fastq
+# - reads from mutations.vcf
+# - writes to variations.map
 import os
 import random
 import sys
@@ -11,32 +12,49 @@ import helpers
 
 import bio
 
-def write( pos, sequence, quality, variations=set(), extra='' ):
+def write( pos, sequence, quality, variations=set(), extra='', variation_map=None ):
+  '''
+    extra is not used and for humans only
+  '''
   if len(variations) == 0:
     sys.stdout.write( '@mgsa_seq_%i_%s\n' % ( (pos+1), extra ) ) # sam is 1 indexed
+    #print "no variations"
   else:
-    sys.stdout.write( '@mgsa_seq_%i_variation_%s_%s\n' % ( (pos+1), ','.join([ v for v in variations ]), extra ) ) # sam is 1 indexed
+    if variation_map is None:
+      sys.stdout.write( '@mgsa_seq_%i_variation_%s_%s\n' % ( (pos+1), ','.join([ v for v in variations ]), extra ) ) # sam is 1 indexed
+      #print "no wrote to vmap"
+    else:
+      sys.stdout.write( '@mgsa_seq_%i\n' % ( pos+1 ) ) # sam is 1 indexed
+      variation_map.write( '@mgsa_seq_%i: %s_%s\n' % ( (pos+1), ','.join([ v for v in variations ]), extra ) ) # sam is 1 indexed
+      #print "wrote to vmap"
   sys.stdout.write( sequence )
   sys.stdout.write( '\n+\n' )
   sys.stdout.write( quality ) # quality 
   sys.stdout.write( '\n' )
 
-
-if len(sys.argv) < 3:
-  print "Usage: %s readlength coverage [vcf]" % sys.argv[0]
+if len(sys.argv) < 2:
+  print "Usage: %s config_file [vcf variations]" % sys.argv[0]
   sys.exit(1)
 
-read_length = int(sys.argv[1])
-coverage = int(sys.argv[2])
-if len(sys.argv) == 4:
-  vcf = bio.VCF( reader=open(sys.argv[3], 'r') )
+config_helper = bio.Config()
+cfg = config_helper.read_config_file( open( sys.argv[1], 'r' ) )
+
+if len(sys.argv) >= 3:
+  vcf = bio.VCF( reader=open(sys.argv[2], 'r') )
 else:
   vcf = None
 
+if len(sys.argv) == 4:
+  variation_map = open(sys.argv[3], 'w')
+else:
+  variation_map = None
+
 probabilistic = False
 
-read_probability = 1. * coverage / read_length 
+read_probability = 1. * cfg['coverage'] / cfg['read_length']
 read_every = 1. / read_probability
+
+error_generator = bio.ErrorGenerator( bio.ErrorGenerator.create_uniform_error_profile( cfg['error_prob'] ) )
 
 # read candidate fasta
 dna = ''
@@ -48,7 +66,7 @@ for line in sys.stdin:
     continue
   line = line.strip()
   dna += line
-  process = len(dna) - read_length + 1
+  process = len(dna) - cfg['read_length'] + 1
   if process > 0:
     for i in xrange(0, process):
       time_to_next -= 1
@@ -58,6 +76,8 @@ for line in sys.stdin:
         if vcf is None:
           reference_position = candidate_position # reference == candidate
           variations = set()
+          reference_net = 0
+          include_start = False
         else:
           net = vcf.net_insertions( candidate_position ) # net_insertions expects a reference position
           reference_position = candidate_position - net # guess reference position
@@ -81,9 +101,10 @@ for line in sys.stdin:
             #print "net_pos %i net_insertions %i -> %s" % ( net_position, net_insertions, include_start )
             
           #print "net for %i: %i" % ( ( base_candidate_position + i ), net )
-          variations = vcf.variations( reference_position, reference_position + read_length, include_start=include_start )
-        write( reference_position, dna[i:i+read_length], '~' * read_length, variations=variations, extra='net%i_for%i_is%s' % (reference_net, reference_position, include_start ) )
-        max_pos = max(max_pos, reference_position + read_length)
+          variations = vcf.variations( reference_position, reference_position + cfg['read_length'], include_start=include_start )
+          dna_with_errors = error_generator.apply_errors( dna[i:i+cfg['read_length']] )
+        write( reference_position, dna_with_errors, '~' * cfg['read_length'], variations=variations, extra='net%i_for%i_is%s' % (reference_net, reference_position, include_start ), variation_map=variation_map )
+        max_pos = max(max_pos, reference_position + cfg['read_length'])
         time_to_next += read_every
     base_candidate_position += process
     dna = dna[process:]
