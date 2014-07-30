@@ -126,7 +126,7 @@ def bowtie_evaluate():
   #log( reference_diff.errors )
 
   # see what vcfs were found
-  vcf_diff = bio.VCFDiff( bio.VCF(reader=open('../../data/test/%s.vcf' % config('candidate_prefix'), 'r')), candidate_fasta.fasta, log )
+  vcf_diff = bio.VCFFastaDiff( bio.VCF(reader=open('../../data/test/%s.vcf' % config('candidate_prefix'), 'r')), candidate_fasta.fasta, log )
   #log( candidate_fasta.fasta.deleted )
   log( 'snps: %s' % vcf_diff.snp_stats )
   log( 'inserts: %s' % vcf_diff.ins_stats )

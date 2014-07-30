@@ -17,15 +17,15 @@ def write( pos, sequence, quality, variations=set(), extra='', variation_map=Non
     extra is not used and for humans only
   '''
   if len(variations) == 0:
-    sys.stdout.write( '@mgsa_seq_%i_%s\n' % ( (pos+1), extra ) ) # sam is 1 indexed
+    sys.stdout.write( '@mgsa_seq_%i_%s\n' % ( pos, extra ) ) # sam is 0 indexed
     #print "no variations"
   else:
     if variation_map is None:
-      sys.stdout.write( '@mgsa_seq_%i_variation_%s_%s\n' % ( (pos+1), ','.join([ v for v in variations ]), extra ) ) # sam is 1 indexed
+      sys.stdout.write( '@mgsa_seq_%i_variation_%s_%s\n' % ( pos, ','.join([ v for v in variations ]), extra ) ) # sam is 0 indexed
       #print "no wrote to vmap"
     else:
-      sys.stdout.write( '@mgsa_seq_%i\n' % ( pos+1 ) ) # sam is 1 indexed
-      variation_map.write( '@mgsa_seq_%i: %s_%s\n' % ( (pos+1), ','.join([ v for v in variations ]), extra ) ) # sam is 1 indexed
+      sys.stdout.write( '@mgsa_seq_%i\n' % ( pos ) ) # sam is 0 indexed
+      variation_map.write( '@mgsa_seq_%i: %s_%s\n' % ( pos, ','.join([ v for v in variations ]), extra ) ) # sam is 0 indexed
       #print "wrote to vmap"
   sys.stdout.write( sequence )
   sys.stdout.write( '\n+\n' )
