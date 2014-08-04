@@ -46,20 +46,23 @@ for line in open( sys.argv[1], 'r' ):
 
 
   # generates a reference sequence that consists of repeated copies of the provided sequence
-  #if first:
-  #  run( "python build_repeated_fasta.py ../../data/%s.fasta %s > ../../data/%s_x%s.fasta" % ( cfg['fasta'], cfg['mult'], cfg['fasta'], cfg['mult'] ) )
-  #  first = False
-  #  sys.exit(0)
+  if cfg['command'] == 'fasta':
+    run( "python build_repeated_fasta.py ../../data/%s.fasta %s > ../../data/%s_x%s.fasta" % ( cfg['fasta'], cfg['mult'], cfg['fasta'], cfg['mult'] ) )
+    continue # next line
 
-  # generates a donor sequence that contains mutations from the reference sequence
-  
   fasta_file = "../../data/%s_x%s.fasta" % (cfg['fasta'], cfg['mult'] )
   vcf_file = "../../data/%s_%s_x%s.vcf" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
-  #run( "python generate_mutation.py %s %s %s > ../../data/%s_%s_x%s.fasta" % ( fasta_file, vcf_file, cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
+
+  # generates a donor sequence that contains mutations from the reference sequence
+  if cfg['command'] == 'mutations':  
+    run( "python generate_mutation.py %s %s %s > ../../data/%s_%s_x%s.fasta" % ( fasta_file, vcf_file, cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
+    continue
 
   # generates reads from the donor sequence
   variation_map_file = '../../data/%s_%s_x%s.vmap' % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
-  #run( "python generate_reads.py %s ../../data/%s_%s_x%s.vcf %s < ../../data/%s_%s_x%s.fasta > ../../data/%s_%s_x%s.fastq" % ( cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], variation_map_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
+  if cfg['command'] == 'reads':  
+    run( "python generate_reads.py %s ../../data/%s_%s_x%s.vcf %s < ../../data/%s_%s_x%s.fasta > ../../data/%s_%s_x%s.fastq" % ( cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], variation_map_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
+    continue
 
   # runs an aligner
   sam_file =  "../../data/%s_%s_x%s_%s.sam" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'] )

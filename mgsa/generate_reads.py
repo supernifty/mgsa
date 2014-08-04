@@ -61,9 +61,17 @@ dna = ''
 base_candidate_position = 0
 time_to_next = read_every
 max_pos = 0
+lines = 0
+#if vcf is not None:
+#  bio.log_stderr( "snp: %s; indel: %s" % ( vcf.snp_list, vcf.indel_list ) )
 for line in sys.stdin:
+  if lines < 10 or lines % 1000 == 0:
+    bio.log_stderr( 'generate_reads: %i lines processed' % lines )
+  lines += 1
+
   if line.startswith( '>' ):
     continue
+
   line = line.strip()
   dna += line
   process = len(dna) - cfg['read_length'] + 1

@@ -45,7 +45,7 @@ class VCF(object):
           self.indel_map[int(pos)] = len(self.indel_list)
           self.indel_list.append( { 'pos': pos, 'before': ref, 'after': alt } )
       count += 1
-    self.log( '%i lines loaded' % count )
+    self.log( 'VCF.load: %i lines loaded' % count )
 
   def snp( self, pos, ref, alt ):
     '''
@@ -80,7 +80,7 @@ class VCF(object):
       returns the net change in position
     '''
     net = 0
-    for indel in self.indel_list:
+    for indel in self.indel_list: # TODO performance
       if indel['pos'] < position:
         net += len(indel['after']) - len(indel['before'])
       else:
@@ -101,24 +101,50 @@ class VCF(object):
     #else:
     #  return None
 
+  def bisect(self, pos_list, value):
+    '''returns an index that is less than or equal to value'''
+    start = 0 # inclusive
+    end = len(pos_list) # exclusive
+    while end - start > 1:
+      mid = start + ( end - start ) / 2
+      if pos_list[mid]['pos'] == value:
+        return mid
+      elif pos_list[mid]['pos'] < value:
+        start = mid
+      else: # pos > value
+        end = mid
+      #print "bisect: start: %i end: %i" % ( start, end )
+        
+    return start
+
   def variations(self, start, end, include_start=False ):
     '''
       returns a string representation of all variations within the specified range
     '''
     result = set()
-    for snp in self.snp_list:
-      if start < snp['pos'] < end or include_start and start == snp['pos']:
-        result.add( 'S%i-0' % ( snp['pos'] - start ) )
-        #print snp
-    for indel in self.indel_list:
-      if start < indel['pos'] < end or include_start and start == indel['pos']:
-        net = len(indel['after']) - len(indel['before'])
-        if net < 0: # deletion
-          result.add( 'D%i-%i' % ( indel['pos'] - start, -net ) )
-        elif net > 0: # insertion
-          indel_pos = indel['pos']
-          result.add( 'I%i-%i' % ( indel_pos - start, net ) )
-    #print result, " for", start, "", end
+    start_pos = self.bisect( self.snp_list, start ) # snps must be sorted
+    if start_pos < len(self.snp_list):
+      for snp_idx in xrange(start_pos, len(self.snp_list)): #self.snp_list[start_pos:]:
+        snp = self.snp_list[snp_idx]
+        if snp['pos'] > end:
+          break
+        if start < snp['pos'] < end or include_start and start == snp['pos']:
+          result.add( 'S%i-0' % ( snp['pos'] - start ) )
+          #print snp
+    start_pos = self.bisect( self.indel_list, start ) # indels must be sorted
+    if start_pos < len(self.indel_list):
+      for indel_idx in xrange( start_pos, len(self.indel_list) ): #self.indel_list[start_pos]:
+        indel = self.indel_list[indel_idx]
+        if indel['pos'] > end:
+          break
+        if start < indel['pos'] < end or include_start and start == indel['pos']:
+          net = len(indel['after']) - len(indel['before'])
+          if net < 0: # deletion
+            result.add( 'D%i-%i' % ( indel['pos'] - start, -net ) )
+          elif net > 0: # insertion
+            indel_pos = indel['pos']
+            result.add( 'I%i-%i' % ( indel_pos - start, net ) )
+      #print result, " for", start, "", end
     return result
 
 class VCFWriter(object):
@@ -199,16 +225,16 @@ class VCFFastaDiff(object):
     self.snp_stats = { 'tp': 0, 'fn': 0, 'other': 0 }
     for true_snp in vcf.snp_list: # vcf.snp has pos, ref, alt
       pos = true_snp['pos']
-      value = fasta.consensus_at(pos)[1]
-      if value == true_snp['ref']:
+      candidate_value = fasta.consensus_at(pos)[1]
+      if candidate_value == true_snp['ref']: # missed snp
         self.snp_stats['fn'] += 1
-      elif value == true_snp['alt']:
+      elif candidate_value == true_snp['alt']: # found snp
         self.snp_stats['tp'] += 1
       else: # neither snp ref or alt
         log( 'consensus at %i: %s %s %s ref %s alt %s' % ( 
           pos, 
           fasta.consensus_at(pos-1)[1], 
-          value, 
+          candidate_value, 
           fasta.consensus_at(pos+1)[1], 
           true_snp['ref'], true_snp['alt'] ) )
         self.snp_stats['other'] += 1

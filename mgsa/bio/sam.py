@@ -26,7 +26,7 @@ class SamToVCF(object):
       if actual_base is None:
         break # reference is done
       move, candidate_base = candidate.consensus_at( pos )
-      if candidate_base != actual_base:
+      if candidate_base != actual_base and candidate_base != 'N':
         target_vcf.snp( pos, actual_base, candidate_base ) # mutation
       pos += 1
     # check for sequence finishing early
@@ -51,7 +51,7 @@ class SamToFasta(object):
       self.parse_line( line.strip() )
       self.stats['lines'] += 1
       if self.stats['lines'] < 5000 and self.stats['lines'] % 1000 == 0 or self.stats['lines'] % 10000 == 0:
-        self.log( '%i lines processed' % self.stats['lines'] )
+        self.log( 'SamToFasta: %i lines processed' % self.stats['lines'] )
     self.log( self.stats )
 
   def write( self, fh ):
@@ -154,7 +154,7 @@ class SamAccuracyEvaluator(object):
       self.parse_line( line.strip() )
       self.stats['lines'] += 1
       if self.stats['lines'] < 5000 and self.stats['lines'] % 1000 == 0 or self.stats['lines'] % 10000 == 0:
-        self.log( '%i lines processed' % self.stats['lines'] )
+        self.log( 'SamAccuracyEvaluator: %i lines processed' % self.stats['lines'] )
     if self.stats['correct'] > 0:
       self.stats['correct_mapq'] /= self.stats['correct']
     if self.stats['incorrect'] > 0:

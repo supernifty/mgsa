@@ -77,7 +77,10 @@ class ProbabilisticFasta(object):
     return probabilities
 
   def consensus_at( self, i=0 ):
-    best = '0'
+    '''
+      returns the majority base at a given position, or N if no coverage
+    '''
+    best = 'N' # default if no coverage
     best_value = 0
     coverage = 0
     result = ''
