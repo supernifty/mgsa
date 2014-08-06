@@ -30,7 +30,7 @@ target.write( '# cfg, unmapped, incorrect, read_precision, read_recall, read_f1,
 first = True
 config_helper = bio.Config()
 for line in open( sys.argv[1], 'r' ):
-  if line.startswith( '#' ):
+  if line.startswith( '#' ) or line.strip() == '':
     target.write( line )
     continue
   cfg = config_helper.read_config_line( line )

@@ -4,8 +4,7 @@
 import os
 import sys
 
-BWA_PATH="../../tools/bwa-0.7.5a/bwa"
-BOWTIE_PATH="../../tools/bowtie2-2.1.0/bowtie2"
+import config
 
 def baseline_map( fasta_file, fastq_file, sam_file, params=None ):
   '''build candidate.sam from candidate.fastq and reference.fasta'''
@@ -14,14 +13,14 @@ def baseline_map( fasta_file, fastq_file, sam_file, params=None ):
 def bowtie_map( fasta_file, fastq_file, sam_file, params ):
   '''build candidate.sam from candidate.fastq and reference.fasta'''
   # evaluate bowtie - build bowtie sam
-  os.system( '%s-build %s %s-bt2' % ( BOWTIE_PATH, fasta_file, fasta_file ) )
-  os.system( '%s %s -p 16 -x %s-bt2 -U %s -t -S %s' % ( BOWTIE_PATH, params, fasta_file, fastq_file, sam_file ) )
+  os.system( '%s-build %s %s-bt2' % ( config.BOWTIE_PATH, fasta_file, fasta_file ) )
+  os.system( '%s %s -p 16 -x %s-bt2 -U %s -t -S %s' % ( config.BOWTIE_PATH, params, fasta_file, fastq_file, sam_file ) )
 
 def bwa_map( fasta_file, fastq_file, sam_file, params ):
   '''build candidate.sam from candidate.fastq and reference.fasta'''
   # evaluate bowtie - build bowtie sam
-  os.system( '%s index -p %s-bwa %s' % ( BWA_PATH, fasta_file, fasta_file ) )
-  os.system( '%s %s %s-bwa %s > %s' % ( BWA_PATH, params, fasta_file, fastq_file, sam_file ) )
+  os.system( '%s index -p %s-bwa %s' % ( config.BWA_PATH, fasta_file, fasta_file ) )
+  os.system( '%s %s %s-bwa %s > %s' % ( config.BWA_PATH, params, fasta_file, fastq_file, sam_file ) )
 
 if len(sys.argv) != 5:
   print "Usage: %s [bowtie2|bwa] reference.fasta reads.fastq output.sam" % sys.argv[0]

@@ -4,6 +4,10 @@ Multiple Genome Sequence Aligner
 This work is in progress and not ready for public consumption.
 Trying to use this code is strongly discouraged.
 
+Setup
+-----
+* config.py - edit this to paths appropriate for your system
+
 Included Files
 --------------
 * cmd.py - command line based interface
