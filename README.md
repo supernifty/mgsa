@@ -1,6 +1,8 @@
 
 Multiple Genome Sequence Aligner
 ================================
+This work is in progress and not ready for public consumption.
+Trying to use this code is strongly discouraged.
 
 Included Files
 --------------

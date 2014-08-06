@@ -1,5 +1,6 @@
 
 import datetime
+import math
 import random
 import re
 import sys
@@ -186,30 +187,44 @@ class VCFDiff(object):
       @vcf_candidate: the candidate VCF
     '''
     self.stats = { 'tp': 0, 'fp': 0, 'fn': 0 }
+    self.buckets = [ { 'tp': 0, 'fp': 0, 'fn': 0 } for _ in xrange(0, 20) ]
+    max_snp_pos = 0
+    if len( vcf_correct.snp_list ) > 0:
+      max_snp_pos = vcf_correct.snp_list[-1]['pos']
+    if len( vcf_candidate.snp_list ) > 0 and vcf_candidate.snp_list[-1]['pos'] > max_snp_pos:
+      max_snp_pos = vcf_candidate.snp_list[-1]['pos']
+    bucket_size = ( 1 + max_snp_pos ) / 20.
     #log( '%i correct snps, %i candidate snps; %i correct snp map; %i candidate snp map' % ( len(vcf_correct.snp_list), len(vcf_candidate.snp_list), len(vcf_correct.snp_map), len(vcf_candidate.snp_map) ) )
     for true_snp in vcf_correct.snp_list:
+      bucket = int( math.floor( true_snp['pos'] / bucket_size ) )
       if true_snp['pos'] in vcf_candidate.snp_map: # there's a similarly placed snp
         candidate_snp = vcf_candidate.snp_list[vcf_candidate.snp_map[true_snp['pos']]]
         if candidate_snp['ref'] == true_snp['ref'] and candidate_snp['alt'] == true_snp['alt']:
           self.stats['tp'] += 1
+          self.buckets[bucket]['tp'] += 1
         else:
           self.stats['fn'] += 1
-          log( 'fn(near): %i' % true_snp['pos'] )
+          self.buckets[bucket]['fn'] += 1
+          #log( 'fn(near): %i' % true_snp['pos'] )
       else:
         self.stats['fn'] += 1
-        log( 'fn: %i' % true_snp['pos'] )
+        self.buckets[bucket]['fn'] += 1
+        #log( 'fn: %i' % true_snp['pos'] )
       
     for candidate_snp in vcf_candidate.snp_list:
+      bucket = int( math.floor( candidate_snp['pos'] / bucket_size ) )
       if candidate_snp['pos'] in vcf_correct.snp_map: 
         true_snp = vcf_correct.snp_list[vcf_correct.snp_map[candidate_snp['pos']]]
         if candidate_snp['ref'] != true_snp['ref'] or candidate_snp['alt'] != true_snp['alt']:
           self.stats['fp'] += 1
-          log( 'fp(near): %i' % candidate_snp['pos'] )
+          self.buckets[bucket]['fp'] += 1
+          #log( 'fp(near): %i' % candidate_snp['pos'] )
         else:
           pass # tp already found
       else: # false positive
         self.stats['fp'] += 1
-        log( 'fp: %i' % candidate_snp['pos'] )
+        self.buckets[bucket]['fp'] += 1
+        #log( 'fp: %i' % candidate_snp['pos'] )
 
 class VCFFastaDiff(object):
   '''
