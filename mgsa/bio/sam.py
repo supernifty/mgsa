@@ -115,8 +115,9 @@ class SamToFasta(object):
             genome_pos += cigar_len
 
           if cigar_match[1] == 'S': # soft clipping
-            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos, confidence=0.5 )
-            genome_pos += cigar_len
+            #self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos, confidence=0.5 )
+            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos - cigar_len, confidence=0.5 )
+            #genome_pos += cigar_len
             fragment_pos += cigar_len
 
           if cigar_match[1] == 'H': # hard clipping
