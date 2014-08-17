@@ -46,7 +46,7 @@ class SamToFasta(object):
     self.allow_indels = allow_indels
     self.log = log
     self.fasta = fasta.ProbabilisticFasta(log)
-    self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0 }
+    self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0, 'inversions': 0 }
     for line in sam:
       self.parse_line( line.strip() )
       self.stats['lines'] += 1
@@ -84,6 +84,8 @@ class SamToFasta(object):
       flag = int(fields[1])
       #if self.stats['lines'] < 100:
       #  log( 'flag is %i' % flag )
+      if flag & 0x10 != 0:
+        self.stats['inversions'] += 1
       if flag & 0x04 != 0:
         self.stats['unmapped'] += 1
       else:

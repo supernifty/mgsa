@@ -148,11 +148,26 @@ def chance_of_repeats( n, k, r ):
   #print "total_combinations", total_combinations, "selections", trials, "this", combinations
   #return math.exp( math.log( combinations ) - math.log( total_combinations ) )
 
+def binomial( n, k ):
+  return math.factorial( n ) / math.factorial( k ) / math.factorial( n - k )
+
+def miscall_probability( coverage, wrong_prob ):
+  p = 0.0
+  for k in xrange( int( math.ceil( coverage / 2. ) ), coverage + 1 ):
+    prob = binomial( coverage, k ) * ( wrong_prob ** k ) * ( ( 1 - wrong_prob ) ** ( coverage - k ) )
+    print k, coverage, binomial( coverage, k ), prob
+    p += prob
+  return p
+
 if __name__ == '__main__':
   #import doctest
   #doctest.testmod()
   #print "done"
 
   #python_plot_from_pipeline_batch( open( 'pipeline_batch_read_length.out' ) )
-  add_f1_to_batch_results( sys.stdin )
-  
+  #add_f1_to_batch_results( sys.stdin )
+  print "10, 0.01:", miscall_probability( 10, 0.01 )
+  print "10, 0.1:", miscall_probability( 10, 0.1 )
+  print "5, 0.1:", miscall_probability( 5, 0.1 )
+  print "3, 0.1:", miscall_probability( 3, 0.1 )
+  print "4, 0.02:", miscall_probability( 4, 0.02 )

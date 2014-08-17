@@ -12,20 +12,28 @@ import helpers
 
 import bio
 
-def write( pos, sequence, quality, variations=set(), extra='', variation_map=None ):
+def write( pos, sequence, quality, variations=set(), extra='', variation_map=None, inversion=False ):
   '''
+    write a sequence of given quality
     extra is not used and for humans only
   '''
+  if inversion:
+    inversion_text = 'inversion_'
+    sequence = bio.reverse_complement( sequence )
+    quality = quality[::-1]
+  else:
+    inversion_text = ''
+
   if len(variations) == 0:
-    sys.stdout.write( '@mgsa_seq_%i_%s\n' % ( pos, extra ) ) # sam is 0 indexed
+    sys.stdout.write( '@mgsa_seq_%i_%s%s\n' % ( pos, inversion_text, extra ) ) # sam is 0 indexed
     #print "no variations"
   else:
     if variation_map is None:
-      sys.stdout.write( '@mgsa_seq_%i_variation_%s_%s\n' % ( pos, ','.join([ v for v in variations ]), extra ) ) # sam is 0 indexed
+      sys.stdout.write( '@mgsa_seq_%i_variation_%s_%s%s\n' % ( pos, ','.join([ v for v in variations ]), inversion_text, extra ) ) # sam is 0 indexed
       #print "no wrote to vmap"
     else:
       sys.stdout.write( '@mgsa_seq_%i\n' % ( pos ) ) # sam is 0 indexed
-      variation_map.write( '@mgsa_seq_%i: %s_%s\n' % ( pos, ','.join([ v for v in variations ]), extra ) ) # sam is 0 indexed
+      variation_map.write( '@mgsa_seq_%i: %s_%s%s\n' % ( pos, ','.join([ v for v in variations ]), inversion_text, extra ) ) # sam is 0 indexed
       #print "wrote to vmap"
   sys.stdout.write( sequence )
   sys.stdout.write( '\n+\n' )
@@ -53,6 +61,11 @@ probabilistic = False
 
 read_probability = 1. * cfg['coverage'] / cfg['read_length']
 read_every = 1. / read_probability
+inversion_prob = cfg['inversion_prob']
+if inversion_prob > 0:
+  inversion_every = 1. / inversion_prob
+else:
+  inversion_every = 1e12
 
 error_generator = bio.ErrorGenerator( bio.ErrorGenerator.create_uniform_error_profile( cfg['error_prob'] ) )
 
@@ -60,6 +73,7 @@ error_generator = bio.ErrorGenerator( bio.ErrorGenerator.create_uniform_error_pr
 dna = ''
 base_candidate_position = 0
 time_to_next = read_every
+time_to_inversion = inversion_every
 max_pos = 0
 lines = 0
 #if vcf is not None:
@@ -80,13 +94,14 @@ for line in sys.stdin:
       time_to_next -= 1
       if probabilistic and random.random() < read_probability or \
          not probabilistic and time_to_next <= 0:
+        time_to_inversion -= 1
         candidate_position = base_candidate_position + i # reference == candidate
-        if vcf is None:
+        if vcf is None: # no variations
           reference_position = candidate_position # reference == candidate
           variations = set()
           reference_net = 0
           include_start = False
-        else:
+        else: # variations
           net = vcf.net_insertions( candidate_position ) # net_insertions expects a reference position
           reference_position = candidate_position - net # guess reference position
           reference_net = vcf.net_insertions( reference_position ) # get variation count
@@ -110,8 +125,14 @@ for line in sys.stdin:
             
           #print "net for %i: %i" % ( ( base_candidate_position + i ), net )
           variations = vcf.variations( reference_position, reference_position + cfg['read_length'], include_start=include_start )
-          dna_with_errors = error_generator.apply_errors( dna[i:i+cfg['read_length']] )
-        write( reference_position, dna_with_errors, '~' * cfg['read_length'], variations=variations, extra='net%i_for%i_is%s' % (reference_net, reference_position, include_start ), variation_map=variation_map )
+          dna_with_errors = error_generator.apply_errors( dna[i:i+cfg['read_length']] ) # add errors to read
+
+        inversion = probabilistic and random.random() < inversion_prob or not probabilistic and time_to_inversion <= 0
+        if inversion:
+          time_to_inversion += inversion_every
+
+        write( reference_position, dna_with_errors, '~' * cfg['read_length'], variations=variations, extra='net%i_for%i_is%s' % (reference_net, reference_position, include_start ), variation_map=variation_map, inversion=inversion )
+
         max_pos = max(max_pos, reference_position + cfg['read_length'])
         time_to_next += read_every
     base_candidate_position += process
