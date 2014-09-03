@@ -198,7 +198,7 @@ class SamAccuracyEvaluator(object):
           self.stats['mapped'] += 1
         else:
           self.stats['unknown_mapping'] += 1 # but still try to map
-        pos = int(fields[3]) - 1 # pos in genome; 0 based
+        pos = int(fields[3]) - 1 # pos in genome; conver to 0 based
         cigar = fields[5]
         prematch = True # clipping at start
         correct_pos = int(re.sub( 'mgsa_seq_([0-9]*).*', '\\1', fields[0] ))

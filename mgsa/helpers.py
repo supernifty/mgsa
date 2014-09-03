@@ -4,25 +4,28 @@ import math
 import sys
 import zlib
 
-#def python_plot_from_pipeline_batch( h ):
-#  '''
-#    given a pipeline batch result file, return a list of result arrays
-#  '''
-#  last = None
-#  current = None
-#  result = []
-#  for line in h:
-#    fields = line.strip().split()
-#    definition = fields[:-4]
-#    results = fields[-4:]
-#    if last is None or count_changes( definition ) > 1:
-#      if current is not None:
-#        result.append( current )
-#      # add to current
-#      current = [ results[-1] ] # recall
-#    else:
-#      current.append( results[-1] )
-#  return result
+def series_from_pipeline_batch( fh, x, y ):
+  '''
+    given a pipeline batch result file, return a list of result arrays
+    @fh: file .out
+    @x: e.g. insert_prob
+    @y: e.g. vcf_f1
+  '''
+  y_map = { 'unmapped': -14, 'incorrect': -13, 'read_precision': -12, 'read_recall': -11, 'read_f1': -10, 'vcf_tp': -9, 'vcf_fp': -8, 'vcf_fn': -7, 'vcf_precision': -6, 'vcf_recall': -5, 'vcf_f1': -4, 'vcf_bucket_tp': -3, 'vcf_bucket_fp': -2, 'vcf_bucket_fn': -1 }
+  xs = []
+  ys = []
+  for line in fh:
+    if line.startswith( 'command' ) or line.startswith( '#' ):
+      continue
+    fields = line.strip().split(',')
+    for field in fields:
+      field = field.strip()
+      if field.startswith( x ):
+        fieldname, value = field.split(' ')
+        xs.append( float(value) )
+        break
+    ys.append( float( fields[y_map[y]] ) )
+  return xs, ys
 
 def add_f1_to_batch_results(h):
   '''

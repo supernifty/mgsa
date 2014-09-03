@@ -38,9 +38,12 @@ class ProbabilisticFasta(object):
         self.genome[value].extend( [0] * ( position - len(self.genome[value]) + 1 ) )
         if len(self.genome[value]) > self.length:
           self.length = len(self.genome[value])
-      self.genome[value][position] += confidence
-      self.prior[value] += 1
-      self.total += 1
+      #self.log( "adding confidence %f to %s at %i; start %i" % ( confidence, value, position, start ) )
+      #self.log( "capacity %i" % ( len(self.genome[value] ) ) )
+      if position >= 0: # mappers can clip off the end
+        self.genome[value][position] += confidence
+        self.prior[value] += 1
+        self.total += 1
 
   def insert( self, fragment, start, confidence=1.0 ):
     if start not in self.insertions:
