@@ -26,7 +26,10 @@ class ProbabilisticFasta(object):
 
   def add( self, fragment, start, confidence=1.0 ):
     '''
-      process a mapped fragment of dna
+      process a directly mapped fragment of dna
+      @fragment: the piece of dna
+      @fragment: where in the genome it starts
+      @confidence: how confident in this mapping
     '''
     for i in xrange(0, len(fragment) ):
       value = fragment[i]
@@ -46,6 +49,11 @@ class ProbabilisticFasta(object):
         self.total += 1
 
   def insert( self, fragment, start, confidence=1.0 ):
+    '''
+      @fragment: the piece of dna to insert
+      @start: where the insertion starts on the reference
+      @confidence: how confident in this insertion
+    '''
     if start not in self.insertions:
       self.insertions[start] = {}
     if fragment not in self.insertions[start]:
