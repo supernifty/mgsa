@@ -120,9 +120,9 @@ for line in open( sys.argv[1], 'r' ):
   # bias report
   if cfg['reports'] is not None and cfg['reports'].find('bias') != -1:
     report = bio.BiasReport( 
-      candidate_fasta=bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta, 
-      reference_fasta=open( fasta_file, 'r' ), 
-      donor_vcf=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr),
+      candidate_fasta=bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta, # what the aligner has built
+      reference_fasta=open( fasta_file, 'r' ), # the reference
+      donor_vcf=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr), # variations to donor
       log=bio.log_stderr, 
       buckets=cfg['bias_report_buckets'] )
     #bias_report_file = "out/%s_%s_x%s_%s_%s_bias.txt" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )

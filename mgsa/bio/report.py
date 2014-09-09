@@ -14,9 +14,9 @@ class BiasReport (object):
     '''
     reference = fasta.Fasta( fasta.FastaReader( reference_fasta ) )
     pos = 0
-    self.reference_histogram = [ 0 ] * buckets
-    self.error_histogram = [ 0 ] * buckets
-    self.stats = { 'unmapped': 0, 'mapped': 0 }
+    self.reference_histogram = [ 0 ] * (buckets+1)
+    self.error_histogram = [ 0 ] * (buckets+1)
+    self.stats = { 'unmapped': 0, 'mapped': 0, 'reference_percent_total': 0., 'error_percent_total': 0., 'total': 0 }
     while pos < candidate_fasta.length:
       reference_base = reference.base_at( pos )
       if reference_base is None:
@@ -37,15 +37,21 @@ class BiasReport (object):
       #if candidate_base != reference_base and candidate_base != 'N':
       #  target_vcf.snp( pos, reference_base, candidate_base ) # mutation
       pos += 1
+    self.reference_histogram = [ 1. * r / self.stats['total'] for r in self.reference_histogram ]
+    self.error_histogram = [ 1. * r / self.stats['total'] for r in self.error_histogram ]
 
   def add_to_stats( self, reference, error, buckets ):
+    # track counts
+    self.stats['reference_percent_total'] += reference
+    self.stats['error_percent_total'] += error
+    self.stats['total'] += 1
     # find reference bucket
     bucket_size = 1. / buckets
     reference_bucket = int( math.floor( reference / bucket_size ) )
-    if reference_bucket >= len(self.reference_histogram):
-      reference_bucket = len(self.reference_histogram) - 1
+    #if reference_bucket >= len(self.reference_histogram):
+    #  reference_bucket = len(self.reference_histogram) - 1
     error_bucket = int( math.floor( error / bucket_size ) )
-    if error_bucket >= len(self.error_histogram):
-      error_bucket = len(self.error_histogram) - 1
+    #if error_bucket >= len(self.error_histogram):
+    #  error_bucket = len(self.error_histogram) - 1
     self.reference_histogram[reference_bucket] += 1
     self.error_histogram[error_bucket] += 1
