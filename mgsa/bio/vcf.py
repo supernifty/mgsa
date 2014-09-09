@@ -161,13 +161,17 @@ class VCFWriter(object):
 ##chr\tpos\tid\tref\talt\tqual\tfilter\tinfo
 ''' % datetime.datetime.now().strftime("%Y%m%d") )
 
-  def snp( self, pos, ref, alt ):
+  def snp( self, pos, ref, alt, confidence=1. ):
     '''
       note that pos in a vcf is 1-based
     '''
+    if confidence < 1.:
+      quality = '%.2f' % math.log(-10 * math.log(1.-confidence,10))
+    else:
+      quality = '.'
     self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\t%s\n' % (
         # chrom, pos, id, ref, alt, qual, filter, info
-        '.', (pos + 1), '.', ref, alt, '.', 'PASS', 'DP=100'
+        '.', (pos + 1), '.', ref, alt, quality, 'PASS', 'DP=100'
       ) )
 
   def indel( self, pos, before, after ):

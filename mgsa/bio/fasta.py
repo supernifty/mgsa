@@ -1,4 +1,5 @@
 
+import collections
 import datetime
 import random
 import re
@@ -69,7 +70,7 @@ class ProbabilisticFasta(object):
       counts of nucleotides seen at a position
       e.g. { 'A': 10, 'G': 4 }
     '''
-    result = {}
+    result = collections.defaultdict(int)
     for value in self.genome:
       if len(self.genome[value]) > position:
         result[value] = self.genome[value][position]
@@ -89,7 +90,7 @@ class ProbabilisticFasta(object):
 
   def consensus_at( self, i=0 ):
     '''
-      returns the majority base at a given position, or N if no coverage
+      returns the majority base at a given position, or N if no coverage (move, best, confidence, coverage)
     '''
     best = 'N' # default if no coverage
     best_value = 0
@@ -132,7 +133,7 @@ class ProbabilisticFasta(object):
       result += best
       move += 1
      
-    return (move, result)
+    return (move, result, best, coverage)
   
   def consensus_count( self, start=0, count=1 ):
     '''
@@ -144,7 +145,7 @@ class ProbabilisticFasta(object):
     total_move = 0
     reference_move = 0
     while len(result) <= count and start + reference_move < self.length:
-      move, s = self.consensus_at( start + reference_move )
+      move, s, confidence, coverage = self.consensus_at( start + reference_move )
       result += s 
       reference_move += 1
     #self.log( 'consensus for %i count %i is %s (%i)' % (start, count, result, len(result)) )
@@ -160,7 +161,7 @@ class ProbabilisticFasta(object):
     result = ''
     self.insertion_count = 0
     for i in xrange(start, end):
-      move, add = self.consensus_at( i )
+      move, add, confidence, coverage = self.consensus_at( i )
       result += add
     #self.log( 'consensus for %i to %i is %s (%i)' % (start, end, result, len(result)) )
     return result 
@@ -173,7 +174,8 @@ class FastaMutate(object):
 
   def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, max_insert_len=1, max_delete_len=1, probabilistic=True ):
     '''
-      reader: FastaReader
+      @reader: FastaReader
+      @vcf_file: write mutations to vcf
     '''
     self.reader = reader
     self.snp_prob = snp_prob

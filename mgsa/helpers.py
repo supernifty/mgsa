@@ -4,14 +4,17 @@ import math
 import sys
 import zlib
 
-def series_from_pipeline_batch( fh, x, y ):
+def series_from_pipeline_batch( fh, x, y, bias_report=False ):
   '''
     given a pipeline batch result file, return a list of result arrays
     @fh: file .out
     @x: e.g. insert_prob
     @y: e.g. vcf_f1
   '''
-  y_map = { 'unmapped': -14, 'incorrect': -13, 'read_precision': -12, 'read_recall': -11, 'read_f1': -10, 'vcf_tp': -9, 'vcf_fp': -8, 'vcf_fn': -7, 'vcf_precision': -6, 'vcf_recall': -5, 'vcf_f1': -4, 'vcf_bucket_tp': -3, 'vcf_bucket_fp': -2, 'vcf_bucket_fn': -1 }
+  y_map = { 'unmapped': -16, 'incorrect': -15, 'read_precision': -14, 'read_recall': -13, 'read_f1': -12, 'vcf_tp': -11, 'vcf_fp': -10, 'vcf_fn': -9, 'vcf_precision': -8, 'vcf_recall': -7, 'vcf_f1': -6, 'vcf_bucket_tp': -5, 'vcf_bucket_fp': -4, 'vcf_bucket_fn': -3, 'reference_bias': -2, 'error_bias': -1 }
+  if not bias_report:
+    for key in y_map:
+      y_map[key] += 2
   xs = []
   ys = []
   for line in fh:
@@ -26,6 +29,22 @@ def series_from_pipeline_batch( fh, x, y ):
         break
     ys.append( float( fields[y_map[y]] ) )
   return xs, ys
+
+def series_from_pipeline_result( fh, y, bias_report=False ):
+  y_map = { 'unmapped': -16, 'incorrect': -15, 'read_precision': -14, 'read_recall': -13, 'read_f1': -12, 'vcf_tp': -11, 'vcf_fp': -10, 'vcf_fn': -9, 'vcf_precision': -8, 'vcf_recall': -7, 'vcf_f1': -6, 'vcf_bucket_tp': -5, 'vcf_bucket_fp': -4, 'vcf_bucket_fn': -3, 'reference_bias': -2, 'error_bias': -1 }
+  if not bias_report:
+    for key in y_map:
+      y_map[key] += 2
+  xs = []
+  ys = []
+  for line in fh:
+    if line.startswith( 'command' ) or line.startswith( '#' ):
+      continue
+    fields = line.strip().split(',')
+    ys = [ float(x) for x in fields[y_map[y]].split('|' ) ]
+    for x in xrange(len(ys)):
+      xs.append( 1. * x / len(ys) ) 
+    return xs, ys
 
 def add_f1_to_batch_results(h):
   '''

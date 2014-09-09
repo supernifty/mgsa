@@ -25,7 +25,7 @@ class SamToVCF(object):
       actual_base = reference.base_at( pos )
       if actual_base is None:
         break # reference is done
-      move, candidate_base = candidate.consensus_at( pos )
+      move, candidate_base, confidence, coverage = candidate.consensus_at( pos )
       if candidate_base != actual_base and candidate_base != 'N':
         target_vcf.snp( pos, actual_base, candidate_base ) # mutation
       pos += 1

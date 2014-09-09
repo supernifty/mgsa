@@ -26,7 +26,9 @@ if len(sys.argv) < 3:
   sys.exit(0)
 
 target = open( sys.argv[2], 'w' )
-target.write( '# cfg, unmapped, incorrect, read_precision, read_recall, read_f1, vcf_tp, vcf_fp, vcf_fn, vcf_precision, vcf_recall, vcf_f1, vcf_bucket_tp, vcf_bucket_fp, vcf_bucket_fn\n' )
+target.write( '# cfg, unmapped, incorrect, read_precision, read_recall, read_f1, vcf_tp, vcf_fp, vcf_fn, vcf_precision, vcf_recall, vcf_f1, vcf_bucket_tp, vcf_bucket_fp, vcf_bucket_fn' )
+target.write( ', reference_bias, error_bias' )
+target.write( '\n' )
 first = True
 config_helper = bio.Config()
 for line in open( sys.argv[1], 'r' ):
@@ -93,7 +95,6 @@ for line in open( sys.argv[1], 'r' ):
   # generate consensus dna
   #consensus_file = "../../data/%s_%s_x%s_%s_%s_recovered.fasta" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
   #run( "python generate_consensus.py < %s > %s" % ( sam_file, consensus_file ) )
-
   # generate vcf
   recovered_vcf_file = "../../data/%s_%s_x%s_%s_%s_recovered.vcf" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
   #run( "python generate_vcf.py %s < %s > %s" % ( fasta_file, sam_file, recovered_vcf_file ) )
@@ -115,5 +116,18 @@ for line in open( sys.argv[1], 'r' ):
     vcf_f1 = 2. * ( vcf_precision * vcf_recall ) / ( vcf_precision + vcf_recall ) 
   target.write( '%s,%f,%f,%f,%f,%f,%i,%i,%i,%f,%f,%f' % ( line.strip(), unmapped, incorrect, precision * 100, recall * 100, f1 * 100, vcf_diff.stats['tp'], vcf_diff.stats['fp'], vcf_diff.stats['fn'], vcf_precision * 100, vcf_recall * 100, vcf_f1 * 100 ) )
   target.write( ',%s,%s,%s' % ( '|'.join( [ str( x['tp'] ) for x in vcf_diff.buckets ] ), '|'.join( [ str( x['fp'] ) for x in vcf_diff.buckets ] ),'|'.join( [ str( x['fn'] ) for x in vcf_diff.buckets ] ) ) )
+
+  # bias report
+  if cfg['reports'] is not None and cfg['reports'].find('bias') != -1:
+    report = bio.BiasReport( 
+      candidate_fasta=bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta, 
+      reference_fasta=open( fasta_file, 'r' ), 
+      donor_vcf=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr),
+      log=bio.log_stderr, 
+      buckets=cfg['bias_report_buckets'] )
+    #bias_report_file = "out/%s_%s_x%s_%s_%s_bias.txt" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
+    #print "stats", report.stats, "reference", report.reference_histogram, "error", report.error_histogram
+    target.write( ',%s,%s' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ) ) )
+
   target.write( '\n' )
   target.flush()
