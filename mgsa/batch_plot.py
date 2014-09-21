@@ -2,15 +2,23 @@
 import sys
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 import helpers
 
 def plot_series():
-  xs, ys = helpers.series_from_pipeline_batch( fh=open(sys.argv[1]), x='insert_prob', y='incorrect', bias_report=False )
+  xs, ys = helpers.series_from_pipeline_batch( fh=open(sys.argv[1]), x='mult_snp_prob', y='mean_reference', bias_report=True )
   xs = [ x * 100 for x in xs ]
-  plt.plot( xs, ys, label='BWA' )
-  plt.ylabel('Incorrect %')
-  plt.xlabel('Mutation %')
+  ys = [ y * 100 for y in ys ]
+  plt.plot( xs, ys, label='Bias' )
+  plt.ylabel('Reference Bias (%)')
+  plt.xlabel('Reference Mutation')
+  #xs, ys = helpers.series_from_pipeline_batch( fh=open(sys.argv[1]), x='mult_snp_prob', y='unmapped', bias_report=True )
+  #xs = [ x * 100 for x in xs ]
+  #ys = [ y * 100 for y in ys ]
+  #plt.plot( xs, ys, label='Unmapped' )
+  #plt.ylabel('Unmapped (%)')
+  #plt.xlabel('Reference Mutation')
   plt.legend()
   plt.show()
 
@@ -44,38 +52,74 @@ def plot_reference_bias():
   plt.legend()
   plt.show()
 
-def plot_bias():
-  xs, yrs = helpers.series_from_pipeline_result( fh=open(sys.argv[1]), y='reference_bias', bias_report=True )
-  _, yes = helpers.series_from_pipeline_result( fh=open(sys.argv[1]), y='error_bias', bias_report=True )
+def plot_bias( include_zero=False, include_unmapped=False ):
+  xs, yrs = helpers.series_from_pipeline_result( fh=open(sys.argv[1]), y='reference_bias', bias_report=True, item=1 )
+  _, yes = helpers.series_from_pipeline_result( fh=open(sys.argv[1]), y='error_bias', bias_report=True, item=1 )
   xs = [ x * 100 for x in xs ]
+
+  # determine averages
+  expected_err = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='mean_error', bias_report=True, item=1 ) * 100.
+  expected_ref = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='mean_reference', bias_report=True, item=1 ) * 100.
+  #expected_ref = 0.
+  #for i in xrange(len(xs)):
+  #  expected_ref += xs[i] * yrs[i]
+  #expected_err = 0.
+  #for i in xrange(len(xs)):
+  #  expected_err += xs[i] * yes[i]
+  plt.text( 108, 2.5, "Average reference bias: %.2f%%\nAverage error bias: %.2f%%" % ( expected_ref, expected_err ), ha='right' )
+
+  if include_zero:
+    plt.xlim( xmin=-5, xmax=110 )
+  else:
+    plt.xlim( xmin=5, xmax=110 )
+
+  if include_unmapped:
+    plt.xlim( xmax=115 )
+    xs.append( 110. ) # fix later
+    unmapped = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='unmapped_variations', bias_report=True )
+    total = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='total_variations', bias_report=True )
+    yrs.append( 1.0 * unmapped / total )
+    yes.append( 0 ) # dummy
+    plt.xticks( xs[1:], [ '%i' % int(x) for x in xs[1:-1] ] + [ 'Unmapped' ], rotation=-45 )
   print xs, yrs, yes
+
   # weird crap
   yrs = [ y * 100 + 1e-7 for y in yrs ]
   yes = [ y * 100 + 1e-7 for y in yes ]
   width = 100. / len(yrs) * 0.4
   #plt.bar( left=xs, height=yrs, label='Reference Bias', width=width, color='b', log=True )
   #plt.bar( left=[x+width for x in xs], height=yes, label='Error Bias', width=width, color='y', log=True )
-  plt.bar( left=[x-width/2 for x in xs][1:], height=yrs[1:], label='Reference Bias', width=width, color='b', log=False, align='center')
-  plt.bar( left=[x+width/2 for x in xs][1:], height=yes[1:], label='Error Bias', width=width, color='g', log=False, align='center')
+  if include_zero:
+    plt.bar( left=[x-width/2 for x in xs], height=yrs, label='Reference Bias', width=width, color='b', log=False, align='center')
+    plt.bar( left=[x+width/2 for x in xs], height=yes, label='Error Bias', width=width, color='g', log=False, align='center')
+  else:
+    plt.bar( left=[x-width/2 for x in xs][1:], height=yrs[1:], label='Reference Bias', width=width, color='b', log=False, align='center')
+    plt.bar( left=[x+width/2 for x in xs][1:], height=yes[1:], label='Error Bias', width=width, color='g', log=False, align='center')
   plt.ylabel('SNVs (%)')
   plt.xlabel('Bias (%)')
 
-  # determine averages
-  expected_ref = 0.
-  for i in xrange(len(xs)):
-    expected_ref += xs[i] * yrs[i] / 100.
-  expected_err = 0.
-  for i in xrange(len(xs)):
-    expected_err += xs[i] * yes[i] / 100.
-  plt.text( 108, 2.5, "Average reference bias: %.1f%%\nAverage error bias: %.1f%%" % ( expected_ref, expected_err ), ha='right' )
-  plt.xlim( xmin=5, xmax=110 )
   plt.legend()
   plt.show()
 
-def plot_bias_compare():
+def plot_bias_compare( include_unmapped=False ):
   xs, yrs = helpers.series_from_pipeline_result( fh=open(sys.argv[1]), y='reference_bias', bias_report=True )
   _, yes = helpers.series_from_pipeline_result( fh=open(sys.argv[1]), y='reference_bias', bias_report=True, item=2 )
   xs = [ x * 100 for x in xs ]
+  plt.xlim( xmin=5, xmax=110 )
+
+  if include_unmapped:
+    plt.xlim( xmax=115 )
+    xs.append( 110. ) # fix later
+    unmapped = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='unmapped_variations', bias_report=True )
+    total = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='total_variations', bias_report=True )
+    yrs.append( 1.0 * unmapped / total )
+
+    unmapped = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='unmapped_variations', bias_report=True, item=2 )
+    total = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='total_variations', bias_report=True, item=2 )
+    yes.append( 1.0 * unmapped / total )
+
+    plt.xticks( xs[1:], [ '%i' % int(x) for x in xs[1:-1] ] + [ 'Unmapped' ], rotation=-45 )
+
   print xs, yrs, yes
   # weird crap
   yrs = [ y * 100 + 1e-7 for y in yrs ]
@@ -83,26 +127,24 @@ def plot_bias_compare():
   width = 100. / len(yrs) * 0.35
   #plt.bar( left=xs, height=yrs, label='Reference Bias', width=width, color='b', log=True )
   #plt.bar( left=[x+width for x in xs], height=yes, label='Error Bias', width=width, color='y', log=True )
-  plt.bar( left=[x-width/2 for x in xs][1:], height=yrs[1:], label='Read length 50bp', width=width, color='b', log=False, align='center')
-  plt.bar( left=[x+width/2 for x in xs][1:], height=yes[1:], label='Read length 100bp', width=width, color='g', log=False, align='center')
+  plt.bar( left=[x-width/2 for x in xs][1:], height=yrs[1:], label='Reference Mutation 10%', width=width, color='b', log=False, align='center')
+  plt.bar( left=[x+width/2 for x in xs][1:], height=yes[1:], label='Reference Mutation 90%', width=width, color='g', log=False, align='center')
   plt.ylabel('SNVs (%)')
   plt.xlabel('Bias (%)')
 
   # determine averages
-  expected_ref = 0.
-  for i in xrange(len(xs)):
-    expected_ref += xs[i] * yrs[i] / 100.
-  expected_err = 0.
-  for i in xrange(len(xs)):
-    expected_err += xs[i] * yes[i] / 100.
-  plt.text( 108, 2.5, "Average bias (50bp): %.1f%%\nAverage bias (100bp): %.1f%%" % ( expected_ref, expected_err ), ha='right' )
-  plt.xlim( xmin=5, xmax=110 )
-  plt.legend()
+  expected_ref_1 = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='mean_reference', bias_report=True, item=1 ) * 100.
+  expected_ref_2 = helpers.item_from_pipeline_result( fh=open(sys.argv[1]), y='mean_reference', bias_report=True, item=2 ) * 100.
+  plt.text( 108, 2.5, "Average bias (10%%): %.1f%%\nAverage bias (90%%): %.1f%%" % ( expected_ref_1, expected_ref_2 ), ha='right' )
+  plt.legend(loc='upper left')
+  #plt.legend()
   plt.show()
 
 if __name__ == '__main__':
-  #plot_series()
+  from matplotlib import rcParams
+  rcParams.update({'figure.autolayout': True})
+  plot_series()
   #plot_error_bias()
   #plot_reference_bias()
-  #plot_bias()
-  plot_bias_compare()
+  #plot_bias(include_zero=False, include_unmapped=True)
+  #plot_bias_compare( include_unmapped=True )

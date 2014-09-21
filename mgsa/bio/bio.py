@@ -17,14 +17,14 @@ class Config(object):
     generates configuration dictionary from a line config spec
     e.g. snp_prob 0.03, insert_prob 0, delete_prob 0, fasta hiv, mapper baseline, read_length 50
   '''
-  floats = ( 'insert_prob', 'delete_prob', 'snp_prob', 'error_prob', 'inversion_prob' )
+  floats = ( 'insert_prob', 'delete_prob', 'snp_prob', 'error_prob', 'inversion_prob', 'mult_snp_prob' )
   ints = ( 'max_insertion_len', 'max_deletion_len', 'read_length', 'coverage', 'mult', 'bias_report_buckets')
 
   def __init__( self ):
     pass
 
   def read_config_line( self, line ):
-    cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 50, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0, 'command': '', 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '', 'bias_report_buckets': 100 }
+    cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 50, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0, 'command': '', 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '', 'bias_report_buckets': 100 }
     for option in line.split( ',' ):
       key, value = option.strip().split()
       if key in Config.floats:
@@ -41,10 +41,11 @@ class Config(object):
     return cfg
 
   def read_config_file( self, fh ):
-    cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 50, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0, 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '', 'bias_report_buckets': 100 }
+    cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 50, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0, 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '', 'bias_report_buckets': 100 }
     for line in fh:
       if line.startswith( '#' ):
         continue
+      #print "processing config line", line
       key, value = line.strip().split()
       if key in Config.floats:
         cfg[key] = float(value)

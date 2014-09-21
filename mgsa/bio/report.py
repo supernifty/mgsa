@@ -16,7 +16,7 @@ class BiasReport (object):
     pos = 0
     self.reference_histogram = [ 0 ] * (buckets+1)
     self.error_histogram = [ 0 ] * (buckets+1)
-    self.stats = { 'unmapped': 0, 'mapped': 0, 'reference_percent_total': 0., 'error_percent_total': 0., 'total': 0 }
+    self.stats = { 'unmapped': 0, 'mapped': 0, 'reference_percent_total': 0., 'error_percent_total': 0., 'total': 0, 'mean_reference': 0, 'mean_error': 0 }
     while pos < candidate_fasta.length:
       reference_base = reference.base_at( pos )
       if reference_base is None:
@@ -25,6 +25,7 @@ class BiasReport (object):
       if pos in donor_vcf.snp_map:
         counts = candidate_fasta.count( pos )
         total = sum( [ counts[base] for base in counts ] )
+        self.stats['total'] += 1
         if total > 0:
           self.stats['mapped'] += 1
           donor_base = donor_vcf.snp_list[donor_vcf.snp_map[pos]]['alt']
@@ -37,14 +38,15 @@ class BiasReport (object):
       #if candidate_base != reference_base and candidate_base != 'N':
       #  target_vcf.snp( pos, reference_base, candidate_base ) # mutation
       pos += 1
-    self.reference_histogram = [ 1. * r / self.stats['total'] for r in self.reference_histogram ]
-    self.error_histogram = [ 1. * r / self.stats['total'] for r in self.error_histogram ]
+    self.reference_histogram = [ 1. * r / self.stats['total'] for r in self.reference_histogram ] # convert to %
+    self.error_histogram = [ 1. * r / self.stats['total'] for r in self.error_histogram ] # convert to %
+    self.stats['mean_reference'] = 1. * self.stats['reference_percent_total'] / self.stats['mapped']
+    self.stats['mean_error'] = 1. * self.stats['error_percent_total'] / self.stats['mapped']
 
   def add_to_stats( self, reference, error, buckets ):
     # track counts
     self.stats['reference_percent_total'] += reference
     self.stats['error_percent_total'] += error
-    self.stats['total'] += 1
     # find reference bucket
     bucket_size = 1. / buckets
     reference_bucket = int( math.floor( reference / bucket_size ) )

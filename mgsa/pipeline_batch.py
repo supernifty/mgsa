@@ -27,11 +27,12 @@ if len(sys.argv) < 3:
 
 target = open( sys.argv[2], 'w' )
 target.write( '# cfg, unmapped, incorrect, read_precision, read_recall, read_f1, vcf_tp, vcf_fp, vcf_fn, vcf_precision, vcf_recall, vcf_f1, vcf_bucket_tp, vcf_bucket_fp, vcf_bucket_fn' )
-target.write( ', reference_bias, error_bias' )
+target.write( ', reference_bias, error_bias, unmapped_variations, total_variations, mean_reference, mean_error' ) # part of BiasReport
 target.write( '\n' )
 first = True
 config_helper = bio.Config()
-for line in open( sys.argv[1], 'r' ):
+config_file = sys.argv[1]
+for line in open( config_file, 'r' ):
   if line.startswith( '#' ) or line.strip() == '':
     target.write( line )
     continue
@@ -48,11 +49,12 @@ for line in open( sys.argv[1], 'r' ):
 
 
   # generates a reference sequence that consists of repeated copies of the provided sequence
+  fasta_file = "../../data/%s_x%s.fasta" % (cfg['fasta'], cfg['mult'] )
+
   if cfg['command'] == 'fasta':
-    run( "python build_repeated_fasta.py ../../data/%s.fasta %s > ../../data/%s_x%s.fasta" % ( cfg['fasta'], cfg['mult'], cfg['fasta'], cfg['mult'] ) )
+    run( "python build_repeated_fasta.py %s ../../data/%s.fasta > %s" % ( cfg_file, cfg['fasta'], fasta_file ) )
     continue # next line
 
-  fasta_file = "../../data/%s_x%s.fasta" % (cfg['fasta'], cfg['mult'] )
   vcf_file = "../../data/%s_%s_x%s.vcf" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
 
   # generates a donor sequence that contains mutations from the reference sequence
@@ -127,7 +129,7 @@ for line in open( sys.argv[1], 'r' ):
       buckets=cfg['bias_report_buckets'] )
     #bias_report_file = "out/%s_%s_x%s_%s_%s_bias.txt" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
     #print "stats", report.stats, "reference", report.reference_histogram, "error", report.error_histogram
-    target.write( ',%s,%s' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ) ) )
+    target.write( ',%s,%s,%.2f,%.2f,%f,%f' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ), report.stats['unmapped'], report.stats['total'], report.stats['mean_reference'], report.stats['mean_error'] ) )
 
   target.write( '\n' )
   target.flush()
