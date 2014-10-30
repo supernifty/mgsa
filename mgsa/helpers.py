@@ -4,12 +4,13 @@ import math
 import sys
 import zlib
 
-def series_from_pipeline_batch( fh, x, y, bias_report=True ):
+def series_from_pipeline_batch( fh, x, y, bias_report=True, column_offset=0 ):
   '''
     given a pipeline batch result file, return a list of result arrays
     @fh: file .out
     @x: e.g. insert_prob
     @y: e.g. vcf_f1
+    @column_offset: use if older version of output with missing columns
   '''
   y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
   if not bias_report:
@@ -27,10 +28,10 @@ def series_from_pipeline_batch( fh, x, y, bias_report=True ):
         fieldname, value = field.split(' ')
         xs.append( float(value) )
         break
-    ys.append( float( fields[y_map[y]] ) )
+    ys.append( float( fields[y_map[y] + column_offset] ) )
   return xs, ys
 
-def series_from_pipeline_result( fh, y, bias_report=False, item=1 ):
+def series_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset=0 ):
   y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
   if not bias_report:
     for key in y_map:
@@ -44,12 +45,12 @@ def series_from_pipeline_result( fh, y, bias_report=False, item=1 ):
       item -= 1
       continue
     fields = line.strip().split(',')
-    ys = [ float(x) for x in fields[y_map[y]].split('|' ) ]
+    ys = [ float(x) for x in fields[y_map[y] + column_offset].split('|' ) ]
     for x in xrange(len(ys)):
       xs.append( 1. * x / (len(ys)-1) ) 
     return xs, ys
 
-def item_from_pipeline_result( fh, y, bias_report=False, item=1 ):
+def item_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset=0 ):
   y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
   if not bias_report:
     for key in y_map:
@@ -61,7 +62,7 @@ def item_from_pipeline_result( fh, y, bias_report=False, item=1 ):
       item -= 1
       continue
     fields = line.strip().split(',')
-    return float(fields[y_map[y]])
+    return float(fields[y_map[y] + column_offset])
 
 def add_f1_to_batch_results(h):
   '''

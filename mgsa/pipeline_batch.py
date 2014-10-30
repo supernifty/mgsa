@@ -119,7 +119,7 @@ for line in open( config_file, 'r' ):
   target.write( '%s,%f,%f,%f,%f,%f,%i,%i,%i,%f,%f,%f' % ( line.strip(), unmapped, incorrect, precision * 100, recall * 100, f1 * 100, vcf_diff.stats['tp'], vcf_diff.stats['fp'], vcf_diff.stats['fn'], vcf_precision * 100, vcf_recall * 100, vcf_f1 * 100 ) )
   target.write( ',%s,%s,%s' % ( '|'.join( [ str( x['tp'] ) for x in vcf_diff.buckets ] ), '|'.join( [ str( x['fp'] ) for x in vcf_diff.buckets ] ),'|'.join( [ str( x['fn'] ) for x in vcf_diff.buckets ] ) ) )
 
-  # bias report
+  # bias report - may as well always have this on (?)
   if cfg['reports'] is not None and cfg['reports'].find('bias') != -1:
     report = bio.BiasReport( 
       candidate_fasta=bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta, # what the aligner has built
