@@ -172,7 +172,7 @@ class FastaMutate(object):
   '''
   probabilities = 'AAACCTTGGG'
 
-  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, max_insert_len=1, max_delete_len=1, probabilistic=True ):
+  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True ):
     '''
       @reader: FastaReader
       @vcf_file: write mutations to vcf
@@ -181,8 +181,11 @@ class FastaMutate(object):
     self.snp_prob = snp_prob
     self.insert_prob = insert_prob
     self.delete_prob = delete_prob
+    self.min_insert_len = min_insert_len
     self.max_insert_len = max_insert_len
+    self.min_delete_len = min_delete_len
     self.max_delete_len = max_delete_len
+    self.min_variation_dist = min_variation_dist
     self.deletion_remain = 0
     self.mutations = 0
     self.vcf_file = vcf_file
@@ -192,6 +195,7 @@ class FastaMutate(object):
     else:
       self.vcf = vcf.VCF()
     self.pos = 0
+    self.last_variation_pos = None # this is the end position of the last variation
 
     seed = random.randint(0, sys.maxint)
     random.seed(seed)
@@ -222,19 +226,24 @@ class FastaMutate(object):
     return new_c
 
   def add_insertion(self, c):
-    insert_len = random.randint(1, self.max_insert_len)
+    '''
+      generates a new insertion and returns it
+    '''
+    insert_len = random.randint(self.min_insert_len, self.max_insert_len) # decide insertion len
+    # generate actual insertion
     new_c = ''
     while insert_len > 0:
       insert_len -= 1
       new_c += self.probabilities[random.randint(0, len(self.probabilities)-1)]
     self.mutations += 1
+    # add to vcf
     if self.vcf is not None:
       self.vcf.indel( self.pos, self.previous + c, self.previous + new_c + c )
     return new_c
 
   def add_deletion(self, c):
     self.mutations += 1
-    self.deletion_remain = random.randint(1, self.max_delete_len)
+    self.deletion_remain = random.randint(self.min_delete_len, self.max_delete_len)
     self.deleted = ''
     self.deletion_start = self.pos
     self.deletion_previous = self.previous
@@ -252,21 +261,24 @@ class FastaMutate(object):
 
   def mutate(self, fragment):
     result = ''
-    for c in fragment:
+    for c in fragment: # iterate over each base in fragment
       if self.deletion_remain > 0:
         self.continue_deletion( c )
       elif self.probabilistic:
         # snp
-        if random.uniform(0, 1) < self.snp_prob:
+        if random.uniform(0, 1) < self.snp_prob and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ):
           new_c = self.add_snp( c )
           result += new_c
+          self.last_variation_pos = self.pos
         # insert
-        elif random.uniform(0, 1) < self.insert_prob and self.pos > self.max_insert_len: # TODO reads can get -ve reference
+        elif random.uniform(0, 1) < self.insert_prob and self.pos > self.max_insert_len and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): # TODO reads can get -ve reference
           new_c = self.add_insertion( c )
-          result += new_c + c
+          result += new_c + c # insertion gets placed before current base
+          self.last_variation_pos = self.pos - 1 # -1 because insertion is placed before current
         # delete
-        elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob: 
-          self.add_deletion(c)
+        elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): 
+          self.add_deletion( c )
+          self.last_variation_pos = self.pos + self.deletion_remain
         # no mutation
         else: 
           result += c

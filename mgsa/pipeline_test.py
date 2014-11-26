@@ -10,6 +10,8 @@
 # delete_prob 0
 # max_insertion_len 1
 # max_deletion_len 1
+# see bio.Config for full list
+# This file superceded by pipeline_batch
 #####################################
 
 import bio

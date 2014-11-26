@@ -10,6 +10,7 @@
 # delete_prob 0
 # max_insertion_len 1
 # max_deletion_len 1
+# see bio.Config for full list...
 #####################################
 
 import bio
@@ -25,6 +26,7 @@ if len(sys.argv) < 3:
   print "Usage: %s config_file output_file" % sys.argv[0]
   sys.exit(0)
 
+# open config file
 target = open( sys.argv[2], 'w' )
 target.write( '# cfg, unmapped, incorrect, read_precision, read_recall, read_f1, vcf_tp, vcf_fp, vcf_fn, vcf_precision, vcf_recall, vcf_f1, vcf_bucket_tp, vcf_bucket_fp, vcf_bucket_fn' )
 target.write( ', reference_bias, error_bias, unmapped_variations, total_variations, mean_reference, mean_error' ) # part of BiasReport
@@ -32,6 +34,8 @@ target.write( '\n' )
 first = True
 config_helper = bio.Config()
 config_file = sys.argv[1]
+
+# evaluate each line and create config object
 for line in open( config_file, 'r' ):
   if line.startswith( '#' ) or line.strip() == '':
     target.write( line )
@@ -46,7 +50,6 @@ for line in open( config_file, 'r' ):
   with open( cfg_file, 'w' ) as cfg_out:
     for key in cfg:
       cfg_out.write( '%s %s\n' % ( key, str(cfg[key]) ) )
-
 
   # generates a reference sequence that consists of repeated copies of the provided sequence
   fasta_file = "../../data/%s_x%s.fasta" % (cfg['fasta'], cfg['mult'] )

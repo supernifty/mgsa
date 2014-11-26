@@ -21,13 +21,15 @@ class SamToVCF(object):
     candidate = sam_to_fasta.fasta
     reference = fasta.Fasta( fasta.FastaReader( reference ) )
     pos = 0
+    # TODO ploidy; make heterozygous calls and pass on to target vcf
+    # TODO predict indels
     while pos < candidate.length:
       actual_base = reference.base_at( pos )
       if actual_base is None:
         break # reference is done
       move, candidate_base, confidence, coverage = candidate.consensus_at( pos )
       if candidate_base != actual_base and candidate_base != 'N':
-        target_vcf.snp( pos, actual_base, candidate_base ) # mutation
+        target_vcf.snp( pos, actual_base, candidate_base, coverage=coverage ) # mutation
       pos += 1
     # check for sequence finishing early
     log( "pos %i candidate length %i reference length %i" % ( pos, candidate.length, reference.length ) )
@@ -147,9 +149,11 @@ class SamAccuracyEvaluator(object):
     evaluate sam accuracy given the correct sequence marker
   '''  
   def __init__( self, sam, variation_map=None, log=bio.log_stderr, verbose=False ):
-    self.variation_map = self.parse_variation_map( variation_map )
-    self.log = log
     self.verbose = verbose
+    self.variation_map = self.parse_variation_map( variation_map )
+    if verbose:
+      print "SamAccuracyEvaluator: variation map contains %i items" % ( len(self.variation_map) )
+    self.log = log
     self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0, 'correct': 0, 'incorrect': 0, 'soft_clipping': 0, 'hard_clipping': 0, 'matched': 0, 'correct_mapq': 0.0, 'incorrect_mapq': 0.0 }
     self.incorrect = []
     self.incorrect_diff = {}
@@ -167,8 +171,17 @@ class SamAccuracyEvaluator(object):
     if vmap is None:
       return None
     result = {}
+    count = 0
     for line in vmap:
       key, value = line.strip().split()
+      # key is of the form "@field:"
+      actual_key = re.sub( '.*(mgsa_seq_[0-9~]*).*', '\\1', key )
+      result[actual_key] = value
+      if self.verbose and count < 20:
+        print "SamAccuracyEvaluator: added %s: %s to variation map" % ( actual_key, value )
+      count += 1
+    if self.verbose:
+      print "SamAccuracyEvaluator: added %i items to variation map" % count
     return result
 
   def parse_line( self, line ):
@@ -198,16 +211,21 @@ class SamAccuracyEvaluator(object):
           self.stats['mapped'] += 1
         else:
           self.stats['unknown_mapping'] += 1 # but still try to map
-        pos = int(fields[3]) - 1 # pos in genome; conver to 0 based
+        original_pos = int(fields[3]) - 1 # pos in genome; conver to 0 based
+        pos = original_pos
         cigar = fields[5]
         prematch = True # clipping at start
-        correct_pos = int(re.sub( 'mgsa_seq_([0-9]*).*', '\\1', fields[0] ))
+        correct_pos, correct_offset, insertion_len = [ int(x) for x in re.sub( 'mgsa_seq_([0-9~]*).*', '\\1', fields[0] ).split('~') ]
+        if correct_offset != 0:
+          correct_offset = correct_offset - insertion_len
+        variation_map_field_name = re.sub( '(mgsa_seq_[0-9~]*).*', '\\1', fields[0] )
         if 'variation_' in fields[0]:
           variations = re.sub( '.*variation_([SID0-9,-]*).*', '\\1', fields[0] ).split(',')
           #print "field %s -> %s" % ( fields[0], variations )
-        elif self.variation_map is not None and fields[0] in self.variation_map:
-          variations = re.sub( '([SID0-9,-]*).*', '\\1', self.variation_map[fields[0]] ).split(',')
+        elif self.variation_map is not None and variation_map_field_name in self.variation_map:
+          variations = re.sub( '([SID0-9,-]*).*', '\\1', self.variation_map[variation_map_field_name] ).split(',')
         else:
+          #print "SamAccuracyEvaluator: warning: variation %s not found" % variation_map_field_name
           variations = ()
         for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ): # match description
           cigar_len = int(cigar_match[0])
@@ -261,7 +279,7 @@ class SamAccuracyEvaluator(object):
               pos -= cigar_len + indel_offset
 
         #print "variations", variations
-        if correct_pos == pos:
+        if correct_pos + correct_offset == pos:
           self.stats['correct'] += 1
           self.stats['correct_mapq'] += int(fields[4])
           for c in variations:
@@ -277,16 +295,19 @@ class SamAccuracyEvaluator(object):
             self.stats['incorrect_%s' % c[0] ] += 1
           if self.verbose:
             self.incorrect.append( { 
+              'original_pos': original_pos, 
               'correct_pos': correct_pos, 
+              'correct_offset': correct_offset, 
               'provided_pos': pos, 
               'mapq': fields[4],
               'cigar': cigar,
               'label': fields[0],
-              'read': fields[9][:10]
+              'read': fields[9][:10],
+              'variations': variations
             } )
           else:
             self.incorrect.append( { 'correct_pos': correct_pos, 'provided_pos': pos, 'mapq': fields[4] } )
-          diff = pos - correct_pos
+          diff = pos - ( correct_pos + correct_offset )
           if diff not in self.incorrect_diff:
             self.incorrect_diff[ diff ] = 0
           self.incorrect_diff[ diff ] += 1

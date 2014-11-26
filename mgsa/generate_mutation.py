@@ -12,9 +12,9 @@ if len(sys.argv) < 3:
 if len(sys.argv) > 3:
   cfg = bio.Config().read_config_file( open( sys.argv[3] ) )
 else:
-  cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0.01, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mapper': 'bowtie2' }
+  bio.Config.default_config
 
-mutator = bio.FastaMutate( bio.FastaReader( open( sys.argv[1], 'r' ) ), vcf_file=open( sys.argv[2], 'w' ), snp_prob=cfg['snp_prob'], insert_prob=cfg['insert_prob'], delete_prob=cfg['delete_prob'], max_insert_len=cfg['max_insertion_len'], max_delete_len=cfg['max_deletion_len'] )
+mutator = bio.FastaMutate( bio.FastaReader( open( sys.argv[1], 'r' ) ), vcf_file=open( sys.argv[2], 'w' ), snp_prob=cfg['snp_prob'], insert_prob=cfg['insert_prob'], delete_prob=cfg['delete_prob'], min_insert_len=cfg['min_insertion_len'], max_insert_len=cfg['max_insertion_len'], min_delete_len=cfg['min_insertion_len'], max_delete_len=cfg['max_deletion_len'], min_variation_dist=cfg['min_variation_distance'] )
 sys.stdout.write( '>mutated %s\n' % sys.argv[1] )
 for fragment in mutator.items():
   sys.stdout.write( '%s\n' % fragment )

@@ -31,7 +31,26 @@ def series_from_pipeline_batch( fh, x, y, bias_report=True, column_offset=0 ):
     ys.append( float( fields[y_map[y] + column_offset] ) )
   return xs, ys
 
+def series_from_line( line, y, bias_report=False, column_offset=0 ):
+  y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
+  if not bias_report:
+    for key in y_map:
+      y_map[key] += 4
+  xs = []
+  ys = []
+  # found the line
+  fields = line.strip().split(',')
+  ys = [ float(x) for x in fields[y_map[y] + column_offset].split('|' ) ] # gets each y field
+  for x in xrange(len(ys)):
+    xs.append( 1. * x / (len(ys)-1) ) # proportion of y
+  return xs, ys # e.g. [ 0.00 0.25 0.5 0.75 ], [ values ]
+
+ 
 def series_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset=0 ):
+  '''
+    given a pipeline batch result file, look at each row starting from item and return [xs, ys], where
+    xs is the proportion; ys is the field specified by y 
+  '''
   y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
   if not bias_report:
     for key in y_map:
@@ -44,11 +63,12 @@ def series_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset
     if item > 1:
       item -= 1
       continue
+    # found the line
     fields = line.strip().split(',')
-    ys = [ float(x) for x in fields[y_map[y] + column_offset].split('|' ) ]
+    ys = [ float(x) for x in fields[y_map[y] + column_offset].split('|' ) ] # gets each y field
     for x in xrange(len(ys)):
-      xs.append( 1. * x / (len(ys)-1) ) 
-    return xs, ys
+      xs.append( 1. * x / (len(ys)-1) ) # proportion of y
+    return xs, ys # e.g. [ 0.00 0.25 0.5 0.75 ], [ values ]
 
 def item_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset=0 ):
   y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }

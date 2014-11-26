@@ -18,13 +18,15 @@ class Config(object):
     e.g. snp_prob 0.03, insert_prob 0, delete_prob 0, fasta hiv, mapper baseline, read_length 50
   '''
   floats = ( 'insert_prob', 'delete_prob', 'snp_prob', 'error_prob', 'inversion_prob', 'mult_snp_prob' )
-  ints = ( 'max_insertion_len', 'max_deletion_len', 'read_length', 'coverage', 'mult', 'bias_report_buckets')
+  ints = ( 'min_insertion_len', 'max_insertion_len', 'min_deletion_len', 'max_deletion_len', 'min_variation_distance', 'read_length', 'coverage', 'mult', 'bias_report_buckets')
+  default_config = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'min_insertion_len': 1, 'max_insertion_len': 1, 'min_deletion_len': 1, 'max_deletion_len': 1, 'min_variation_distance': 1, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 100, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0, 'command': '', 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '-', 'bias_report_buckets': 10 }
 
   def __init__( self ):
     pass
 
   def read_config_line( self, line ):
-    cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 50, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0, 'command': '', 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '-', 'bias_report_buckets': 100 }
+    # defaults
+    cfg = Config.default_config.copy()
     for option in line.split( ',' ):
       key, value = option.strip().split()
       if key in Config.floats:
@@ -33,7 +35,7 @@ class Config(object):
         cfg[key] = int(value)
       else:
         cfg[key] = value
-      # generate brief description
+      # generate brief description for filename
       if key in ( 'insert_prob', 'delete_prob', 'snp_prob' ):
         cfg['mutation_type'] = cfg['mutation_type'] + '_' + key[:3]
       if key in ( 'max_insertion_len', 'max_deletion_len' ):
@@ -41,7 +43,8 @@ class Config(object):
     return cfg
 
   def read_config_file( self, fh ):
-    cfg = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'max_insertion_len': 1, 'max_deletion_len': 1, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 50, 'fasta': 'circoviridae', 'coverage': 10, 'error_prob': 0, 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '-', 'bias_report_buckets': 100 }
+    # defaults
+    cfg = Config.default_config.copy()
     for line in fh:
       if line.startswith( '#' ):
         continue

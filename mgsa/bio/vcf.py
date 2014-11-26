@@ -7,6 +7,10 @@ import sys
 
 import bio
 
+# constants
+DEFAULT_VCF_COVERAGE = 10
+DEFAULT_VCF_ZYGOSITY = "1" # choose alt
+
 class VCF(object):
   '''
     manage a VCF set
@@ -48,23 +52,23 @@ class VCF(object):
       count += 1
     self.log( 'VCF.load: %i lines loaded' % count )
 
-  def snp( self, pos, ref, alt ):
+  def snp( self, pos, ref, alt, coverage=None ):
     '''
       adds a snp
     '''
     self.snp_map[int(pos)] = len(self.snp_list)
     self.snp_list.append( { 'pos': int(pos), 'ref': ref, 'alt': alt } )
     if self.writer is not None:
-      self.writer.snp( pos, ref, alt )
+      self.writer.snp( pos, ref, alt, coverage=coverage )
 
-  def indel( self, pos, before, after ):
+  def indel( self, pos, before, after, coverage=None ):
     '''
       adds an indel
     '''
     self.indel_map[int(pos)] = len(self.indel_list)
     self.indel_list.append( { 'pos': int(pos), 'before': before, 'after': after } )
     if self.writer is not None:
-      self.writer.indel( pos, before, after )
+      self.writer.indel( pos, before, after, coverage=coverage )
 
   def write_all( self, writer ):
     '''
@@ -76,9 +80,9 @@ class VCF(object):
     for indel in self.indel_list:
       vcf_writer.indel( indel['pos'], indel['before'], indel['after'] )
 
-  def net_insertions(self, position):
+  def net_insertions_to_reference_position(self, position):
     '''
-      returns the net change in position
+      returns the net change in position given a reference position
     '''
     net = 0
     for indel in self.indel_list: # TODO performance
@@ -87,6 +91,56 @@ class VCF(object):
       else:
         break # assume indel_list is ordered
     return net
+
+  def net_insertions_to_candidate_position(self, candidate_position):
+    '''
+      returns the net change in position given a candidate position
+    '''
+    net_insertions = 0
+    for indel in self.indel_list: # TODO performance
+      current_reference_position = indel['pos']
+      current_candidate_position = indel['pos'] + net_insertions
+      if current_candidate_position < candidate_position:
+        net_insertions += len(indel['after']) - len(indel['before'])
+      else:
+        break # assume indel_list is ordered
+    return net_insertions
+
+  def candidate_position_to_reference_position(self, candidate_position):
+    '''
+      returns the corresponding reference position, plus any offset back to the reference position
+      e.g. ref = GA; candidate = GTTA; indel should be { pos 2 before GA after GTTA }
+      0 -> (0, 0)
+      1 -> (0, 1)
+      2 -> (0, 2)
+      3 -> (1, 0)
+    '''
+    net_insertions = 0
+    last_variation = None
+    for indel in self.indel_list: # TODO performance
+      current_reference_position = indel['pos'] # reference start of indel
+      current_candidate_position = indel['pos'] + net_insertions # candidate start of indel
+      #print "ref %i cand %i target %i" % ( current_reference_position, current_candidate_position, candidate_position )
+      if current_candidate_position <= candidate_position: # the insertion is before the candidate position
+        indel_size = len(indel['after']) - len(indel['before'])
+        if current_candidate_position + indel_size > candidate_position: # the insertion spans the candidate position
+          #print "split candidate_position %i indel_size %i current_candidate_position %i" % ( candidate_position, indel_size, current_candidate_position )
+          return ( current_reference_position - 1, candidate_position - current_candidate_position + 1, indel_size )
+        else:
+          net_insertions += indel_size # keep going
+          last_variation = indel
+          last_reference_position = current_reference_position
+          last_candidate_position = current_candidate_position
+      else: # the insertion is after the candidate position
+        break
+    # no more insertions
+    if last_variation is None:
+      #print "no variation candidate_position %i" % ( candidate_position )
+      return (candidate_position, 0, 0) # no variations
+    else:
+      last_indel_size = len(last_variation['after']) - len(last_variation['before'])
+      #print "last_variation %s candidate_position %i last_indel_size %i last_candidate_position %i" % ( last_variation, candidate_position, last_indel_size, last_candidate_position )
+      return (last_reference_position - last_indel_size + candidate_position - last_candidate_position, 0, 0)
 
   def find_indel( self, pos ):
     '''
@@ -118,10 +172,12 @@ class VCF(object):
         
     return start
 
-  def variations(self, start, end, include_start=False ):
+  def variations(self, start, end, include_start=True, offset=0 ):
     '''
-      returns a string representation of all variations within the specified range
+      returns a string representation of all variations within the specified range.
+      start and end are both positions on the *reference*
     '''
+    #print "variations for %i %i" % ( start, end )
     result = set()
     start_pos = self.bisect( self.snp_list, start ) # snps must be sorted
     if start_pos < len(self.snp_list):
@@ -132,19 +188,40 @@ class VCF(object):
         if start < snp['pos'] < end or include_start and start == snp['pos']:
           result.add( 'S%i-0' % ( snp['pos'] - start ) )
           #print snp
-    start_pos = self.bisect( self.indel_list, start ) # indels must be sorted
-    if start_pos < len(self.indel_list):
-      for indel_idx in xrange( start_pos, len(self.indel_list) ): #self.indel_list[start_pos]:
-        indel = self.indel_list[indel_idx]
-        if indel['pos'] > end:
-          break
-        if start < indel['pos'] < end or include_start and start == indel['pos']:
-          net = len(indel['after']) - len(indel['before'])
-          if net < 0: # deletion
-            result.add( 'D%i-%i' % ( indel['pos'] - start, -net ) )
-          elif net > 0: # insertion
-            indel_pos = indel['pos']
-            result.add( 'I%i-%i' % ( indel_pos - start, net ) )
+    #start_pos = self.bisect( self.indel_list, start ) # indels must be sorted
+    #if start_pos < len(self.indel_list):
+    #  for indel_idx in xrange( start_pos, len(self.indel_list) ): #self.indel_list[start_pos]:
+    #    indel = self.indel_list[indel_idx]
+    #    if indel['pos'] > end:
+    #      break
+    #    if start < indel['pos'] < end or include_start and start == indel['pos']:
+    #      net = len(indel['after']) - len(indel['before'])
+    #      if net < 0: # deletion
+    #        result.add( 'D%i-%i' % ( indel['pos'] - start, -net ) )
+    #      elif net > 0: # insertion
+    #        indel_pos = indel['pos']
+    #        result.add( 'I%i-%i' % ( indel_pos - start, net ) )
+    if offset > 0: # offset means we are in an insertion, don't include again
+      start_search = start + 1
+      include_start = False
+    else:
+      start_search = start + 1 # no offset means we are past any insertion, don't include again
+
+    for indel_idx in xrange( 0, len(self.indel_list) ):
+      indel = self.indel_list[indel_idx]
+      if indel['pos'] > end: # assuming indels are sorted
+        break
+      net = len(indel['after']) - len(indel['before'])
+      if indel['pos'] > start_search and indel['pos'] < end or include_start and start_search == indel['pos']: # the indel starts inside the read
+        if net < 0: # deletion
+          result.add( 'D%i-%i' % ( indel['pos'] - start, -net ) )
+        elif net > 0: # insertion
+          indel_pos = indel['pos']
+          result.add( 'I%i-%i[%i,%i,%i]' % ( indel_pos - start, net, indel_pos, offset, end ) )
+          #print "added full indel pos %i rel %i net %i" % ( indel_pos, indel_pos - start, net )
+      #if indel['pos'] < start and indel['pos'] + net >= start: # the read starts inside an indel
+      #  result.add( 'I0-%i' % ( net - ( start - indel['pos'] ) ) ) # partial insert
+        #print "added partial indel 0 %i" % ( start - indel['pos'] )
       #print result, " for", start, "", end
     return result
 
@@ -158,26 +235,29 @@ class VCFWriter(object):
     self.writer.write( '''##fileformat=VCFv4.1
 ##fileDate=%s
 ##source=SuperniftyMutationSimulator
-##chr\tpos\tid\tref\talt\tqual\tfilter\tinfo
+##chr\tpos\tid\tref\talt\tqual\tfilter\tinfo\tformat\tna00001
 ''' % datetime.datetime.now().strftime("%Y%m%d") )
 
-  def snp( self, pos, ref, alt, confidence=1. ):
+  def snp( self, pos, ref, alt, confidence=1., coverage=None, zygosity=None ):
     '''
       note that pos in a vcf is 1-based
+      @coverage: depth of coverage on this variation
+      @zygosity: for diploid, "0/1" = heterozygous; "1/1" = alt homozygous
     '''
     if confidence < 1.:
       quality = '%.2f' % math.log(-10 * math.log(1.-confidence,10))
     else:
       quality = '.'
-    self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\t%s\n' % (
+
+    self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\tDP=%i\tGT\t%s\n' % (
         # chrom, pos, id, ref, alt, qual, filter, info
-        '.', (pos + 1), '.', ref, alt, quality, 'PASS', 'DP=100'
+        '.', (pos + 1), '.', ref, alt, quality, 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
       ) )
 
-  def indel( self, pos, before, after ):
-    self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\t%s\n' % (
+  def indel( self, pos, before, after, coverage=None, zygosity=None ):
+    self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\tDP=%i\tGT\t%s\n' % (
         # chrom, pos, id, ref, alt, qual, filter, info
-        '.', (pos + 1), '.', before, after, '.', 'PASS', 'DP=100'
+        '.', (pos + 1), '.', before, after, '.', 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
       ) )
 
 class VCFDiff(object):
