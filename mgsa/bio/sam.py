@@ -22,15 +22,23 @@ class SamToVCF(object):
     reference = fasta.Fasta( fasta.FastaReader( reference ) )
     pos = 0
     # TODO ploidy; make heterozygous calls and pass on to target vcf
-    # TODO predict indels
     while pos < candidate.length:
+      
+      
       actual_base = reference.base_at( pos )
       if actual_base is None:
         break # reference is done
-      move, candidate_base, confidence, coverage = candidate.consensus_at( pos )
-      if candidate_base != actual_base and candidate_base != 'N':
-        target_vcf.snp( pos, actual_base, candidate_base, coverage=coverage ) # mutation
-      pos += 1
+      candidate_move, candidate_variation, confidence, coverage = candidate.consensus_at( pos )
+      if candidate_move > 1: # check for insertion
+        # note that the current base is included in candidate_variation
+        target_vcf.indel( pos=pos, before='%s%s' % ( reference.base_at( pos-1 ), reference.base_at( pos ) ), after='%s%s' % ( reference.base_at( pos-1 ), candidate_variation ), coverage=coverage )
+      elif candidate_move < 1: # check for deletion TODO
+        pass 
+      else: # candidate_move is 1
+        if candidate_variation != actual_base and candidate_variation != 'N':
+          target_vcf.snp( pos=pos, ref=actual_base, alt=candidate_variation, coverage=coverage ) # mutation
+      pos += 1 # next base
+
     # check for sequence finishing early
     log( "pos %i candidate length %i reference length %i" % ( pos, candidate.length, reference.length ) )
     if pos < candidate.length: # reference finished early
@@ -47,7 +55,7 @@ class SamToFasta(object):
   def __init__( self, sam, log, allow_indels=True ):
     self.allow_indels = allow_indels
     self.log = log
-    self.fasta = fasta.ProbabilisticFasta(log)
+    self.fasta = fasta.ProbabilisticFasta( log )
     self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0, 'inversions': 0 }
     for line in sam:
       self.parse_line( line.strip() )

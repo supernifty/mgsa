@@ -97,13 +97,14 @@ class ProbabilisticFasta(object):
     coverage = 0
     result = ''
     move = 0
+    # consensus at this base
     for value in self.genome:
       if i < len(self.genome[value]):
         coverage += self.genome[value][i]
         if self.genome[value][i] > best_value:
           best_value = self.genome[value][i]
           best = value
-    # check for insert 
+    # find consensus insertion
     if i in self.insertions:
       # pick highest
       best_insertion = None
@@ -115,16 +116,16 @@ class ProbabilisticFasta(object):
           best_insertion = insertion
           best_insertion_value = self.insertions[i][insertion] 
       if best_insertion is not None and best_insertion_value > ( coverage - insertion_coverage ):
-        result += best_insertion
+        result = best_insertion
         self.inserted[i] = best_insertion
         if self.log:
           self.log( 'included insertion %s at ref %i' % (best_insertion, i) )
-        move += len(best_insertion)
+        move = len(best_insertion)
       else:
         pass
         if self.log:
           pass #self.log( 'skipped insertion at %i with val %f with noinsert %f' % ( i, best_insertion_value, coverage - insertion_coverage ) )
-    # include base if not deleted
+    # was the consensus to delete?
     if best == DELETE_BASE:
       self.deleted.add(i)
       if self.log:
@@ -172,7 +173,7 @@ class FastaMutate(object):
   '''
   probabilities = 'AAACCTTGGG'
 
-  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True ):
+  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random' ):
     '''
       @reader: FastaReader
       @vcf_file: write mutations to vcf
@@ -190,6 +191,7 @@ class FastaMutate(object):
     self.mutations = 0
     self.vcf_file = vcf_file
     self.probabilistic = probabilistic
+    self.insert_source = insert_source
     if vcf_file is not None:
       self.vcf = vcf.VCF( writer=vcf.VCFWriter(vcf_file) )
     else:
@@ -231,10 +233,15 @@ class FastaMutate(object):
     '''
     insert_len = random.randint(self.min_insert_len, self.max_insert_len) # decide insertion len
     # generate actual insertion
-    new_c = ''
-    while insert_len > 0:
-      insert_len -= 1
-      new_c += self.probabilities[random.randint(0, len(self.probabilities)-1)]
+    if self.insert_source == 'random':
+      new_c = ''
+      while insert_len > 0:
+        insert_len -= 1
+        new_c += self.probabilities[random.randint(0, len(self.probabilities)-1)]
+    elif self.insert_source == 'repeated':
+      pass
+    elif self.insert_source == 'novel':
+      pass
     self.mutations += 1
     # add to vcf
     if self.vcf is not None:

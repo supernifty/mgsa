@@ -219,6 +219,32 @@ def miscall_probability( coverage, wrong_prob ):
     p += prob
   return p
 
+def quick_view( fh, bias_report=False ):
+  '''
+    quick summary of the output from an experiment
+  '''
+  y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
+  if not bias_report:
+    for key in y_map:
+      y_map[key] += 6
+  rev_map = dict((v,k) for k,v in y_map.iteritems())
+  result = {}
+  for line in fh:
+    if line.startswith( '#' ): 
+      continue
+    fields = line.split(',')
+    for index, field in enumerate(fields):
+      dist = index - len(fields)
+      if dist in rev_map:
+        key = rev_map[dist]
+        if key not in result:
+          result[key] = []
+        result[key].append( field.strip() )
+  for key in result:
+    print key
+    for item in result[key]:
+      print "  %s" % item
+    
 if __name__ == '__main__':
   #import doctest
   #doctest.testmod()
@@ -226,8 +252,10 @@ if __name__ == '__main__':
 
   #python_plot_from_pipeline_batch( open( 'pipeline_batch_read_length.out' ) )
   #add_f1_to_batch_results( sys.stdin )
-  print "10, 0.01:", miscall_probability( 10, 0.01 )
-  print "10, 0.1:", miscall_probability( 10, 0.1 )
-  print "5, 0.1:", miscall_probability( 5, 0.1 )
-  print "3, 0.1:", miscall_probability( 3, 0.1 )
-  print "4, 0.02:", miscall_probability( 4, 0.02 )
+  #print "10, 0.01:", miscall_probability( 10, 0.01 )
+  #print "10, 0.1:", miscall_probability( 10, 0.1 )
+  #print "5, 0.1:", miscall_probability( 5, 0.1 )
+  #print "3, 0.1:", miscall_probability( 3, 0.1 )
+  #print "4, 0.02:", miscall_probability( 4, 0.02 )
+
+  quick_view( sys.stdin )

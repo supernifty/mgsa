@@ -478,6 +478,44 @@ def plot_reference_bias_ecoli_example(include_zero=False):
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/reference-bias-profile.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
 
+def plot_reference_bias_ecoli_example_with_errors(include_zero=False):
+  out_file = "out/bias_ecoli_141127.out"
+  #run( "python pipeline_batch.py batch/pipeline_batch_bias_ecoli_2.cfg %s" % out_file )
+
+  xs, ys = helpers.series_from_pipeline_result( fh=open(out_file), y='reference_bias', bias_report=True)
+  xs, ys_err = helpers.series_from_pipeline_result( fh=open(out_file), y='error_bias', bias_report=True)
+  xs = [ x * 100 for x in xs ]
+
+  if include_zero:
+    plt.xlim( xmin=-5, xmax=110 )
+  else:
+    plt.xlim( xmin=5, xmax=110 )
+
+  #print xs, ys
+
+  # weird crap
+  ys = [ y * 100 + 1e-7 for y in ys ]
+  ys_err = [ y * 100 + 1e-7 for y in ys_err ]
+  width = 100. / len(ys) * 0.75 / 2
+
+  #plt.bar( left=xs, height=ys, label='Bias', width=width )
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.set_xlim(xmax=105)
+  if include_zero:
+    ax.bar( left=[x for x in xs], height=ys, label='Reference bias (%)', width=width, color='b', log=False, align='center')
+    ax.bar( left=[x + width/2 for x in xs], height=ys_err, label='Error bias (%)', width=width, color='b', log=False, align='center')
+  else:
+    ax.bar( left=[x for x in xs][1:], height=ys[1:], label='Reference bias (%)', width=width, color='b', log=False, align='center')
+    ax.bar( left=[x + width for x in xs][1:], height=ys_err[1:], label='Error bias (%)', width=width, color='r', log=False, align='center')
+    ax.set_xlim(xmin=5)
+  ax.set_ylabel('SNPs (%)')
+  ax.set_xlabel('Bias (%)')
+  leg = ax.legend(loc='upper right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/reference-bias-profile-with-errors.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+
+
 def plot_read_length_vs_alignment_ecoli():
   out_file = "out/pipeline_batch_many_read_lengths_ecoli_20141119.out"
 
@@ -507,7 +545,128 @@ def plot_read_length_vs_alignment_ecoli():
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/ecoli-read-length-vs-alignment-ecoli.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
- 
+
+def plot_coverage_vs_alignment_circoviridae():
+  out_file = "out/pipeline_batch_many_read_coverages_circoviridae_141127.out"
+
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_snp = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'coverage' ) )
+    y.append( find_column( line, 'read_f1' ) )
+    y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  #print "x", x
+  #print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='Alignment', color='r')
+  ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('F1-Score')
+  ax.set_xlabel('Coverage')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/circoviridae-coverage-vs-alignment-no-errors.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def plot_coverage_vs_alignment_circoviridae_errors():
+  out_file = "out/pipeline_batch_many_read_coverages_errors_circoviridae_141127.out"
+
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_snp = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'coverage' ) )
+    y.append( find_column( line, 'read_f1' ) )
+    y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  #print "x", x
+  #print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='Alignment', color='r')
+  ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('F1-Score')
+  ax.set_xlabel('Coverage')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/circoviridae-coverage-vs-alignment-with-errors.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def plot_coverage_vs_alignment_circoviridae_high_errors():
+  out_file = "out/pipeline_batch_many_read_coverages_high_errors_circoviridae_141127.out"
+
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_snp = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'coverage' ) )
+    y.append( find_column( line, 'read_f1' ) )
+    y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  #print "x", x
+  #print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='Alignment', color='r')
+  ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('F1-Score')
+  ax.set_xlabel('Coverage')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/circoviridae-coverage-vs-alignment-high-errors.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def plot_coverage_vs_alignment_ecoli_high_errors():
+  out_file = "out/pipeline_batch_many_read_coverages_high_errors_ecoli_141127.out"
+
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_snp = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'coverage' ) )
+    y.append( find_column( line, 'read_f1' ) )
+    y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  #print "x", x
+  #print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='Alignment', color='r')
+  ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('F1-Score')
+  ax.set_xlabel('Coverage')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/ecoli-coverage-vs-alignment-high-errors.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+
 def plot_mutation_vs_bias_ecoli():
   out_file = "out/pipeline_batch_bias_vs_mutation_ecoli_141119.out"
   bio.log_stderr( 'extracting values from %s...' % out_file )
@@ -552,8 +711,10 @@ def plot_mutation_vs_bias_ecoli():
 #read_length_hiv() # hiv-read-length-vcf-snps.pdf (lots of noise)
 #snp_vs_map_ecoli() # ecoli-map_vs_snp-400.pdf plot of f1-scores of snps found and mapping accuracy, vs mutation rate, for e-coli
 #plot_read_length_vs_alignment_ecoli()
+#plot_coverage_vs_alignment_ecoli_high_errors()
+#plot_reference_bias_ecoli_example() # 
 
 ##### experimental
 #read_length_ecoli_map_low_mutation() # ecoli-read-length-bowtie-mapping.pdf
-#plot_reference_bias_ecoli_example() # 
-plot_mutation_vs_bias_ecoli()
+#plot_mutation_vs_bias_ecoli()
+plot_reference_bias_ecoli_example_with_errors() # 

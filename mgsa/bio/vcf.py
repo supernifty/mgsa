@@ -6,6 +6,7 @@ import re
 import sys
 
 import bio
+import variation
 
 # constants
 DEFAULT_VCF_COVERAGE = 10
@@ -48,7 +49,7 @@ class VCF(object):
           self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt } )
         else:
           self.indel_map[int(pos)] = len(self.indel_list)
-          self.indel_list.append( { 'pos': pos, 'before': ref, 'after': alt } )
+          self.indel_list.append( variation.IndelVariation( pos, ref, alt ) )
       count += 1
     self.log( 'VCF.load: %i lines loaded' % count )
 
@@ -66,7 +67,7 @@ class VCF(object):
       adds an indel
     '''
     self.indel_map[int(pos)] = len(self.indel_list)
-    self.indel_list.append( { 'pos': int(pos), 'before': before, 'after': after } )
+    self.indel_list.append( variation.IndelVariation( int(pos), before, after ) )
     if self.writer is not None:
       self.writer.indel( pos, before, after, coverage=coverage )
 
@@ -78,7 +79,7 @@ class VCF(object):
     for snp in self.snp_list:
       vcf_writer.snp( snp['pos'], snp['ref'], snp['alt'] )
     for indel in self.indel_list:
-      vcf_writer.indel( indel['pos'], indel['before'], indel['after'] )
+      vcf_writer.indel( indel.pos, indel.before, indel.after )
 
   def net_insertions_to_reference_position(self, position):
     '''
@@ -86,8 +87,8 @@ class VCF(object):
     '''
     net = 0
     for indel in self.indel_list: # TODO performance
-      if indel['pos'] < position:
-        net += len(indel['after']) - len(indel['before'])
+      if indel.pos < position:
+        net += len(indel.after) - len(indel.before)
       else:
         break # assume indel_list is ordered
     return net
@@ -98,10 +99,10 @@ class VCF(object):
     '''
     net_insertions = 0
     for indel in self.indel_list: # TODO performance
-      current_reference_position = indel['pos']
-      current_candidate_position = indel['pos'] + net_insertions
+      current_reference_position = indel.pos
+      current_candidate_position = indel.pos + net_insertions
       if current_candidate_position < candidate_position:
-        net_insertions += len(indel['after']) - len(indel['before'])
+        net_insertions += len(indel.after) - len(indel.before)
       else:
         break # assume indel_list is ordered
     return net_insertions
@@ -118,11 +119,11 @@ class VCF(object):
     net_insertions = 0
     last_variation = None
     for indel in self.indel_list: # TODO performance
-      current_reference_position = indel['pos'] # reference start of indel
-      current_candidate_position = indel['pos'] + net_insertions # candidate start of indel
+      current_reference_position = indel.pos # reference start of indel
+      current_candidate_position = indel.pos + net_insertions # candidate start of indel
       #print "ref %i cand %i target %i" % ( current_reference_position, current_candidate_position, candidate_position )
       if current_candidate_position <= candidate_position: # the insertion is before the candidate position
-        indel_size = len(indel['after']) - len(indel['before'])
+        indel_size = len(indel.after) - len(indel.before)
         if current_candidate_position + indel_size > candidate_position: # the insertion spans the candidate position
           #print "split candidate_position %i indel_size %i current_candidate_position %i" % ( candidate_position, indel_size, current_candidate_position )
           return ( current_reference_position - 1, candidate_position - current_candidate_position + 1, indel_size )
@@ -138,7 +139,7 @@ class VCF(object):
       #print "no variation candidate_position %i" % ( candidate_position )
       return (candidate_position, 0, 0) # no variations
     else:
-      last_indel_size = len(last_variation['after']) - len(last_variation['before'])
+      last_indel_size = len(last_variation.after) - len(last_variation.before)
       #print "last_variation %s candidate_position %i last_indel_size %i last_candidate_position %i" % ( last_variation, candidate_position, last_indel_size, last_candidate_position )
       return (last_reference_position - last_indel_size + candidate_position - last_candidate_position, 0, 0)
 
@@ -148,7 +149,7 @@ class VCF(object):
     '''
     # TODO need a better search
     for indel in self.indel_list:
-      if indel['pos'] <= pos <= ( indel['pos'] + len(indel['after']) - len(indel['before']) ):
+      if indel.pos <= pos <= ( indel.pos + len(indel.after) - len(indel.before) ):
         return indel
     return None
     #if pos in self.indel_map:
@@ -209,14 +210,14 @@ class VCF(object):
 
     for indel_idx in xrange( 0, len(self.indel_list) ):
       indel = self.indel_list[indel_idx]
-      if indel['pos'] > end: # assuming indels are sorted
+      if indel.pos > end: # assuming indels are sorted
         break
-      net = len(indel['after']) - len(indel['before'])
-      if indel['pos'] > start_search and indel['pos'] < end or include_start and start_search == indel['pos']: # the indel starts inside the read
+      net = len(indel.after) - len(indel.before)
+      if indel.pos > start_search and indel.pos < end or include_start and start_search == indel.pos: # the indel starts inside the read
         if net < 0: # deletion
-          result.add( 'D%i-%i' % ( indel['pos'] - start, -net ) )
+          result.add( 'D%i-%i' % ( indel.pos - start, -net ) )
         elif net > 0: # insertion
-          indel_pos = indel['pos']
+          indel_pos = indel.pos
           result.add( 'I%i-%i[%i,%i,%i]' % ( indel_pos - start, net, indel_pos, offset, end ) )
           #print "added full indel pos %i rel %i net %i" % ( indel_pos, indel_pos - start, net )
       #if indel['pos'] < start and indel['pos'] + net >= start: # the read starts inside an indel
@@ -277,8 +278,15 @@ class VCFDiff(object):
       max_snp_pos = vcf_correct.snp_list[-1]['pos']
     if len( vcf_candidate.snp_list ) > 0 and vcf_candidate.snp_list[-1]['pos'] > max_snp_pos:
       max_snp_pos = vcf_candidate.snp_list[-1]['pos']
-    bucket_size = ( 1 + max_snp_pos ) / 20.
-    #log( '%i correct snps, %i candidate snps; %i correct snp map; %i candidate snp map' % ( len(vcf_correct.snp_list), len(vcf_candidate.snp_list), len(vcf_correct.snp_map), len(vcf_candidate.snp_map) ) )
+    max_indel_pos = 0
+    if len( vcf_correct.indel_list ) > 0:
+      max_snp_pos = vcf_correct.indel_list[-1].pos
+    if len( vcf_candidate.indel_list ) > 0 and vcf_candidate.indel_list[-1].pos > max_indel_pos:
+      max_indel_pos = vcf_candidate.indel_list[-1].pos
+    bucket_size = ( 1 + max( max_snp_pos, max_indel_pos ) ) / 20.
+    log( '%i correct snps, %i candidate snps; %i correct snp map; %i candidate snp map' % ( len(vcf_correct.snp_list), len(vcf_candidate.snp_list), len(vcf_correct.snp_map), len(vcf_candidate.snp_map) ) )
+    log( '%i correct indels, %i candidate indels; %i correct indels map; %i candidate indels map' % ( len(vcf_correct.indel_list), len(vcf_candidate.indel_list), len(vcf_correct.indel_map), len(vcf_candidate.indel_map) ) )
+    # snps
     for true_snp in vcf_correct.snp_list:
       bucket = int( math.floor( true_snp['pos'] / bucket_size ) )
       if true_snp['pos'] in vcf_candidate.snp_map: # there's a similarly placed snp
@@ -289,11 +297,11 @@ class VCFDiff(object):
         else:
           self.stats['fn'] += 1
           self.buckets[bucket]['fn'] += 1
-          #log( 'fn(near): %i' % true_snp['pos'] )
+          log( 'fn(near): %i' % true_snp['pos'] )
       else:
         self.stats['fn'] += 1
         self.buckets[bucket]['fn'] += 1
-        #log( 'fn: %i' % true_snp['pos'] )
+        log( 'fn: %i' % true_snp['pos'] )
       
     for candidate_snp in vcf_candidate.snp_list:
       bucket = int( math.floor( candidate_snp['pos'] / bucket_size ) )
@@ -302,13 +310,46 @@ class VCFDiff(object):
         if candidate_snp['ref'] != true_snp['ref'] or candidate_snp['alt'] != true_snp['alt']:
           self.stats['fp'] += 1
           self.buckets[bucket]['fp'] += 1
-          #log( 'fp(near): %i' % candidate_snp['pos'] )
+          log( 'fp(near): %i' % candidate_snp['pos'] )
         else:
           pass # tp already found
       else: # false positive
         self.stats['fp'] += 1
         self.buckets[bucket]['fp'] += 1
-        #log( 'fp: %i' % candidate_snp['pos'] )
+        log( 'fp: %i' % candidate_snp['pos'] )
+
+    # indels
+    for true_indel in vcf_correct.indel_list:
+      bucket = int( math.floor( true_indel.pos / bucket_size ) )
+      if true_indel.pos in vcf_candidate.indel_map: # there's a similarly placed snp
+        candidate_indel = vcf_candidate.indel_list[vcf_candidate.indel_map[true_indel.pos]]
+        if candidate_indel.before == true_indel.before and candidate_indel.after == true_indel.after:
+          self.stats['tp'] += 1
+          self.buckets[bucket]['tp'] += 1
+        else:
+          self.stats['fn'] += 1
+          self.buckets[bucket]['fn'] += 1
+          log( 'fn(near): %i' % true_indel.pos )
+      else:
+        log( 'fn: %i bucket %i' % ( true_indel.pos, bucket ) )
+        self.stats['fn'] += 1
+        self.buckets[bucket]['fn'] += 1
+      
+    for candidate_indel in vcf_candidate.indel_list:
+      bucket = int( math.floor( candidate_indel.pos / bucket_size ) )
+      if candidate_indel.pos in vcf_correct.indel_map: 
+        true_indel = vcf_correct.indel_list[vcf_correct.indel_map[candidate_indel.pos]]
+        if candidate_indel.before != true_indel.before or candidate_indel.after != true_indel.after:
+          log( 'fp(near): %i bucket %i' % ( candidate_indel['pos'], bucket ) )
+          self.stats['fp'] += 1
+          self.buckets[bucket]['fp'] += 1
+        else:
+          pass # tp already found
+      else: # false positive
+        self.stats['fp'] += 1
+        self.buckets[bucket]['fp'] += 1
+        log( 'fp: %i' % candidate_indel.pos )
+
 
 class VCFFastaDiff(object):
   '''
@@ -342,8 +383,8 @@ class VCFFastaDiff(object):
     self.del_stats = { 'tp': 0, 'fn': 0, 'fp': 0, 'other': 0 }
     # recall
     for true_indel in vcf.indel_list: # vcf.indel has pos, before, after
-      pos = true_indel['pos'] + 1
-      if len(true_indel['before']) > len(true_indel['after']): # deletion
+      pos = true_indel.pos + 1
+      if len(true_indel.before) > len(true_indel.after): # deletion
         if pos in fasta.deleted:
           self.del_stats['tp'] += 1
         else: # not found
@@ -356,7 +397,7 @@ class VCFFastaDiff(object):
 
     indel_list_positions = set()
     for indel in vcf.indel_list:
-      indel_list_positions.add( indel['pos'] )
+      indel_list_positions.add( indel.pos )
 
     # precision
     for predicted_insertion in fasta.inserted:
