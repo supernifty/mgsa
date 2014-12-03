@@ -240,7 +240,9 @@ def quick_view( fh, bias_report=False ):
         if key not in result:
           result[key] = []
         result[key].append( field.strip() )
-  for key in result:
+  keys = sorted( result.keys() )
+  
+  for key in keys:
     print key
     for item in result[key]:
       print "  %s" % item

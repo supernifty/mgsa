@@ -2,6 +2,43 @@
 # manage different types of variation
 #
 
+class VariationManager(object):
+  def __init__(self):
+    self.snp_list = []
+    self.snp_map = {} # maps pos snp
+    self.indel_list = []
+    self.indel_map = {} # maps pos to indel
+
+  def indel( self, pos, before, after ):
+    self.indel_map[int(pos)] = len(self.indel_list)
+    self.indel_list.append( IndelVariation( int(pos), before, after ) )
+
+  def find_indel_match( self, indel ):
+    '''
+      look for a matching indel in this list of indels
+    '''
+    floor = self.bisect( self.indel_list, indel.pos )
+    if indel.matches( self.indel_list[floor] ):
+      return self.indel_list[floor]
+    if floor + 1 < len(self.indel_list) and indel.matches( self.indel_list[floor + 1] ):
+      return self.indel_list[floor+1]
+    return None
+
+  def bisect(self, pos_list, value):
+    '''returns an index that is less than or equal to value'''
+    start = 0 # inclusive
+    end = len(pos_list) # exclusive
+    while end - start > 1:
+      mid = start + ( end - start ) / 2
+      if pos_list[mid].pos == value:
+        return mid
+      elif pos_list[mid].pos < value:
+        start = mid
+      else: # pos > value
+        end = mid
+      #print "bisect: start: %i end: %i" % ( start, end )
+    return start
+
 class SNPVariation(object):
   pass
 
@@ -37,8 +74,14 @@ class IndelVariation(object):
     '''
     pos_diff = other.pos - self.pos
     if pos_diff > 0: # self is first
-      self_overlap = self.after[:-pos_diff]
-      other_overlap = other.after[pos_diff:]
+      self_overlap = self.after[pos_diff:]
+      other_overlap = other.after[:-pos_diff]
     else: # other is first; pos_diff is -ve
-      other_overlap = self.after[:pos_diff]
-      self_overlap = other.after[-pos_diff:]
+      other_overlap = other.after[-pos_diff:]
+      self_overlap = self.after[:pos_diff]
+
+    print "overlap_matches: %s %s: overlaps %s %s; result %s" % ( self, other, self_overlap, other_overlap, self_overlap == other_overlap )
+    return self_overlap == other_overlap
+
+  def __str__( self ):
+    return 'pos=%i before=%s after=%s' % ( self.pos, self.before, self.after )
