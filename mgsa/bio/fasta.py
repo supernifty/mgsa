@@ -118,8 +118,8 @@ class ProbabilisticFasta(object):
       if best_insertion is not None and best_insertion_value > ( coverage - insertion_coverage ):
         result = best_insertion
         self.inserted[i] = best_insertion
-        if self.log:
-          self.log( 'included insertion %s at ref %i' % (best_insertion, i) )
+        #if self.log:
+        #  self.log( 'included insertion %s at ref %i' % (best_insertion, i) )
         move = len(best_insertion)
       else:
         pass

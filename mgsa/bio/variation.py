@@ -80,7 +80,7 @@ class IndelVariation(object):
       other_overlap = other.after[-pos_diff:]
       self_overlap = self.after[:pos_diff]
 
-    print "overlap_matches: %s %s: overlaps %s %s; result %s" % ( self, other, self_overlap, other_overlap, self_overlap == other_overlap )
+    #print "overlap_matches: %s %s: overlaps %s %s; result %s" % ( self, other, self_overlap, other_overlap, self_overlap == other_overlap )
     return self_overlap == other_overlap
 
   def __str__( self ):

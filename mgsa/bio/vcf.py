@@ -308,13 +308,13 @@ class VCFDiff(object):
         if candidate_snp['ref'] != true_snp['ref'] or candidate_snp['alt'] != true_snp['alt']:
           self.stats['fp'] += 1
           self.buckets[bucket]['fp'] += 1
-          log( 'fp(near): %i' % candidate_snp['pos'] )
+          #log( 'fp(near): %i' % candidate_snp['pos'] )
         else:
           pass # tp already found
       else: # false positive
         self.stats['fp'] += 1
         self.buckets[bucket]['fp'] += 1
-        log( 'fp: %i' % candidate_snp['pos'] )
+        #log( 'fp: %i' % candidate_snp['pos'] )
 
     # indels - true positives
     for true_indel in vcf_correct.manager.indel_list:
