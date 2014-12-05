@@ -694,7 +694,38 @@ def plot_mutation_vs_bias_ecoli():
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/ecoli-mutation-vs-invisible-ecoli.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
- 
+
+def plot_insertion_vs_alignment_circoviridae():
+  out_file = "out/insert_experiment_141206b.out"
+
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_snp = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'max_insertion_len' ) )
+    y.append( find_column( line, 'vcf_f1' ) )
+    #y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  print "x", x
+  print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='Alignment', color='r')
+  #ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('F1-Score')
+  ax.set_xlabel('Insertion Length')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='upper right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/circoviridae-insertion-vs-alignment.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+
 # no longer used
 # TODO ecoli-mutations-snps-unmapped-2.pdf (not used)
 # TODO mutation-f1-hiv.pdf (not used)
@@ -717,4 +748,5 @@ def plot_mutation_vs_bias_ecoli():
 ##### experimental
 #read_length_ecoli_map_low_mutation() # ecoli-read-length-bowtie-mapping.pdf
 #plot_mutation_vs_bias_ecoli()
-plot_reference_bias_ecoli_example_with_errors() # 
+#plot_reference_bias_ecoli_example_with_errors() # 
+plot_insertion_vs_alignment_circoviridae()
