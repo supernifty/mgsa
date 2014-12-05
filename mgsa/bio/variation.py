@@ -3,6 +3,9 @@
 #
 
 class VariationManager(object):
+  '''
+    manages a collection of variations
+  '''
   def __init__(self):
     self.snp_list = []
     self.snp_map = {} # maps pos snp
@@ -10,6 +13,9 @@ class VariationManager(object):
     self.indel_map = {} # maps pos to indel
 
   def indel( self, pos, before, after ):
+    '''
+      add an indel to the collection of variations
+    '''
     self.indel_map[int(pos)] = len(self.indel_list)
     self.indel_list.append( IndelVariation( int(pos), before, after ) )
 
@@ -43,6 +49,10 @@ class SNPVariation(object):
   pass
 
 class IndelVariation(object):
+  '''
+    represents an indel
+  '''
+
   def __init__( self, pos, before, after ):
     self.pos = pos
     self.before = before
@@ -50,7 +60,7 @@ class IndelVariation(object):
 
   def matches( self, other ):
     '''
-      exact match of variation
+      first look for an exact match of variation, then an overlapping match
     '''
     if self.pos == other.pos:
       return self.before == other.before and self.after == other.after

@@ -20,3 +20,8 @@
 #genomes {
   font-weight: bold;
 }
+
+#reference {
+  font-family: monospace;
+  font-size: small;
+}
