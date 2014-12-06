@@ -8,6 +8,13 @@ Setup
 -----
 * config.py - edit this to paths appropriate for your system
 
+Dependencies
+------------
+
+Tests
+-----
+Run test.sh
+
 Included Files
 --------------
 * __init__.py      
