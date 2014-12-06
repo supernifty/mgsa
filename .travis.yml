@@ -1,4 +1,4 @@
 language: python
 python:
   - "2.7"
-script: sh -c 'cd mgsa && python test.py'
+script: sh -c 'cd mgsa && python test.py discover tests'
