@@ -4,6 +4,7 @@ python:
   - "2.7"
 
 before_install:
+  - pip install python-coveralls
   - pip install coveralls
 
 #script: sh -c 'cd mgsa && python test.py discover tests'
