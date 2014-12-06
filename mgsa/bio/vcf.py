@@ -114,32 +114,33 @@ class VCF(object):
       2 -> (0, 2)
       3 -> (1, 0)
     '''
-    net_insertions = 0
-    last_variation = None
-    for indel in self.manager.indel_list: # TODO performance
-      current_reference_position = indel.pos # reference start of indel
-      current_candidate_position = indel.pos + net_insertions # candidate start of indel
-      #print "ref %i cand %i target %i" % ( current_reference_position, current_candidate_position, candidate_position )
-      if current_candidate_position <= candidate_position: # the insertion is before the candidate position
-        indel_size = len(indel.after) - len(indel.before)
-        if current_candidate_position + indel_size > candidate_position: # the insertion spans the candidate position
-          #print "split candidate_position %i indel_size %i current_candidate_position %i" % ( candidate_position, indel_size, current_candidate_position )
-          return ( current_reference_position - 1, candidate_position - current_candidate_position + 1, indel_size )
-        else:
-          net_insertions += indel_size # keep going
-          last_variation = indel
-          last_reference_position = current_reference_position
-          last_candidate_position = current_candidate_position
-      else: # the insertion is after the candidate position
-        break
-    # no more insertions
-    if last_variation is None:
-      #print "no variation candidate_position %i" % ( candidate_position )
-      return (candidate_position, 0, 0) # no variations
-    else:
-      last_indel_size = len(last_variation.after) - len(last_variation.before)
-      #print "last_variation %s candidate_position %i last_indel_size %i last_candidate_position %i" % ( last_variation, candidate_position, last_indel_size, last_candidate_position )
-      return (last_reference_position - last_indel_size + candidate_position - last_candidate_position, 0, 0)
+    return self.manager.candidate_position_to_reference_position( candidate_position )
+#     net_insertions = 0
+#     last_variation = None
+#     for indel in self.manager.indel_list: # TODO performance
+#       current_reference_position = indel.pos # reference start of indel
+#       current_candidate_position = indel.pos + net_insertions # candidate start of indel
+#       #print "ref %i cand %i target %i" % ( current_reference_position, current_candidate_position, candidate_position )
+#       if current_candidate_position <= candidate_position: # the insertion is before the candidate position
+#         indel_size = len(indel.after) - len(indel.before)
+#         if current_candidate_position + indel_size > candidate_position: # the insertion spans the candidate position
+#           #print "split candidate_position %i indel_size %i current_candidate_position %i" % ( candidate_position, indel_size, current_candidate_position )
+#           return ( current_reference_position - 1, candidate_position - current_candidate_position + 1, indel_size )
+#         else:
+#           net_insertions += indel_size # keep going
+#           last_variation = indel
+#           last_reference_position = current_reference_position
+#           last_candidate_position = current_candidate_position
+#       else: # the insertion is after the candidate position
+#         break
+#     # no more insertions
+#     if last_variation is None:
+#       #print "no variation candidate_position %i" % ( candidate_position )
+#       return (candidate_position, 0, 0) # no variations
+#     else:
+#       last_indel_size = len(last_variation.after) - len(last_variation.before)
+#       #print "last_variation %s candidate_position %i last_indel_size %i last_candidate_position %i" % ( last_variation, candidate_position, last_indel_size, last_candidate_position )
+#       return (last_reference_position - last_indel_size + candidate_position - last_candidate_position, 0, 0)
 
   def find_indel( self, pos ):
     '''

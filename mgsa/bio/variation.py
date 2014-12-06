@@ -11,6 +11,8 @@ class VariationManager(object):
     self.snp_map = {} # maps pos snp
     self.indel_list = []
     self.indel_map = {} # maps pos to indel
+    self.net_diff = 0
+    self.reference_to_candidate = []
 
   def indel( self, pos, before, after ):
     '''
@@ -18,19 +20,22 @@ class VariationManager(object):
     '''
     self.indel_map[int(pos)] = len(self.indel_list)
     self.indel_list.append( IndelVariation( int(pos), before, after ) )
+    self.reference_to_candidate.append( pos + self.net_diff ) # don't include most recent indel
+    diff = len(after) - len(before)
+    self.net_diff += diff
 
   def find_indel_match( self, indel ):
     '''
       look for a matching indel in this list of indels
     '''
-    floor = self.bisect( self.indel_list, indel.pos )
+    floor = self.bisect_indel( self.indel_list, indel.pos )
     if indel.matches( self.indel_list[floor] ):
       return self.indel_list[floor]
     if floor + 1 < len(self.indel_list) and indel.matches( self.indel_list[floor + 1] ):
       return self.indel_list[floor+1]
     return None
 
-  def bisect(self, pos_list, value):
+  def bisect_indel(self, pos_list, value):
     '''returns an index that is less than or equal to value'''
     start = 0 # inclusive
     end = len(pos_list) # exclusive
@@ -45,6 +50,45 @@ class VariationManager(object):
       #print "bisect: start: %i end: %i" % ( start, end )
     return start
 
+  def bisect_candidate_position(self, candidate_pos):
+    '''returns an index that is less than or equal to value'''
+    start = 0 # inclusive
+    end = len(self.reference_to_candidate) # exclusive
+    #print self.reference_to_candidate, candidate_pos
+    while end - start > 1:
+      mid = start + ( end - start ) / 2
+      if self.reference_to_candidate[mid] == candidate_pos: # match
+        return mid
+      elif self.reference_to_candidate[mid] < candidate_pos: # mid+
+        start = mid
+      else: # pos > value
+        end = mid
+    if start == 0 and self.reference_to_candidate[0] > candidate_pos:
+      return None
+    else:
+      return start 
+
+  def candidate_position_to_reference_position(self, candidate_position):
+    '''
+      returns the corresponding reference position, plus any offset back to the reference position
+      e.g. ref = GA; candidate = GTTA; indel should be { pos 2 before GA after GTTA }
+      0 -> (0, 0)
+      1 -> (0, 1)
+      2 -> (0, 2)
+      3 -> (1, 0)
+    '''
+    # look for next indel
+    ceil = self.bisect_candidate_position( candidate_position )
+    if ceil is None: # before any indels
+      return (candidate_position, 0, 0)
+    else:
+      indel_length = len( self.indel_list[ceil].after ) - len( self.indel_list[ceil].before )
+      past = candidate_position - self.reference_to_candidate[ceil]
+      if past >= indel_length: # past last indel
+        return (self.indel_list[ceil].pos + past - indel_length, 0, 0 )
+      else: # inside indel
+        return (self.indel_list[ceil].pos - 1, past + 1, indel_length)
+      
 class SNPVariation(object):
   pass
 
