@@ -1,6 +1,9 @@
 
 Multiple Genome Sequence Aligner
 ================================
+[![Build Status](https://travis-ci.org/supernifty/mgsa.svg?branch=master)](https://travis-ci.org/supernifty/mgsa)
+[![Coverage Status](https://coveralls.io/repos/supernifty/mgsa/badge.png?branch=master)](https://coveralls.io/r/supernifty/mgsa?branch=master)
+
 This work is in progress and not ready for public consumption.
 Trying to use this code is strongly discouraged.
 
