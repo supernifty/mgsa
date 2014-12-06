@@ -7,7 +7,7 @@ before_install:
   - pip install coveralls
 
 #script: sh -c 'cd mgsa && python test.py discover tests'
-script: sh -c 'cd mgsa && coverage run test.py discover tests'
+script: sh -c 'cd mgsa && coverage run --source=. test.py discover tests'
 
 after_success:
-  - coveralls debug
+  - coveralls
