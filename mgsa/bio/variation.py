@@ -35,6 +35,17 @@ class VariationManager(object):
       return self.indel_list[floor+1]
     return None
 
+  def find_indels_overlapping( self, start, end ):
+    floor = self.bisect_indel( self.indel_list, start )
+    result = []
+    for idx in xrange(floor, len(self.indel_list)):
+      indel = self.indel_list[idx]
+      if indel.pos >= start and indel.pos < end:
+        result.append( indel )
+      if indel.pos >= end:
+        break
+    return result
+
   def bisect_indel(self, pos_list, value):
     '''returns an index that is less than or equal to value'''
     start = 0 # inclusive
@@ -63,7 +74,7 @@ class VariationManager(object):
         start = mid
       else: # pos > value
         end = mid
-    if start == 0 and self.reference_to_candidate[0] > candidate_pos:
+    if start == 0 and ( len(self.reference_to_candidate) == 0 or self.reference_to_candidate[0] > candidate_pos ):
       return None
     else:
       return start 

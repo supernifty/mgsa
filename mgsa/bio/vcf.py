@@ -146,7 +146,7 @@ class VCF(object):
         
     return start
 
-  def variations(self, start, end, include_start=True, offset=0 ):
+  def variations(self, start, end, offset=0 ):
     '''
       returns a string representation of all variations within the specified range.
       start and end are both positions on the *reference*
@@ -159,7 +159,7 @@ class VCF(object):
         snp = self.snp_list[snp_idx]
         if snp['pos'] > end:
           break
-        if start < snp['pos'] < end or include_start and start == snp['pos']:
+        if start <= snp['pos'] < end:
           result.add( 'S%i-0' % ( snp['pos'] - start ) )
           #print snp
     #start_pos = self.bisect( self.indel_list, start ) # indels must be sorted
@@ -176,22 +176,21 @@ class VCF(object):
     #        indel_pos = indel['pos']
     #        result.add( 'I%i-%i' % ( indel_pos - start, net ) )
     if offset > 0: # offset means we are in an insertion, don't include again
-      start_search = start + 1
-      include_start = False
+      start_search = start + 2
+      #include_start = False
     else:
       start_search = start + 1 # no offset means we are past any insertion, don't include again
 
-    for indel_idx in xrange( 0, len(self.manager.indel_list) ):
-      indel = self.manager.indel_list[indel_idx]
-      if indel.pos > end: # assuming indels are sorted
-        break
+    #for indel_idx in xrange( 0, len(self.manager.indel_list) ):
+    indels_overlapping = self.manager.find_indels_overlapping( start_search, end )
+    for indel in indels_overlapping:
       net = len(indel.after) - len(indel.before)
-      if indel.pos > start_search and indel.pos < end or include_start and start_search == indel.pos: # the indel starts inside the read
-        if net < 0: # deletion
-          result.add( 'D%i-%i' % ( indel.pos - start, -net ) )
-        elif net > 0: # insertion
-          indel_pos = indel.pos
-          result.add( 'I%i-%i[%i,%i,%i]' % ( indel_pos - start, net, indel_pos, offset, end ) )
+      #if indel.pos >= start_search and indel.pos < end: # the indel starts inside the read
+      if net < 0: # deletion
+        result.add( 'D%i-%i' % ( indel.pos - start, -net ) )
+      elif net > 0: # insertion
+        indel_pos = indel.pos
+        result.add( 'I%i-%i[%i,%i,%i]' % ( indel_pos - start, net, indel_pos, offset, end ) )
           #print "added full indel pos %i rel %i net %i" % ( indel_pos, indel_pos - start, net )
       #if indel['pos'] < start and indel['pos'] + net >= start: # the read starts inside an indel
       #  result.add( 'I0-%i' % ( net - ( start - indel['pos'] ) ) ) # partial insert

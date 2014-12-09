@@ -53,7 +53,7 @@ class FastqGenerator(object):
               length = 0
             else: # variations
               reference_position, offset, length = vcf.candidate_position_to_reference_position( candidate_position )
-              variations = vcf.variations( reference_position, reference_position + cfg['read_length'], include_start=True, offset=offset )
+              variations = vcf.variations( reference_position, reference_position + cfg['read_length'], offset=offset )
 
               dna_with_errors = error_generator.apply_errors( dna[i:i+cfg['read_length']] ) # add errors to read
     
