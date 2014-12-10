@@ -120,33 +120,48 @@ class IndelVariation(object):
     if self.pos == other.pos:
       return self.before == other.before and self.after == other.after
     
+    insertion = len(self.after) - len(self.before) > 0
     # same length, not far apart
-    elif self.might_match( other ):
-      return self.overlap_matches( other )
+    if self.might_match( other, insertion ):
+      return self.overlap_matches( other, insertion )
 
+    #print "exact match false; might match false: other.pos %i self.pos %i self.after %i self.before %i" % ( other.pos, self.pos, len(self.after), len(self.before) )
     return False
 
-  def might_match( self, other ):
+  def might_match( self, other, insertion=True ):
     '''
       does it overlap with other
     '''
-    return len(self.after) - len(self.before) == len(other.after) - len(other.before) and abs(other.pos - self.pos) < len(self.after) - len(self.before);
+    if len(self.after) - len(self.before) == len(other.after) - len(other.before): 
+      if insertion:
+        return abs(other.pos - self.pos) < len(self.after) - len(self.before);
+      else: # deletion
+        return abs(other.pos - self.pos) < len(self.before) - len(self.after);
+    return False
 
-  def overlap_matches( self, other ):
+  def overlap_matches( self, other, insertion=True ):
     '''
       overlap between variation matches - so it is "probably" a match
       assumes other has same length and not too far away
     '''
     pos_diff = other.pos - self.pos
-    if pos_diff > 0: # self is first
-      self_overlap = self.after[pos_diff:]
-      other_overlap = other.after[:-pos_diff]
-    else: # other is first; pos_diff is -ve
-      other_overlap = other.after[-pos_diff:]
-      self_overlap = self.after[:pos_diff]
+    if insertion:
+      if pos_diff > 0: # self is first
+        self_overlap = self.after[pos_diff:]
+        other_overlap = other.after[:-pos_diff]
+      else: # other is first; pos_diff is -ve
+        other_overlap = other.after[-pos_diff:]
+        self_overlap = self.after[:pos_diff]
+    else:
+      if pos_diff > 0: # self is first
+        self_overlap = self.before[pos_diff:]
+        other_overlap = other.before[:-pos_diff]
+      else: # other is first; pos_diff is -ve
+        other_overlap = other.before[-pos_diff:]
+        self_overlap = self.before[:pos_diff]
 
     #print "overlap_matches: %s %s: overlaps %s %s; result %s" % ( self, other, self_overlap, other_overlap, self_overlap == other_overlap )
     return self_overlap == other_overlap
 
-  def __str__( self ):
+  def __repr__( self ):
     return 'pos=%i before=%s after=%s' % ( self.pos, self.before, self.after )

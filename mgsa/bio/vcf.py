@@ -240,6 +240,7 @@ class VCFDiff(object):
 
   def __init__( self, vcf_correct, vcf_candidate, log ):
     '''
+      generates self.stats and self.buckets, containing tp, fp, and fn
       @vcf_correct: the correct VCF
       @vcf_candidate: the candidate VCF
     '''

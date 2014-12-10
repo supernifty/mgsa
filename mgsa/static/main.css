@@ -21,7 +21,23 @@
   font-weight: bold;
 }
 
-#reference {
+#reference, #ticks {
   font-family: monospace;
   font-size: small;
+}
+
+.b_G {
+  background-color: #c0c0c0;
+}
+
+.b_T {
+  background-color: #f0a0a0;
+}
+
+.b_C {
+  background-color: #a0a0f0;
+}
+
+.b_A {
+  background-color: #a0f0a0;
 }

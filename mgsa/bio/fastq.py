@@ -5,7 +5,7 @@ import bio
 import fasta
 
 class FastqGenerator(object):
-  def __init__( self, fasta_fh, cfg, vcf, variation_map=None ):
+  def __init__( self, fasta_fh, cfg, vcf, variation_map=None, target_fh=sys.stdout, log=bio.log_stderr ):
     probabilistic = False
 
     read_probability = 1. * cfg['coverage'] / cfg['read_length']
@@ -27,9 +27,9 @@ class FastqGenerator(object):
     lines = 0
     #if vcf is not None:
     #  bio.log_stderr( "snp: %s; indel: %s" % ( vcf.snp_list, vcf.indel_list ) )
-    for line in sys.stdin:
+    for line in fasta_fh:
       if lines < 10 or lines % 1000 == 0:
-        bio.log_stderr( 'generate_reads: %i lines processed' % lines )
+        log( 'generate_reads: %i lines processed' % lines )
       lines += 1
 
       if line.startswith( '>' ):
@@ -55,20 +55,20 @@ class FastqGenerator(object):
               reference_position, offset, length = vcf.candidate_position_to_reference_position( candidate_position )
               variations = vcf.variations( reference_position, reference_position + cfg['read_length'], offset=offset )
 
-              dna_with_errors = error_generator.apply_errors( dna[i:i+cfg['read_length']] ) # add errors to read
+            dna_with_errors = error_generator.apply_errors( dna[i:i+cfg['read_length']] ) # add errors to read
     
             inversion = probabilistic and random.random() < inversion_prob or not probabilistic and time_to_inversion <= 0
             if inversion:
               time_to_inversion += inversion_every
     
-            self.write( reference_position, dna_with_errors, '~' * cfg['read_length'], variation_map=variation_map, variations=variations, offset=offset, debug='', inversion=inversion, length=length )
+            self.write( reference_position, dna_with_errors, '~' * cfg['read_length'], variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
     
             max_pos = max(max_pos, reference_position + cfg['read_length'])
             time_to_next += read_every
         base_candidate_position += process
         dna = dna[process:]
 
-  def write( self, pos, sequence, quality, variation_map, variations=set(), offset=0, length=0, debug='', inversion=False ):
+  def write( self, pos, sequence, quality, variation_map, target_fh, variations=set(), offset=0, length=0, debug='', inversion=False ):
     '''
       write a sequence of given quality
       debug is not used and for humans only
@@ -80,13 +80,13 @@ class FastqGenerator(object):
     else:
       inversion_text = ''
   
-    sys.stdout.write( '@mgsa_seq_%i~%i~%i\n' % ( pos, offset, length ) ) # sam is 0 indexed
+    target_fh.write( '@mgsa_seq_%i~%i~%i\n' % ( pos, offset, length ) ) # sam is 0 indexed
     if len(variations) > 0:
       variation_map.write( '@mgsa_seq_%i~%i~%i: %s_%s%s\n' % ( pos, offset, length, ','.join([ v for v in variations ]), inversion_text, debug ) ) # sam is 0 indexed
 
-    sys.stdout.write( sequence )
-    sys.stdout.write( '\n+\n' )
-    sys.stdout.write( quality ) # quality 
-    sys.stdout.write( '\n' )
+    target_fh.write( sequence )
+    target_fh.write( '\n+\n' )
+    target_fh.write( quality ) # quality 
+    target_fh.write( '\n' )
   
    

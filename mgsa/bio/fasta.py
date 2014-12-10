@@ -128,8 +128,8 @@ class ProbabilisticFasta(object):
     # was the consensus to delete?
     if best == DELETE_BASE:
       self.deleted.add(i)
-      if self.log:
-        self.log( 'deletion at %i' % (i) )
+      #if self.log:
+      #  self.log( 'deletion at %i' % (i) )
     else:
       result += best
       move += 1

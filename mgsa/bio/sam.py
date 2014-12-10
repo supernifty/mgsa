@@ -21,26 +21,34 @@ class SamToVCF(object):
     candidate = sam_to_fasta.fasta
     reference = fasta.Fasta( fasta.FastaReader( reference ) )
     pos = 0
+    delete_start = None
     # TODO ploidy; make heterozygous calls and pass on to target vcf
     while pos < candidate.length:
-      
-      
       actual_base = reference.base_at( pos )
       if actual_base is None:
         break # reference is done
       candidate_move, candidate_variation, confidence, coverage = candidate.consensus_at( pos )
-      if candidate_move > 1: # check for insertion
+
+      if candidate_move > 0 and delete_start: # the end of a delete
+         target_vcf.indel( pos=delete_start - 1, before='%s%s' % ( reference.base_at( delete_start-1 ), delete_variation ), after='%s' % ( reference.base_at( delete_start-1 ) ), coverage=coverage )
+         delete_start = None
+      
+      if candidate_move > 1: # insertion
         # note that the current base is included in candidate_variation
         target_vcf.indel( pos=pos, before='%s%s' % ( reference.base_at( pos-1 ), reference.base_at( pos ) ), after='%s%s' % ( reference.base_at( pos-1 ), candidate_variation ), coverage=coverage )
-      elif candidate_move < 1: # check for deletion TODO
-        pass 
+      elif candidate_move < 1: # start of deletion
+        if delete_start is None:
+          delete_start = pos
+          delete_variation = reference.base_at(pos)
+        else:
+          delete_variation += reference.base_at(pos)
       else: # candidate_move is 1
         if candidate_variation != actual_base and candidate_variation != 'N':
           target_vcf.snp( pos=pos, ref=actual_base, alt=candidate_variation, coverage=coverage ) # mutation
       pos += 1 # next base
 
     # check for sequence finishing early
-    log( "pos %i candidate length %i reference length %i" % ( pos, candidate.length, reference.length ) )
+    #log( "pos %i candidate length %i reference length %i" % ( pos, candidate.length, reference.length ) )
     if pos < candidate.length: # reference finished early
       target_vcf.indel( pos=pos-1, before=reference.base_at( pos-1 ), after=candidate.consensus( start=pos-1 ) )
     elif reference.length > candidate.length: # candidate finished early
@@ -53,6 +61,9 @@ class SamToFasta(object):
   '''  
 
   def __init__( self, sam, log, allow_indels=True ):
+    '''
+      @sam: fh to sam file or other iterable
+    '''
     self.allow_indels = allow_indels
     self.log = log
     self.fasta = fasta.ProbabilisticFasta( log )

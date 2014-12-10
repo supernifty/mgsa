@@ -39,7 +39,25 @@ var main = function () {
     },
 
     update_visualization = function(data, stat) {
-      $('#reference').html( data['ref'] )
+      var ref = '', ticks = '', ticks100 = '', pos = start;
+      for ( c in data['ref'] ) {
+        ref += '<span class="b_' + data['ref'][c] + '">' + data['ref'][c] + '</span>';
+        if ( pos % 10 == 0 ) {
+          ticks += ( ( pos / 10 ) % 10 );
+        }
+        else {
+          ticks += '.';
+        }
+        if ( pos % 100 == 0 ) {
+          ticks100 += ( ( pos / 100 ) % 10 );
+        }
+        else {
+          ticks100 += '.';
+        }
+         pos++;
+      }
+      $('#reference').html( ref );
+      $('#ticks').html( ticks100 + '<br/>' + ticks );
       $('#reference_position').html( start + " to " + end );
       $('#visualize_position').val(start);
     }
