@@ -105,6 +105,19 @@ class TestFastaDiff( unittest.TestCase ):
   def quiet_log(self, msg):
     pass
 
+class TestProbabilisticFasta( unittest.TestCase ):
+  def setUp(self):
+    pass
+
+  def test_confidence( self ):
+    p = bio.ProbabilisticFasta()
+    p.add( 'AA', 0, 0.5 )
+    p.add( 'CC', 1, 0.5 )
+    self.assertEqual( 0.6, p.confidence(0)['A'] )
+    self.assertEqual( 0.4, p.confidence(0)['C'] )
+    self.assertEqual( 0.5, p.confidence(1)['A'] )
+    self.assertEqual( 0.5, p.confidence(1)['C'] )
+    self.assertEqual( 0.6, p.confidence(2)['C'] )
 
 if __name__ == '__main__':
   unittest.main()

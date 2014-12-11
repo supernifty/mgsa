@@ -763,6 +763,76 @@ def plot_insertion_vs_alignment_ecoli():
   fig.savefig('%s/ecoli-insertion-vs-alignment.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
+def plot_deletion_vs_alignment_circoviridae():
+  out_file = "out/delete_experiment_circoviridae_141209.out"
+
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_precision = []
+  y_recall = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'max_deletion_len' ) )
+    y.append( find_column( line, 'vcf_f1' ) )
+    y_precision.append( find_column( line, 'vcf_precision' ) )
+    y_recall.append( find_column( line, 'vcf_recall' ) )
+    #y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  print "x", x
+  print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='F1', color='r')
+  ax.plot(x, y_precision, label='Precision', color='g')
+  ax.plot(x, y_recall, label='Recall', color='b')
+  #ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('%')
+  ax.set_xlabel('Deletion Length')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='upper right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/circoviridae-deletion-vs-alignment.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def plot_deletion_vs_alignment_ecoli():
+  out_file = "out/delete_experiment_ecoli_141211.out"
+
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_precision = []
+  y_recall = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'max_deletion_len' ) )
+    y.append( find_column( line, 'vcf_f1' ) )
+    y_precision.append( find_column( line, 'vcf_precision' ) )
+    y_recall.append( find_column( line, 'vcf_recall' ) )
+    #y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  print "x", x
+  print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='F1', color='r')
+  ax.plot(x, y_precision, label='Precision', color='g')
+  ax.plot(x, y_recall, label='Recall', color='b')
+  #ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('%')
+  ax.set_xlabel('Deletion Length')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='upper right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/ecoli-deletion-vs-alignment.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
 
 # no longer used
 # TODO ecoli-mutations-snps-unmapped-2.pdf (not used)
@@ -787,5 +857,7 @@ def plot_insertion_vs_alignment_ecoli():
 #read_length_ecoli_map_low_mutation() # ecoli-read-length-bowtie-mapping.pdf
 #plot_mutation_vs_bias_ecoli()
 #plot_reference_bias_ecoli_example_with_errors() # 
-plot_insertion_vs_alignment_circoviridae()
+#plot_insertion_vs_alignment_circoviridae()
 #plot_insertion_vs_alignment_ecoli()
+plot_deletion_vs_alignment_ecoli()
+plot_deletion_vs_alignment_circoviridae()
