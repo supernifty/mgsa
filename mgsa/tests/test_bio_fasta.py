@@ -119,5 +119,40 @@ class TestProbabilisticFasta( unittest.TestCase ):
     self.assertEqual( 0.5, p.confidence(1)['C'] )
     self.assertEqual( 0.6, p.confidence(2)['C'] )
 
+class TestFastaMutate( unittest.TestCase ):
+  def setUp(self):
+    pass
+
+  def _make_reader( self, l ):
+    return bio.FastaReader( StringIO.StringIO( '\n'.join( l ) ) )
+
+  def test_no_mutate(self):
+    reader = self._make_reader( ( 'gg', 'cc' ) )
+    mutator = bio.FastaMutate( reader, log=self.quiet_log, snp_prob=0, insert_prob=0, delete_prob=0 )
+    items = []
+    for item in mutator.items():
+      items.append(item)
+    self.assertTrue( 2, len(items) )
+    self.assertEqual( 'gg', items[0] )
+    self.assertEqual( 'cc', items[1] )
+
+  def test_snp(self):
+    reader = self._make_reader( ( 'gg', 'cc' ) )
+    mutator = bio.FastaMutate( reader, log=self.quiet_log, snp_prob=1, insert_prob=0, delete_prob=0 )
+    items = []
+    for item in mutator.items():
+      items.append(item)
+    self.assertTrue( 2, len(items) )
+    self.assertTrue( 2, len(items[0]) )
+    self.assertTrue( 2, len(items[1]) )
+    self.assertNotEqual( 'g', items[0][0] )
+    self.assertNotEqual( 'g', items[0][1] )
+    self.assertNotEqual( 'c', items[1][0] )
+    self.assertNotEqual( 'c', items[1][1] )
+
+  def quiet_log(self, msg):
+    pass
+
+
 if __name__ == '__main__':
   unittest.main()
