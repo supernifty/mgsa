@@ -28,6 +28,8 @@ class VariationManager(object):
     '''
       look for a matching indel in this list of indels
     '''
+    if len(self.indel_list) == 0:
+      return None
     floor = self.bisect_indel( self.indel_list, indel.pos )
     if indel.matches( self.indel_list[floor] ):
       return self.indel_list[floor]
@@ -99,6 +101,9 @@ class VariationManager(object):
         return (self.indel_list[ceil].pos + past - indel_length, 0, 0 )
       else: # inside indel
         return (self.indel_list[ceil].pos - 1, past + 1, indel_length)
+
+  def __str__( self ):
+    return 'snps: %s indels: %s' % ( self.snp_list, self.indel_list )
       
 class SNPVariation(object):
   pass
@@ -128,15 +133,24 @@ class IndelVariation(object):
     #print "exact match false; might match false: other.pos %i self.pos %i self.after %i self.before %i" % ( other.pos, self.pos, len(self.after), len(self.before) )
     return False
 
+  def all_same_base( self, content ):
+    if len(content) == 0:
+      return False
+    return all( c == content[0] for c in content )
+
   def might_match( self, other, insertion=True ):
     '''
       does it overlap with other
     '''
     if len(self.after) - len(self.before) == len(other.after) - len(other.before): 
       if insertion:
-        return abs(other.pos - self.pos) < len(self.after) - len(self.before);
+        if abs(other.pos - self.pos) <= len(self.after) - len(self.before): # they overlap
+          return True
+        return self.after[1:-1] == other.after[1:-1] #and self.all_same_base( self.after[1:-1] )# content matches
       else: # deletion
-        return abs(other.pos - self.pos) < len(self.before) - len(self.after);
+        if abs(other.pos - self.pos) <= len(self.before) - len(self.after): # they overlap
+          return True
+        return self.before[1:-1] == other.before[1:-1] #and self.all_same_base( self.before[1:-1] ) # content matches
     return False
 
   def overlap_matches( self, other, insertion=True ):

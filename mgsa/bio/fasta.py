@@ -173,7 +173,7 @@ class FastaMutate(object):
   '''
   probabilities = 'AAACCTTGGG'
 
-  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random' ):
+  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random', allow_end_mutate=False ):
     '''
       @reader: FastaReader
       @vcf_file: write mutations to vcf
@@ -198,6 +198,7 @@ class FastaMutate(object):
       self.vcf = vcf.VCF()
     self.pos = 0
     self.last_variation_pos = None # this is the end position of the last variation
+    self.allow_end_mutate = allow_end_mutate
 
     seed = random.randint(0, sys.maxint)
     random.seed(seed)
@@ -212,7 +213,8 @@ class FastaMutate(object):
           self.end_deletion()
         break
       # apply mutations
-      fragment = self.mutate( fragment )
+      if self.allow_end_mutate or self.reader.has_next_item(): # don't mutate last fragment
+        fragment = self.mutate( fragment )
       yield fragment
 
   def add_snp(self, c):
@@ -368,14 +370,18 @@ class Fasta(object):
   def length(self):
     if self._length is None:
       # read the whole thing
+      #print "getlength"
       for item in self.reader.items():
+         #print "lgot", item
          self.fasta += item
       self._length = len(self.fasta)
+    #print "getlength out"
     return self._length
 
   def base_at(self, i):
     if i >= len(self.fasta):
       for item in self.reader.items():
+        #print "got", item
         self.fasta += item
         if i < len(self.fasta): # success
           break
@@ -403,19 +409,40 @@ class FastaReader(object):
   '''
   def __init__(self, genome):
     self.genome = genome
+    self.has_next = True
+    self.future_fragment = self._next_item()
 
   def items(self):
     while True:
-      fragment = self.next_item()
-      if fragment is None:
+      current_fragment = self.future_fragment
+      if current_fragment is None:
         break
-      yield fragment
+      self.future_fragment = self._next_item()
+      self.has_next = self.future_fragment is not None
+      #print "current %s future %s" % ( current_fragment, self.future_fragment )
+      yield current_fragment
+
+  #def items(self):
+  #  while True:
+  #    current_fragment = self.next_item()
+  #    if current_fragment is None:
+  #      break
+  #    yield current_fragment
 
   def next_item(self):
+    current_fragment = self.future_fragment
+    self.future_fragment = self._next_item()
+    self.has_next = self.future_fragment is not None
+    return current_fragment    
+ 
+  def _next_item(self):
     for line in self.genome:
       if not line.startswith( '>' ):
         return line.strip()
     return None
+
+  def has_next_item(self):
+    return self.has_next
 
 class FastaStats(object):
   '''calculate some overall stats for a fasta file'''

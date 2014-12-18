@@ -7,6 +7,8 @@ import sys
 import bio
 import fasta
 
+SOFT_CLIP_CONFIDENCE = 0.0
+
 class SamToVCF(object):
   '''
     similar to SamToFasta but use a reference to only get variants
@@ -50,9 +52,11 @@ class SamToVCF(object):
     # check for sequence finishing early
     #log( "pos %i candidate length %i reference length %i" % ( pos, candidate.length, reference.length ) )
     if pos < candidate.length: # reference finished early
+      #print "pos %i rl %i cl %i" % ( pos, reference.length, candidate.length )
       target_vcf.indel( pos=pos-1, before=reference.base_at( pos-1 ), after=candidate.consensus( start=pos-1 ) )
-    elif reference.length > candidate.length: # candidate finished early
-      target_vcf.indel( pos=pos-1, before=reference.base_at( pos-1 ), after=reference.fragment( start=pos-1 ) )
+    # TODO this doesn't work
+    #elif reference.length > candidate.length: # candidate finished early
+    #  target_vcf.indel( pos=pos-1, before=reference.base_at( pos-1 ), after=reference.fragment( start=pos-1 ) )
 
 class SamToFasta(object):
   '''
@@ -139,7 +143,7 @@ class SamToFasta(object):
 
           if cigar_match[1] == 'S': # soft clipping
             #self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos, confidence=0.5 )
-            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos - cigar_len, confidence=0.5 )
+            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos - cigar_len, confidence=SOFT_CLIP_CONFIDENCE )
             #genome_pos += cigar_len
             fragment_pos += cigar_len
 

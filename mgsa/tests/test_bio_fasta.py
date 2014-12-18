@@ -127,21 +127,28 @@ class TestFastaMutate( unittest.TestCase ):
     return bio.FastaReader( StringIO.StringIO( '\n'.join( l ) ) )
 
   def test_no_mutate(self):
+    #print "test_no_mutate: start"
     reader = self._make_reader( ( 'gg', 'cc' ) )
     mutator = bio.FastaMutate( reader, log=self.quiet_log, snp_prob=0, insert_prob=0, delete_prob=0 )
     items = []
     for item in mutator.items():
+      #print "appending", item
       items.append(item)
+    #print "items", items
     self.assertTrue( 2, len(items) )
     self.assertEqual( 'gg', items[0] )
     self.assertEqual( 'cc', items[1] )
+    #print "test_no_mutate: end"
 
   def test_snp(self):
+    #print "test_snp: start"
     reader = self._make_reader( ( 'gg', 'cc' ) )
-    mutator = bio.FastaMutate( reader, log=self.quiet_log, snp_prob=1, insert_prob=0, delete_prob=0 )
+    mutator = bio.FastaMutate( reader, log=self.quiet_log, snp_prob=1, insert_prob=0, delete_prob=0, allow_end_mutate=True )
     items = []
     for item in mutator.items():
+      #print "appending", item
       items.append(item)
+    #print "items", items
     self.assertTrue( 2, len(items) )
     self.assertTrue( 2, len(items[0]) )
     self.assertTrue( 2, len(items[1]) )
@@ -153,6 +160,29 @@ class TestFastaMutate( unittest.TestCase ):
   def quiet_log(self, msg):
     pass
 
+class TestFastaReader( unittest.TestCase ):
+  def setUp(self):
+    pass
+
+  def test_items( self ):
+    g = StringIO.StringIO( '>\nabc\ndef' )
+    p = bio.FastaReader( g )
+    items = [ f for f in p.items() ]
+    self.assertEqual( ['abc', 'def'], items )
+
+  def test_items( self ):
+    g = StringIO.StringIO( '>\nabc\ndef' )
+    p = bio.FastaReader( g )
+    count = 0
+    for item in p.items():
+      if count == 0:
+        self.assertEqual( 'abc', item )
+        self.assertTrue( p.has_next_item() )
+      if count == 1:
+        self.assertEqual( 'def', item )
+        self.assertFalse( p.has_next_item() )
+      count += 1
+    self.assertEqual( 2, count )
 
 if __name__ == '__main__':
   unittest.main()

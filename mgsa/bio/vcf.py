@@ -198,6 +198,9 @@ class VCF(object):
       #print result, " for", start, "", end
     return result
 
+  def __str__( self ):
+    return 'snps: %s indels: %s' % ( self.snp_list, self.manager )
+
 class VCFWriter(object):
   '''
     write a vcf file
@@ -270,7 +273,7 @@ class VCFDiff(object):
         else:
           self.stats['fn'] += 1
           self.buckets[bucket]['fn'] += 1
-          log( 'fn(near): %i' % true_snp['pos'] )
+          #log( 'fn(near): %i' % true_snp['pos'] )
       else:
         self.stats['fn'] += 1
         self.buckets[bucket]['fn'] += 1
@@ -297,6 +300,7 @@ class VCFDiff(object):
       if vcf_candidate.manager.find_indel_match( true_indel ) is None:
         self.stats['fn'] += 1
         self.buckets[bucket]['fn'] += 1
+        log( 'fn: %s' % true_indel )
       else:
         self.stats['tp'] += 1
         self.buckets[bucket]['tp'] += 1
@@ -307,6 +311,7 @@ class VCFDiff(object):
       if vcf_correct.manager.find_indel_match( candidate_indel ) is None:
         self.stats['fp'] += 1
         self.buckets[bucket]['fp'] += 1
+        log( 'fp: %s' % candidate_indel )
       else:
         pass # tp already found
 

@@ -38,3 +38,9 @@ class TestVCF( unittest.TestCase ):
     self.assertTrue( 'S5-0' in vcf.variations( 0, 10 ) )
     self.assertEqual( 1, len(vcf.variations( 10, 20 )) )
     self.assertTrue( 'S2-0' in vcf.variations( 10, 20 ) )
+
+  def test_short_indel(self):
+    vcf = bio.VCF()
+    vcf.indel( 5, 'AA', 'ATA' )
+    self.assertEqual( 1, len(vcf.variations( 0, 10 )) )
+    self.assertTrue( 'I5-1[5,0,10]' in vcf.variations( 0, 10 ) )

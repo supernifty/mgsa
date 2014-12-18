@@ -115,6 +115,8 @@ for line in open( config_file, 'r' ):
   vcf_f1 = 0
   if vcf_diff.stats['tp'] > 0 or vcf_diff.stats['fp'] > 0:
     vcf_precision = 1. * vcf_diff.stats['tp'] / ( vcf_diff.stats['tp'] + vcf_diff.stats['fp'] )
+  elif vcf_diff.stats['fp'] == 0: 
+    vcf_precision = 1 # nothing wrong
   if vcf_diff.stats['tp'] > 0 or vcf_diff.stats['fn'] > 0:
     vcf_recall = 1. * vcf_diff.stats['tp'] / ( vcf_diff.stats['tp'] + vcf_diff.stats['fn'] )
   if vcf_precision != 0 or vcf_recall != 0:

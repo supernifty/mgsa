@@ -9,6 +9,11 @@ class TestIndelVariation( unittest.TestCase ):
   def setUp(self):
     pass
 
+  def test_all_same_base(self):
+    x = bio.IndelVariation( 0, '', '' )
+    self.assertTrue( x.all_same_base( 'GGG' ) )
+    self.assertFalse( x.all_same_base( 'GCG' ) )
+
   def test_exact_insertion_ok(self):
     v1 = bio.IndelVariation( 20, 'GG', 'GCCTTAAG' )
     v2 = bio.IndelVariation( 20, 'GG', 'GCCTTAAG' )
@@ -45,11 +50,12 @@ class TestIndelVariation( unittest.TestCase ):
     self.assertFalse( v1.matches( v2 ) )
     self.assertFalse( v2.matches( v1 ) )
 
-  def test_exact_deletion_too_far(self):
-    v1 = bio.IndelVariation( 30, 'GCCTTAAG', 'GG' )
-    v2 = bio.IndelVariation( 20, 'GCCTTAAG', 'GG' )
-    self.assertFalse( v1.matches( v2 ) )
-    self.assertFalse( v2.matches( v1 ) )
+  # allow this
+  #def test_exact_deletion_too_far(self):
+  #  v1 = bio.IndelVariation( 30, 'GCCTTAAG', 'GG' )
+  #  v2 = bio.IndelVariation( 20, 'GCCTTAAG', 'GG' )
+  #  self.assertFalse( v1.matches( v2 ) )
+  #  self.assertFalse( v2.matches( v1 ) )
   
   def test_inexact_deletion_ok(self):
     v1 = bio.IndelVariation( 20, 'GCCTTAAG', 'GG' )
@@ -81,3 +87,26 @@ class TestIndelVariation( unittest.TestCase ):
     self.assertTrue( v1.matches( v2 ) )
     self.assertTrue( v2.matches( v1 ) )
  
+  def test_short_overlap(self):
+    v1 = bio.IndelVariation( 5, 'CA', 'CAA' )
+    v2 = bio.IndelVariation( 6, 'AC', 'AAC' )
+    self.assertTrue( v1.matches( v2 ) )
+    self.assertTrue( v2.matches( v1 ) )
+ 
+  def test_short_overlap_2(self):
+    # ok if .....CAAAC
+    v1 = bio.IndelVariation( 5, 'CA', 'CAA' )
+    v2 = bio.IndelVariation( 7, 'AC', 'AAC' )
+    self.assertTrue( v1.matches( v2 ) )
+    self.assertTrue( v2.matches( v1 ) )
+ 
+  def test_short_no_overlap_1(self):
+    # ok if .....CAAAC
+    v1 = bio.IndelVariation( 5, 'CA', 'CAA' )
+    v2 = bio.IndelVariation( 7, 'AC', 'AGC' )
+    self.assertFalse( v1.matches( v2 ) )
+    self.assertFalse( v2.matches( v1 ) )
+
+
+
+
