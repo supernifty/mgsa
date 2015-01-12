@@ -52,14 +52,14 @@ class VCF(object):
       count += 1
     self.log( 'VCF.load: %i lines loaded' % count )
 
-  def snp( self, pos, ref, alt, coverage=None ):
+  def snp( self, pos, ref, alt, coverage=None, confidence=1. ):
     '''
       adds a snp
     '''
     self.snp_map[int(pos)] = len(self.snp_list)
     self.snp_list.append( { 'pos': int(pos), 'ref': ref, 'alt': alt } )
     if self.writer is not None:
-      self.writer.snp( pos, ref, alt, coverage=coverage )
+      self.writer.snp( pos, ref, alt, coverage=coverage, confidence=confidence )
 
   def indel( self, pos, before, after, coverage=None ):
     '''
@@ -207,6 +207,9 @@ class VCFWriter(object):
   '''
 
   def __init__( self, writer ):
+    '''
+      @writer: file like object
+    '''
     self.writer = writer
     self.writer.write( '''##fileformat=VCFv4.1
 ##fileDate=%s
@@ -221,7 +224,7 @@ class VCFWriter(object):
       @zygosity: for diploid, "0/1" = heterozygous; "1/1" = alt homozygous
     '''
     if confidence < 1.:
-      quality = '%.2f' % math.log(-10 * math.log(1.-confidence,10))
+      quality = '%.0f' % ( -10 * math.log(1.-confidence, 10 ))
     else:
       quality = '.'
 

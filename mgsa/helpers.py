@@ -4,6 +4,19 @@ import math
 import sys
 import zlib
 
+# before error_bias_no_variation
+#y_map_old = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
+
+def make_ymap(bias_report, has_no_variation=False):
+  y_map = { 'unmapped': -21, 'incorrect': -20, 'read_precision': -19, 'read_recall': -18, 'read_f1': -17, 'vcf_tp': -16, 'vcf_fp': -15, 'vcf_fn': -14, 'vcf_precision': -13, 'vcf_recall': -12, 'vcf_f1': -11, 'vcf_bucket_tp': -10, 'vcf_bucket_fp': -9, 'vcf_bucket_fn': -8, 'reference_bias': -7, 'error_bias': -6, 'unmapped_variations': -5, 'total_variations': -4, 'mean_reference': -3, 'mean_error': -2, 'error_bias_no_variation': -1 }
+  if not bias_report:
+    for key in y_map:
+      y_map[key] += 6
+  if not has_no_variation:
+    for key in y_map:
+      y_map[key] += 1
+  return y_map
+
 def series_from_pipeline_batch( fh, x, y, bias_report=True, column_offset=0 ):
   '''
     given a pipeline batch result file, return a list of result arrays
@@ -12,10 +25,7 @@ def series_from_pipeline_batch( fh, x, y, bias_report=True, column_offset=0 ):
     @y: e.g. vcf_f1
     @column_offset: use if older version of output with missing columns
   '''
-  y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
-  if not bias_report:
-    for key in y_map:
-      y_map[key] += 4
+  y_map = make_ymap(bias_report)
   xs = []
   ys = []
   for line in fh:
@@ -32,10 +42,7 @@ def series_from_pipeline_batch( fh, x, y, bias_report=True, column_offset=0 ):
   return xs, ys
 
 def series_from_line( line, y, bias_report=False, column_offset=0 ):
-  y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
-  if not bias_report:
-    for key in y_map:
-      y_map[key] += 4
+  y_map = make_ymap(bias_report)
   xs = []
   ys = []
   # found the line
@@ -51,10 +58,7 @@ def series_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset
     given a pipeline batch result file, look at each row starting from item and return [xs, ys], where
     xs is the proportion; ys is the field specified by y 
   '''
-  y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
-  if not bias_report:
-    for key in y_map:
-      y_map[key] += 4
+  y_map = make_ymap(bias_report)
   xs = []
   ys = []
   for line in fh:
@@ -71,10 +75,7 @@ def series_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset
     return xs, ys # e.g. [ 0.00 0.25 0.5 0.75 ], [ values ]
 
 def item_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset=0 ):
-  y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
-  if not bias_report:
-    for key in y_map:
-      y_map[key] += 4
+  y_map = make_ymap(bias_report)
   for line in fh:
     if line.startswith( 'command' ) or line.startswith( '#' ):
       continue
@@ -100,6 +101,9 @@ def add_f1_to_batch_results(h):
       else:
         f1 = 0
       sys.stdout.write( '%s,%f\n' % ( line.strip(), f1 ) )
+
+def calculate_tpr():
+  pass # TODO
 
 def repeats( s, k ):
   '''
@@ -223,10 +227,7 @@ def quick_view( fh, bias_report=False ):
   '''
     quick summary of the output from an experiment
   '''
-  y_map = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
-  if not bias_report:
-    for key in y_map:
-      y_map[key] += 6
+  y_map = make_ymap(bias_report)
   rev_map = dict((v,k) for k,v in y_map.iteritems())
   result = {}
   for line in fh:

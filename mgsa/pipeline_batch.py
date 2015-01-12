@@ -27,9 +27,10 @@ if len(sys.argv) < 3:
   sys.exit(0)
 
 # open config file
+# if a field is added, update helpers.py
 target = open( sys.argv[2], 'w' )
 target.write( '# cfg, unmapped, incorrect, read_precision, read_recall, read_f1, vcf_tp, vcf_fp, vcf_fn, vcf_precision, vcf_recall, vcf_f1, vcf_bucket_tp, vcf_bucket_fp, vcf_bucket_fn' )
-target.write( ', reference_bias, error_bias, unmapped_variations, total_variations, mean_reference, mean_error' ) # part of BiasReport
+target.write( ', reference_bias, error_bias, unmapped_variations, total_variations, mean_reference, mean_error, error_bias_no_variation' ) # part of BiasReport
 target.write( '\n' )
 first = True
 config_helper = bio.Config()
@@ -106,7 +107,7 @@ for line in open( config_file, 'r' ):
 
   # build candidate vcf
   candidate_vcf = bio.VCF( writer=bio.VCFWriter( open( recovered_vcf_file, 'w' ) ) ) # empty vcf
-  bio.SamToVCF( sam=open( sam_file, 'r' ), reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr ) # write to vcf
+  bio.SamToVCF( sam=open( sam_file, 'r' ), reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
   # compare correct vcf to candidate vcf
   vcf_diff = bio.VCFDiff( vcf_correct=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr), vcf_candidate=candidate_vcf, log=bio.log_stderr )
   #print vcf_diff.stats
@@ -134,7 +135,8 @@ for line in open( config_file, 'r' ):
       buckets=cfg['bias_report_buckets'] )
     #bias_report_file = "out/%s_%s_x%s_%s_%s_bias.txt" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
     #print "stats", report.stats, "reference", report.reference_histogram, "error", report.error_histogram
-    target.write( ',%s,%s,%.2f,%.2f,%f,%f' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ), report.stats['unmapped'], report.stats['total'], report.stats['mean_reference'], report.stats['mean_error'] ) )
+    #target.write( ',%s,%s,%.2f,%.2f,%f,%f,%s' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ), report.stats['unmapped'], report.stats['total'], report.stats['mean_reference'], report.stats['mean_error'], '|'.join( [str(x) for x in report.error_histogram_no_variation ] ) ) )
+    target.write( ',%s,%s,%.2f,%.2f,%f,%f' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ), report.stats['unmapped'], report.stats['total'], report.stats['mean_reference'] ) )
 
   target.write( '\n' )
   target.flush()

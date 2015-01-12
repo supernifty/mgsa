@@ -546,6 +546,36 @@ def plot_read_length_vs_alignment_ecoli():
   fig.savefig('%s/ecoli-read-length-vs-alignment-ecoli.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
+def plot_read_length_vs_alignment_ecoli_detailed():
+  out_file = "out/pipeline_batch_many_read_lengths_ecoli_150107.out"
+
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_snp = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'read_length' ) )
+    y.append( find_column( line, 'read_f1' ) )
+    y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  #print "x", x
+  #print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='Alignment', color='r')
+  ax.plot(x, y_snp, label='SNP Call', color='b')
+  ax.set_ylabel('F1-Score')
+  ax.set_xlabel('Read Length')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/ecoli-read-length-vs-alignment-ecoli-detailed.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
 def plot_coverage_vs_alignment_circoviridae():
   out_file = "out/pipeline_batch_many_read_coverages_circoviridae_141127.out"
 
@@ -765,7 +795,6 @@ def plot_insertion_vs_alignment_ecoli():
 
 def plot_deletion_vs_alignment_circoviridae():
   out_file = "out/delete_experiment_circoviridae_141209.out"
-
   bio.log_stderr( 'extracting values from %s...' % out_file )
   x = []
   y = []
@@ -797,6 +826,79 @@ def plot_deletion_vs_alignment_circoviridae():
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/circoviridae-deletion-vs-alignment.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def plot_insertion_vs_readlength_circoviridae():
+  out_file = "out/insert_readlength_150108.out"
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_precision = []
+  y_recall = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'read_length' ) )
+    y.append( find_column( line, 'vcf_f1' ) )
+    y_precision.append( find_column( line, 'vcf_precision' ) )
+    y_recall.append( find_column( line, 'vcf_recall' ) )
+    #y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  print "x", x
+  print "y", y
+  print "y_p", y_precision
+  print "y_r", y_recall
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='F1', color='r')
+  ax.plot(x, y_precision, label='Precision', color='g')
+  ax.plot(x, y_recall, label='Recall', color='b')
+  #ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('%')
+  ax.set_xlabel('Read Length')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='upper left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/circoviridae-insertion-vs-readlength.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def plot_insertion_vs_readlength_ecoli():
+  out_file = "out/insert_readlength_ecoli_150108a.out"
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_precision = []
+  y_recall = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'read_length' ) )
+    y.append( find_column( line, 'vcf_f1' ) )
+    y_precision.append( find_column( line, 'vcf_precision' ) )
+    y_recall.append( find_column( line, 'vcf_recall' ) )
+    #y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  print "x", x
+  print "y", y
+  print "y_p", y_precision
+  print "y_r", y_recall
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='F1', color='r')
+  ax.plot(x, y_precision, label='Precision', color='g')
+  ax.plot(x, y_recall, label='Recall', color='b')
+  #ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('%')
+  ax.set_xlabel('Read Length')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='upper left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/ecoli-insertion-vs-readlength.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
 
 def plot_deletion_vs_alignment_ecoli():
   out_file = "out/delete_experiment_ecoli_141211.out"
@@ -838,6 +940,7 @@ def plot_deletion_vs_alignment_ecoli():
 # TODO ecoli-mutations-snps-unmapped-2.pdf (not used)
 # TODO mutation-f1-hiv.pdf (not used)
 # TODO ecoli-mutations-snps-f1-2.pdf (not used)
+#plot_read_length_vs_alignment_ecoli()
 
 ##### in report
 #mutation_hiv() # mutation-hiv.pdf (% unmapped as mutation rate increases)
@@ -849,9 +952,9 @@ def plot_deletion_vs_alignment_ecoli():
 #read_length_ecoli_map() # ecoli-read-length-bowtie-mapping.pdf
 #read_length_hiv() # hiv-read-length-vcf-snps.pdf (lots of noise)
 #snp_vs_map_ecoli() # ecoli-map_vs_snp-400.pdf plot of f1-scores of snps found and mapping accuracy, vs mutation rate, for e-coli
-#plot_read_length_vs_alignment_ecoli()
 #plot_coverage_vs_alignment_ecoli_high_errors()
 #plot_reference_bias_ecoli_example() # 
+#plot_read_length_vs_alignment_ecoli_detailed()
 
 ##### experimental
 #read_length_ecoli_map_low_mutation() # ecoli-read-length-bowtie-mapping.pdf
@@ -859,5 +962,7 @@ def plot_deletion_vs_alignment_ecoli():
 #plot_reference_bias_ecoli_example_with_errors() # 
 #plot_insertion_vs_alignment_circoviridae()
 #plot_insertion_vs_alignment_ecoli()
-plot_deletion_vs_alignment_ecoli()
-plot_deletion_vs_alignment_circoviridae()
+#plot_deletion_vs_alignment_ecoli()
+#plot_deletion_vs_alignment_circoviridae()
+#plot_insertion_vs_readlength_circoviridae()
+plot_insertion_vs_readlength_ecoli()

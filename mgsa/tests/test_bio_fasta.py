@@ -119,6 +119,25 @@ class TestProbabilisticFasta( unittest.TestCase ):
     self.assertEqual( 0.5, p.confidence(1)['C'] )
     self.assertEqual( 0.6, p.confidence(2)['C'] )
 
+  def test_consensus_snp( self ):
+    p = bio.ProbabilisticFasta()
+    p.add( 'AA', 0, 1. ) # AA-
+    p.add( 'CC', 1, 1. ) # -CC
+    p.add( 'CG', 1, 1. ) # -CG
+    c = p.consensus_at( 0 )
+    self.assertEqual( 1, c[0] )
+    self.assertEqual( 'A', c[1] )
+    self.assertEqual( 1, c[2] )
+    self.assertEqual( 1, c[3] )
+    c = p.consensus_at( 1 )
+    self.assertEqual( 'C', c[1] )
+    self.assertEqual( 2, c[2] )
+    self.assertEqual( 3, c[3] )
+    c = p.consensus_at( 2 )
+    self.assertEqual( 'C', c[1] )
+    self.assertEqual( 1, c[2] )
+    self.assertEqual( 2, c[3] )
+
 class TestFastaMutate( unittest.TestCase ):
   def setUp(self):
     pass

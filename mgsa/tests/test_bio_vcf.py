@@ -44,3 +44,23 @@ class TestVCF( unittest.TestCase ):
     vcf.indel( 5, 'AA', 'ATA' )
     self.assertEqual( 1, len(vcf.variations( 0, 10 )) )
     self.assertTrue( 'I5-1[5,0,10]' in vcf.variations( 0, 10 ) )
+
+class TestVCFWriter( unittest.TestCase ):
+  def setUp(self):
+    pass
+
+  def test_write_snp_simple( self ):
+    target = StringIO.StringIO()
+    vcf = bio.VCFWriter(target)
+    vcf.snp( pos=1, ref='A', alt='G' )
+    lines = target.getvalue().split('\n')
+    self.assertEqual( 6, len(lines) )
+    self.assertEqual( '.\t2\t.\tA\tG\t.\tPASS\tDP=10\tGT\t1', lines[4] )
+
+  def test_write_snp_confidence( self ):
+    target = StringIO.StringIO()
+    vcf = bio.VCFWriter(target)
+    vcf.snp( pos=1, ref='A', alt='G', confidence=0.5 )
+    lines = target.getvalue().split('\n')
+    self.assertEqual( 6, len(lines) )
+    self.assertEqual( '.\t2\t.\tA\tG\t3\tPASS\tDP=10\tGT\t1', lines[4] )

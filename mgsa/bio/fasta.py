@@ -91,6 +91,11 @@ class ProbabilisticFasta(object):
   def consensus_at( self, i=0 ):
     '''
       returns the majority base at a given position, or N if no coverage (move, best, confidence, coverage)
+      @return move, result, best, coverage
+       - move: how many bases to move candidate
+       - result: best variation
+       - best: confidence of this variation
+       - coverage: total # reads covering this base
     '''
     best = 'N' # default if no coverage
     best_value = 0
@@ -134,7 +139,7 @@ class ProbabilisticFasta(object):
       result += best
       move += 1
      
-    return (move, result, best, coverage)
+    return (move, result, best_value, coverage) # TODO only returning confidence for variation, not indel
   
   def consensus_count( self, start=0, count=1 ):
     '''

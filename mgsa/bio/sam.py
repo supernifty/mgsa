@@ -13,11 +13,12 @@ class SamToVCF(object):
   '''
     similar to SamToFasta but use a reference to only get variants
   '''
-  def __init__( self, sam, reference, target_vcf, log, sam_sorted=False ):
+  def __init__( self, sam, reference, target_vcf, log, sam_sorted=False, call_strategy='consensus' ):
     '''
       @sam: file handle to sam file
       @reference: file handle to fasta file
       @target: VCF object
+      @call_strategy: consensus|conservative|aggressive TODO not implemented
     '''
     sam_to_fasta = SamToFasta( sam, log ) # builds fasta
     candidate = sam_to_fasta.fasta
@@ -29,7 +30,7 @@ class SamToVCF(object):
       actual_base = reference.base_at( pos )
       if actual_base is None:
         break # reference is done
-      candidate_move, candidate_variation, confidence, coverage = candidate.consensus_at( pos )
+      candidate_move, candidate_variation, evidence, coverage = candidate.consensus_at( pos )
 
       if candidate_move > 0 and delete_start: # the end of a delete
          target_vcf.indel( pos=delete_start - 1, before='%s%s' % ( reference.base_at( delete_start-1 ), delete_variation ), after='%s' % ( reference.base_at( delete_start-1 ) ), coverage=coverage )
@@ -44,9 +45,10 @@ class SamToVCF(object):
           delete_variation = reference.base_at(pos)
         else:
           delete_variation += reference.base_at(pos)
-      else: # candidate_move is 1
+      else: # candidate_move is 1 => snp
         if candidate_variation != actual_base and candidate_variation != 'N':
-          target_vcf.snp( pos=pos, ref=actual_base, alt=candidate_variation, coverage=coverage ) # mutation
+          confidence = 1. * evidence / coverage
+          target_vcf.snp( pos=pos, ref=actual_base, alt=candidate_variation, coverage=coverage, confidence=confidence ) # mutation
       pos += 1 # next base
 
     # check for sequence finishing early
