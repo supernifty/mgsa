@@ -61,6 +61,7 @@ class BiasReport (object):
     self.error_histogram_no_variation = [ 1. * r / total_no_variation for r in self.error_histogram_no_variation ] # convert to %
 
   def add_variation_to_stats( self, reference, error, buckets_count ):
+    #print "add_variation_to_stats ref", reference, "err", error
     # track counts
     self.stats['reference_percent_total'] += reference
     self.stats['error_percent_total'] += error

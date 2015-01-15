@@ -25,7 +25,7 @@ class ProbabilisticFasta(object):
     self.length = 0 # length of genome
     self.log = log
 
-  def add( self, fragment, start, confidence=1.0 ):
+  def add( self, fragment, start, confidence=1.0, debug=None ):
     '''
       process a directly mapped fragment of dna
       @fragment: the piece of dna
@@ -48,6 +48,8 @@ class ProbabilisticFasta(object):
         self.genome[value][position] += confidence
         self.prior[value] += 1
         self.total += 1
+        #if position == 39415: # debugging
+        #  self.log( 'start %i: added %f to %s, total %f, line %s' % ( start, confidence, value, self.genome[value][position], debug ) )
 
   def insert( self, fragment, start, confidence=1.0 ):
     '''
@@ -90,9 +92,9 @@ class ProbabilisticFasta(object):
 
   def consensus_at( self, i=0 ):
     '''
-      returns the majority base at a given position, or N if no coverage (move, best, confidence, coverage)
+      returns the majority base at given position i, or N if no coverage (move, best, confidence, coverage)
       @return move, result, best, coverage
-       - move: how many bases to move candidate
+       - move: how many bases to move candidate (1 is normal)
        - result: best variation
        - best: confidence of this variation
        - coverage: total # reads covering this base
@@ -103,12 +105,13 @@ class ProbabilisticFasta(object):
     result = ''
     move = 0
     # consensus at this base
-    for value in self.genome:
-      if i < len(self.genome[value]):
+    for value in self.genome: # i.e. A, C, G, T
+      if i < len(self.genome[value]): # check in range
         coverage += self.genome[value][i]
         if self.genome[value][i] > best_value:
-          best_value = self.genome[value][i]
-          best = value
+          best_value = self.genome[value][i] # best count
+          best = value # best base
+    #self.log( 'consensus at %i: best %s: %i of %i' % ( i, best, best_value, coverage ) )
     # find consensus insertion
     if i in self.insertions:
       # pick highest
@@ -412,9 +415,10 @@ class FastaReader(object):
 >>> [ f for f in p.items() ]
 ['abc', 'def']
   '''
-  def __init__(self, genome):
+  def __init__(self, genome, include_headers=False):
     self.genome = genome
     self.has_next = True
+    self.include_headers = include_headers
     self.future_fragment = self._next_item()
 
   def items(self):
@@ -442,7 +446,9 @@ class FastaReader(object):
  
   def _next_item(self):
     for line in self.genome:
-      if not line.startswith( '>' ):
+      if not self.include_headers and line.startswith( '>' ):
+        pass
+      else:
         return line.strip()
     return None
 
@@ -458,6 +464,9 @@ class FastaStats(object):
       if not line.startswith( '>' ):
         self.stats['count'] += len(line)
     log( self.stats )
+
+class MultiFastaReader(object):
+  pass
 
 class ErrorGenerator(object):
   def __init__( self, error_profile ):

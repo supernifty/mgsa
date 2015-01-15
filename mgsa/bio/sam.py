@@ -2,7 +2,9 @@
 import datetime
 import random
 import re
+import struct
 import sys
+import zlib
 
 import bio
 import fasta
@@ -21,7 +23,7 @@ class SamToVCF(object):
       @call_strategy: consensus|conservative|aggressive TODO not implemented
     '''
     sam_to_fasta = SamToFasta( sam, log ) # builds fasta
-    candidate = sam_to_fasta.fasta
+    candidate = sam_to_fasta.fasta # ProbabilisticFasta
     reference = fasta.Fasta( fasta.FastaReader( reference ) )
     pos = 0
     delete_start = None
@@ -128,7 +130,7 @@ class SamToFasta(object):
           cigar_len = int(cigar_match[0])
 
           if cigar_match[1] == 'M': # match
-            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos )
+            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos ) #, debug=line )
             genome_pos += cigar_len
             fragment_pos += cigar_len
 
@@ -145,7 +147,7 @@ class SamToFasta(object):
 
           if cigar_match[1] == 'S': # soft clipping
             #self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos, confidence=0.5 )
-            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos - cigar_len, confidence=SOFT_CLIP_CONFIDENCE )
+            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos - cigar_len, confidence=SOFT_CLIP_CONFIDENCE ) #, debug=line )
             #genome_pos += cigar_len
             fragment_pos += cigar_len
 
@@ -156,7 +158,7 @@ class SamToFasta(object):
             genome_pos += cigar_len
 
           if cigar_match[1] == '=': # sequence match
-            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos )
+            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos ) #, debug=line )
             genome_pos += cigar_len
             fragment_pos += cigar_len
 
@@ -360,3 +362,118 @@ class SamWriter(object):
     match = matches[ random.randint( 0, len(matches) - 1 ) ]
     self._fh.write( '%s\t%i\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%s\t%s\t%s\n' % ( name[1:], 0, 'generated', match + 1, 1, '%iM' % len(dna), '*', 0, 0, dna, confidence, '' ) )
 
+class BamReader(object):
+  '''
+    provides a sam handle like interface given a bam file
+    use as an iterator.
+    basically this class returns lines from a compressed (zlib) file
+    TODO now working, incomplete
+  '''
+  MAGIC = '\x1f\x8b\x08\x04'
+  HEADER = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00\x42\x43\x02\x00"
+  EOF = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00BC\x02\x00\x1b\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+  BC = b"BC"
+
+  def __init__( self, bam_fh ):
+    self.fh = bam_fh
+    self.buffered_lines = []
+    self.block = 0
+
+  def __iter__(self):
+    return self
+
+  def next(self):
+    if len(self.buffered_lines) == 0:
+      self._get_lines()
+      if len(self.buffered_lines) == 0:
+        raise StopIteration
+    return self.buffered_lines.pop(0)
+
+  def _get_lines(self):
+    # read block header
+    magic = self.fh.read(4)
+    if not magic:
+      return # no more data
+    if magic != BamReader.MAGIC:
+      raise Exception( 'invalid data' )
+    mod_time, extra_flags, os, extra_len = struct.unpack("<LBBH", self.fh.read(8))
+    block_size = None
+    x_len = 0
+    while x_len < extra_len:
+      subfield_id = self.fh.read(2)
+      subfield_len = struct.unpack("<H", self.fh.read(2))[0]  # uint16_t
+      subfield_data = self.fh.read(subfield_len)
+      x_len += subfield_len + 4
+      if subfield_id == BamReader.BC:
+        #assert subfield_len == 2, "Wrong BC payload length"
+        #assert block_size is None, "Two BC subfields?"
+        block_size = struct.unpack("<H", subfield_data)[0] + 1  # uint16_t
+    #assert x_len == extra_len, (x_len, extra_len)
+    #assert block_size is not None, "Missing BC, this isn't a BGZF file!"
+
+    # Now comes the compressed data, CRC, and length of uncompressed data.
+    deflate_size = block_size - 1 - extra_len - 19
+    d = zlib.decompressobj(-15)  # Negative window size means no headers
+    data = d.decompress(self.fh.read(deflate_size)) + d.flush()
+    expected_crc = self.fh.read(4)
+    expected_size = struct.unpack("<I", self.fh.read(4))[0]
+    #assert expected_size == len(data), \
+    #       "Decompressed to %i, not %i" % (len(data), expected_size)
+    # Should cope with a mix of Python platforms...
+    crc = zlib.crc32(data)
+    if crc < 0:
+        crc = struct.pack("<i", crc)
+    else:
+        crc = struct.pack("<I", crc)
+
+    self._process_data( data )
+    #assert expected_crc == crc, \
+    #       "CRC is %s, not %s" % (crc, expected_crc)
+    #if text_mode:
+    #    return block_size, _as_string(data)
+    #else:
+    #    return block_size, data
+
+  def find_null_terminated( self, data, start ):
+    end = start
+    while data[end] != '\0':
+      end += 1
+    return end + 1, str(data[start:end])
+
+  def _process_data( self, data ):
+    print "processing %i bytes" % len(data)
+    if self.block == 0:
+      magic, l_text = struct.unpack( '<4sl', data[0:8] ) # uses 4 + 4
+      # header
+      offset = 8
+      #print "magic, l_text", magic, l_text
+      header, self.n_ref = struct.unpack( '<%isl' % l_text, data[offset:offset + l_text + 4] ) # uses l_text + 4
+      #print "header, n_ref", header, self.n_ref
+      if len(header) > 0:
+        self.buffered_lines = header.split( '\n' )
+      offset = offset + l_text + 4 # n_ref
+      l_name = struct.unpack( '<l', data[offset:offset+4] )[0]
+      offset += 4 # l_name
+      #print 'l_name', l_name
+      name, self.l_ref = struct.unpack( '<%isl' % l_name, data[offset:offset + l_name + 4] )
+      offset += l_name + 4
+      #self.buffered_lines.append( name )
+      #print 'offset', offset
+    else: 
+      # sequences
+      offset = 0
+      while self.l_ref > 0:
+        print 'l_ref', self.l_ref, 'offset', offset
+        if offset >= len(data):
+          break
+        start_offset = offset
+        block_size, refID, pos, bin_mq_nl, flag_nc, l_seq, next_refID, next_pos, tlen = struct.unpack( '<lllLLllll', data[offset:offset + 36] )
+        offset += 36
+        offset, read_name = self.find_null_terminated( data, offset )
+        #print 'found', read_name, 'new offset', offset
+        self.buffered_lines.append( '%s' % read_name )
+
+        self.l_ref -= 1
+        offset = start_offset + block_size + 4
+
+    self.block += 1

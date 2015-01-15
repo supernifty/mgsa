@@ -4,6 +4,7 @@ import math
 import sys
 import zlib
 
+import bio
 # before error_bias_no_variation
 #y_map_old = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
 
@@ -247,8 +248,20 @@ def quick_view( fh, bias_report=False ):
     print key
     for item in result[key]:
       print "  %s" % item
-    
+
 if __name__ == '__main__':
+  if len(sys.argv) < 2:
+    print "%s (quick_view|fasta_stats|fasta_width width|fasta_edit command)" % sys.argv[0]
+  elif sys.argv[1] == 'quick_view':
+    quick_view( sys.stdin )
+  elif sys.argv[1] == 'fasta_stats':
+    print bio.fasta_stats( sys.stdin ).stats
+  elif sys.argv[1] == 'fasta_set_width':
+    bio.fasta_set_width( sys.stdin, sys.stdout, int(sys.argv[2]) )
+  elif sys.argv[1] == 'fasta_edit':
+    bio.fasta_edit( sys.stdin, sys.argv[2] )
+  else:
+    print "unrecognized command"
   #import doctest
   #doctest.testmod()
   #print "done"
@@ -261,4 +274,3 @@ if __name__ == '__main__':
   #print "3, 0.1:", miscall_probability( 3, 0.1 )
   #print "4, 0.02:", miscall_probability( 4, 0.02 )
 
-  quick_view( sys.stdin )

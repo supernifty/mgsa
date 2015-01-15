@@ -295,7 +295,7 @@ class VCFDiff(object):
       else: # false positive
         self.stats['fp'] += 1
         self.buckets[bucket]['fp'] += 1
-        #log( 'fp: %i' % candidate_snp['pos'] )
+        log( 'fp: %i' % ( candidate_snp['pos'] ) ) # debug
 
     # indels - true positives
     for true_indel in vcf_correct.manager.indel_list:

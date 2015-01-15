@@ -178,4 +178,10 @@ class IndelVariation(object):
     return self_overlap == other_overlap
 
   def __repr__( self ):
+    before = self.before
+    after = self.after
+    if len(before) > 100:
+      before = before[:50] + '...' + before[-50:]
+    if len(after) > 100:
+      after = after[:50] + '...' + after[-50:]
     return 'pos=%i before=%s after=%s' % ( self.pos, self.before, self.after )

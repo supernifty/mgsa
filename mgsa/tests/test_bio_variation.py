@@ -107,6 +107,13 @@ class TestIndelVariation( unittest.TestCase ):
     self.assertFalse( v1.matches( v2 ) )
     self.assertFalse( v2.matches( v1 ) )
 
+  def test_repr_simple(self):
+    v1 = bio.IndelVariation( 5, 'CA', 'CAA' )
+    self.assertEqual( 'pos=5 before=CA after=CAA', v1.__repr__() )
 
-
+  def test_repr_long(self):
+    before = 'A' * 200
+    after = 'G' * 200
+    v1 = bio.IndelVariation( 5, 'CA', 'CAA' )
+    self.assertTrue( len( v1.__repr__() ) < 300 )
 
