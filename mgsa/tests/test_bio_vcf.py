@@ -55,7 +55,7 @@ class TestVCFWriter( unittest.TestCase ):
     vcf.snp( pos=1, ref='A', alt='G' )
     lines = target.getvalue().split('\n')
     self.assertEqual( 6, len(lines) )
-    self.assertEqual( '.\t2\t.\tA\tG\t.\tPASS\tDP=10\tGT\t1', lines[4] )
+    self.assertEqual( '.\t2\t.\tA\tG\t3\tPASS\tDP=10\tGT\t1', lines[4] ) # 3 is default quality
 
   def test_write_snp_confidence( self ):
     target = StringIO.StringIO()
