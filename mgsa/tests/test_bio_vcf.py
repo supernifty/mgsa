@@ -64,3 +64,22 @@ class TestVCFWriter( unittest.TestCase ):
     lines = target.getvalue().split('\n')
     self.assertEqual( 6, len(lines) )
     self.assertEqual( '.\t2\t.\tA\tG\t3\tPASS\tDP=10\tGT\t1', lines[4] )
+
+class TestVCFDiff( unittest.TestCase ):
+  def setUp(self):
+    pass
+
+  def test_simple( self ):
+    correct = bio.VCF()
+    candidate = bio.VCF()
+    correct.snp( 2, 'G', 'T' )
+    correct.snp( 5, 'G', 'T' )
+    candidate.snp( 5, 'G', 'T' )
+    candidate.snp( 8, 'G', 'T' )
+    diff = bio.VCFDiff( correct, candidate, log = bio.log_quiet, generate_positions = True )
+    self.assertEqual( 1, diff.stats['tp'] )
+    self.assertEqual( 1, diff.stats['fp'] )
+    self.assertEqual( 1, diff.stats['fn'] )
+    self.assertEqual( 5, diff.positions['tp'][0] )
+    self.assertEqual( 2, diff.positions['fn'][0] )
+    self.assertEqual( 8, diff.positions['fp'][0] )

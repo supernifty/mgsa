@@ -15,6 +15,7 @@ DEFAULT_VCF_ZYGOSITY = "1" # choose alt
 class VCF(object):
   '''
     manage a VCF set
+    @reader: fh like object
   '''
 
   def __init__( self, reader=None, writer=None, log=bio.log_stderr ):
@@ -39,35 +40,40 @@ class VCF(object):
       if line.startswith( '#' ):
         continue
       fields = line.split()
-      if len(fields) > 5:
+      if len(fields) > 6:
         pos = int( fields[1] ) - 1 # vcf file is 1-based; bio uses 0-based
         ref = fields[3]
         alt = fields[4]
+        qual = fields[5]
+        if qual == '' or qual == '.':
+          confidence = 0.5
+        else:
+          confidence = 1. - 10 ** ( float(qual) / -10. )
         if len(ref) == 1 and len(alt) == 1:
           self.snp_map[pos] = len(self.snp_list)
-          self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt } )
+          self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt, 'conf': confidence } )
         else:
           self.manager.indel_map[int(pos)] = len(self.manager.indel_list)
           self.manager.indel_list.append( variation.IndelVariation( pos, ref, alt ) )
       count += 1
     self.log( 'VCF.load: %i lines loaded' % count )
 
-  def snp( self, pos, ref, alt, coverage=None, confidence=1. ):
+  def snp( self, pos, ref, alt, coverage=None, confidence=0.5 ):
     '''
       adds a snp
     '''
     self.snp_map[int(pos)] = len(self.snp_list)
-    self.snp_list.append( { 'pos': int(pos), 'ref': ref, 'alt': alt } )
+    self.snp_list.append( { 'pos': int(pos), 'ref': ref, 'alt': alt, 'conf': confidence } )
     if self.writer is not None:
       self.writer.snp( pos, ref, alt, coverage=coverage, confidence=confidence )
 
-  def indel( self, pos, before, after, coverage=None ):
+  def indel( self, pos, before, after, coverage=None, confidence=0.5 ):
     '''
       adds an indel
     '''
     self.manager.indel( pos, before, after )
     if self.writer is not None:
-      self.writer.indel( pos, before, after, coverage=coverage )
+      self.writer.indel( pos, before, after, coverage=coverage, confidence=confidence )
 
   def write_all( self, writer ):
     '''
@@ -217,7 +223,7 @@ class VCFWriter(object):
 ##chr\tpos\tid\tref\talt\tqual\tfilter\tinfo\tformat\tna00001
 ''' % datetime.datetime.now().strftime("%Y%m%d") )
 
-  def snp( self, pos, ref, alt, confidence=1., coverage=None, zygosity=None ):
+  def snp( self, pos, ref, alt, confidence=0.5, coverage=None, zygosity=None ):
     '''
       note that pos in a vcf is 1-based
       @coverage: depth of coverage on this variation
@@ -244,13 +250,15 @@ class VCFDiff(object):
     compare two vcfs
   '''
 
-  def __init__( self, vcf_correct, vcf_candidate, log ):
+  def __init__( self, vcf_correct, vcf_candidate, log=bio.log_stderr, generate_positions=False ):
     '''
       generates self.stats and self.buckets, containing tp, fp, and fn
-      @vcf_correct: the correct VCF
-      @vcf_candidate: the candidate VCF
+      @vcf_correct: the correct VCF()
+      @vcf_candidate: the candidate VCF()
     '''
     self.stats = { 'tp': 0, 'fp': 0, 'fn': 0 }
+    self.generate_positions = generate_positions
+    self.positions = { 'tp': [], 'fp': [], 'fn': [] }
     self.buckets = [ { 'tp': 0, 'fp': 0, 'fn': 0 } for _ in xrange(0, 20) ]
     max_snp_pos = 0
     if len( vcf_correct.snp_list ) > 0:
@@ -273,13 +281,19 @@ class VCFDiff(object):
         if candidate_snp['ref'] == true_snp['ref'] and candidate_snp['alt'] == true_snp['alt']:
           self.stats['tp'] += 1
           self.buckets[bucket]['tp'] += 1
+          if self.generate_positions:
+            self.positions['tp'].append( true_snp['pos'] )
         else:
           self.stats['fn'] += 1
           self.buckets[bucket]['fn'] += 1
           #log( 'fn(near): %i' % true_snp['pos'] )
+          if self.generate_positions:
+            self.positions['fn'].append( true_snp['pos'] )
       else:
         self.stats['fn'] += 1
         self.buckets[bucket]['fn'] += 1
+        if self.generate_positions:
+          self.positions['fn'].append( true_snp['pos'] )
         log( 'fn: %i' % true_snp['pos'] )
       
     for candidate_snp in vcf_candidate.snp_list:
@@ -289,12 +303,16 @@ class VCFDiff(object):
         if candidate_snp['ref'] != true_snp['ref'] or candidate_snp['alt'] != true_snp['alt']:
           self.stats['fp'] += 1
           self.buckets[bucket]['fp'] += 1
+          if self.generate_positions:
+            self.positions['fp'].append( candidate_snp['pos'] )
           #log( 'fp(near): %i' % candidate_snp['pos'] )
         else:
           pass # tp already found
       else: # false positive
         self.stats['fp'] += 1
         self.buckets[bucket]['fp'] += 1
+        if self.generate_positions:
+          self.positions['fp'].append( candidate_snp['pos'] )
         log( 'fp: %i' % ( candidate_snp['pos'] ) ) # debug
 
     # indels - true positives

@@ -123,21 +123,24 @@ for line in open( config_file, 'r' ):
   candidate_vcf = bio.VCF( writer=bio.VCFWriter( open( recovered_vcf_file, 'w' ) ) ) # empty vcf
   bio.SamToVCF( sam=open( sam_file, 'r' ), reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
   # compare correct vcf to candidate vcf
-  vcf_diff = bio.VCFDiff( vcf_correct=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr), vcf_candidate=candidate_vcf, log=bio.log_stderr )
-  #print vcf_diff.stats
-  vcf_precision = 0
-  vcf_recall = 0
-  vcf_f1 = 0
-  if vcf_diff.stats['tp'] > 0 or vcf_diff.stats['fp'] > 0:
-    vcf_precision = 1. * vcf_diff.stats['tp'] / ( vcf_diff.stats['tp'] + vcf_diff.stats['fp'] )
-  elif vcf_diff.stats['fp'] == 0: 
-    vcf_precision = 1 # nothing wrong
-  if vcf_diff.stats['tp'] > 0 or vcf_diff.stats['fn'] > 0:
-    vcf_recall = 1. * vcf_diff.stats['tp'] / ( vcf_diff.stats['tp'] + vcf_diff.stats['fn'] )
-  if vcf_precision != 0 or vcf_recall != 0:
-    vcf_f1 = 2. * ( vcf_precision * vcf_recall ) / ( vcf_precision + vcf_recall ) 
-  target.write( '%s,%f,%f,%f,%f,%f,%i,%i,%i,%f,%f,%f' % ( line.strip(), unmapped, incorrect, precision * 100, recall * 100, f1 * 100, vcf_diff.stats['tp'], vcf_diff.stats['fp'], vcf_diff.stats['fn'], vcf_precision * 100, vcf_recall * 100, vcf_f1 * 100 ) )
-  target.write( ',%s,%s,%s' % ( '|'.join( [ str( x['tp'] ) for x in vcf_diff.buckets ] ), '|'.join( [ str( x['fp'] ) for x in vcf_diff.buckets ] ),'|'.join( [ str( x['fn'] ) for x in vcf_diff.buckets ] ) ) )
+  if cfg['command'] == 'vcf':
+    target.write( '%s' % ( line.strip() ) )
+  else:
+    vcf_diff = bio.VCFDiff( vcf_correct=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr), vcf_candidate=candidate_vcf, log=bio.log_stderr )
+    #print vcf_diff.stats
+    vcf_precision = 0
+    vcf_recall = 0
+    vcf_f1 = 0
+    if vcf_diff.stats['tp'] > 0 or vcf_diff.stats['fp'] > 0:
+      vcf_precision = 1. * vcf_diff.stats['tp'] / ( vcf_diff.stats['tp'] + vcf_diff.stats['fp'] )
+    elif vcf_diff.stats['fp'] == 0: 
+      vcf_precision = 1 # nothing wrong
+    if vcf_diff.stats['tp'] > 0 or vcf_diff.stats['fn'] > 0:
+      vcf_recall = 1. * vcf_diff.stats['tp'] / ( vcf_diff.stats['tp'] + vcf_diff.stats['fn'] )
+    if vcf_precision != 0 or vcf_recall != 0:
+      vcf_f1 = 2. * ( vcf_precision * vcf_recall ) / ( vcf_precision + vcf_recall ) 
+    target.write( '%s,%f,%f,%f,%f,%f,%i,%i,%i,%f,%f,%f' % ( line.strip(), unmapped, incorrect, precision * 100, recall * 100, f1 * 100, vcf_diff.stats['tp'], vcf_diff.stats['fp'], vcf_diff.stats['fn'], vcf_precision * 100, vcf_recall * 100, vcf_f1 * 100 ) )
+    target.write( ',%s,%s,%s' % ( '|'.join( [ str( x['tp'] ) for x in vcf_diff.buckets ] ), '|'.join( [ str( x['fp'] ) for x in vcf_diff.buckets ] ),'|'.join( [ str( x['fn'] ) for x in vcf_diff.buckets ] ) ) )
 
   # bias report - may as well always have this on (?)
   if cfg['reports'] is not None and cfg['reports'].find('bias') != -1:
