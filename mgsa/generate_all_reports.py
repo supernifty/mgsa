@@ -948,7 +948,7 @@ def plot_vcf_parent_vs_child():
   y_tp = []
   for p in diff.positions['tp']: # both
     x_tp.append( p )
-    if p in child.snp_map: # onl
+    if p in child.snp_map:
       snp = child.snp_list[child.snp_map[p]]
       confidence = snp['conf']
     else:
@@ -956,7 +956,6 @@ def plot_vcf_parent_vs_child():
     qual = -10 * math.log( 1. - confidence, 10 )
     y_tp.append( qual )
     #y_tp.append( confidence )
-  print "both", x_tp, y_tp
 
   x_fp = []
   y_fp = []
@@ -970,7 +969,6 @@ def plot_vcf_parent_vs_child():
     qual = -10 * math.log( 1. - confidence, 10 )
     y_fp.append( qual )
     #y_fp.append( confidence )
-  print "child only", x_fp, y_fp
 
   x_fn = []
   y_fn = []
@@ -984,17 +982,17 @@ def plot_vcf_parent_vs_child():
     qual = -10 * math.log( 1. - confidence, 10 )
     y_fn.append( qual )
     #y_fn.append( confidence )
-  print "parent only", x_fn, y_fn
 
 #  ax.bar(x_tp, y_tp, width=4096, color='g', label='Present in both (%i)' % len(x_tp), edgecolor = "none")#, log=True)
 #  ax.bar(x_fp, y_fp, width=4096, color='r', label='Present in child (%i)' % len(x_fp), edgecolor = "none")#, log=True)
 #  ax.bar(x_fn, y_fn, width=4096, color='b', label='Present in parent (%i)' % len(x_fn), edgecolor = "none")#, log=True)
-  ax.scatter(x_fp, y_fp, color='r', label='Present in child (%i)' % len(x_fp), edgecolor = "none")#, log=True)
+  ax.scatter(x_fp, y_fp, color='r', label='Present only in child (%i)' % len(x_fp), edgecolor = "none")#, log=True)
   ax.scatter(x_tp, y_tp, color='g', label='Present in both (%i)' % len(x_tp), edgecolor = "none")#, log=True)
-  ax.scatter(x_fn, y_fn, color='b', label='Present in parent (%i)' % len(x_fn), edgecolor = "none")#, log=True)
+  ax.scatter(x_fn, y_fn, color='b', label='Present only in parent (%i)' % len(x_fn), edgecolor = "none")#, log=True)
 
   ax.set_ylabel('Quality')
   ax.set_xlabel('Position')
+  ax.set_xlim( xmin=0 )
   leg = ax.legend(loc='upper left', prop={'size':10})
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/malaria-3d7-p-vs-3d7-1q-vcf.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
