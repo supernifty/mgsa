@@ -239,10 +239,15 @@ class VCFWriter(object):
         '.', (pos + 1), '.', ref, alt, quality, 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
       ) )
 
-  def indel( self, pos, before, after, coverage=None, zygosity=None ):
+  def indel( self, pos, before, after, confidence=0.5, coverage=None, zygosity=None ):
+    if confidence < 1.:
+      quality = '%.0f' % ( -10 * math.log(1.-confidence, 10 ))
+    else:
+      quality = '.'
+
     self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\tDP=%i\tGT\t%s\n' % (
         # chrom, pos, id, ref, alt, qual, filter, info
-        '.', (pos + 1), '.', before, after, '.', 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
+        '.', (pos + 1), '.', before, after, quality, 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
       ) )
 
 class VCFDiff(object):

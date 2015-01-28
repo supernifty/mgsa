@@ -44,6 +44,33 @@ class TestSamToVCF( unittest.TestCase ):
     self.assertEqual( 'ACC', target_vcf.manager.indel_list[0].before )
     self.assertEqual( 'A', target_vcf.manager.indel_list[0].after )
     
+  def test_consensus_ins(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_0~0~0  0       generated       1      60      3M1I2M       *       0       0       TTAATT    ~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    reference = StringIO.StringIO( 'TTATT' )
+    target_vcf = bio.VCF()
+    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    genome = s.sam_to_fasta.fasta.genome
+    self.assertEqual( [1., 1., 0, 1., 1.], genome['T'] )
+    self.assertEqual( [0., 0., 1.], genome['A'] )
+    self.assertEqual( 0, len(target_vcf.snp_list) )
+    self.assertEqual( 1, len(target_vcf.manager.indel_list) )
+    self.assertEqual( 'AT', target_vcf.manager.indel_list[0].before )
+    self.assertEqual( 'AAT', target_vcf.manager.indel_list[0].after )
+
+  def test_consensus_del(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_0~0~0  0       generated       1      60      3M1D2M       *       0       0       TTATT    ~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    reference = StringIO.StringIO( 'TTAATT' )
+    target_vcf = bio.VCF()
+    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    genome = s.sam_to_fasta.fasta.genome
+    self.assertEqual( [1., 1., 0, 0., 1., 1.], genome['T'] )
+    self.assertEqual( [0., 0., 1.], genome['A'] )
+    self.assertEqual( [0., 0., 0., 1.], genome['-'] )
+    self.assertEqual( 0, len(target_vcf.snp_list) )
+    self.assertEqual( 1, len(target_vcf.manager.indel_list) )
+    self.assertEqual( 'AA', target_vcf.manager.indel_list[0].before )
+    self.assertEqual( 'A', target_vcf.manager.indel_list[0].after )
+ 
   def log(self, msg):
     print msg
 

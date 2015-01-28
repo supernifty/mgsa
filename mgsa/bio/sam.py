@@ -22,42 +22,48 @@ class SamToVCF(object):
       @target: VCF object
       @call_strategy: consensus|conservative|aggressive TODO not implemented
     '''
-    sam_to_fasta = SamToFasta( sam, log ) # builds fasta
-    candidate = sam_to_fasta.fasta # ProbabilisticFasta
+    self.sam_to_fasta = SamToFasta( sam, log ) # builds fasta
+    candidate = self.sam_to_fasta.fasta # ProbabilisticFasta
     reference = fasta.Fasta( fasta.FastaReader( reference ) )
-    pos = 0
+    candidate_pos = 0
     delete_start = None
     # TODO ploidy; make heterozygous calls and pass on to target vcf
-    while pos < candidate.length:
-      actual_base = reference.base_at( pos )
+    while candidate_pos < candidate.length:
+      actual_base = reference.base_at( candidate_pos )
       if actual_base is None:
         break # reference is done
-      candidate_move, candidate_variation, evidence, coverage = candidate.consensus_at( pos )
+      candidate_move, candidate_variation, evidence, coverage = candidate.consensus_at( candidate_pos )
+      log( 'SamToVCF: candidate_pos %i move %i base %s evidence %s coverage %f actual_base %s' % ( candidate_pos, candidate_move, candidate_variation, evidence, coverage, actual_base ) )
 
       if candidate_move > 0 and delete_start: # the end of a delete
+         #target_vcf.indel( pos=delete_start - 1, before='%s%s' % ( reference.base_at( delete_start-1 ), delete_variation ), after='%s' % ( reference.base_at( delete_start-1 ) ), coverage=coverage )
+         #log( 'SamToVCF: deletion at %i before %s/%s after %s coverage %f' % ( delete_start - 1, reference.base_at( delete_start-1 ), delete_variation, reference.base_at( delete_start-1 ), coverage ) )
          target_vcf.indel( pos=delete_start - 1, before='%s%s' % ( reference.base_at( delete_start-1 ), delete_variation ), after='%s' % ( reference.base_at( delete_start-1 ) ), coverage=coverage )
+         log( 'SamToVCF: deletion at %i before %s/%s after %s coverage %f' % ( delete_start - 1, reference.base_at( delete_start-1 ), delete_variation, reference.base_at( delete_start-1 ), coverage ) )
          delete_start = None
       
       if candidate_move > 1: # insertion
         # note that the current base is included in candidate_variation
-        target_vcf.indel( pos=pos, before='%s%s' % ( reference.base_at( pos-1 ), reference.base_at( pos ) ), after='%s%s' % ( reference.base_at( pos-1 ), candidate_variation ), coverage=coverage )
+        target_vcf.indel( pos=candidate_pos, before='%s%s' % ( reference.base_at( candidate_pos-1 ), reference.base_at( candidate_pos ) ), after='%s%s' % ( reference.base_at( candidate_pos-1 ), candidate_variation ), coverage=coverage )
+        log( 'SamToVCF: insertion %i before %s/%s after %s/%s coverage %f' % ( candidate_pos, reference.base_at( candidate_pos-1 ), reference.base_at( candidate_pos ), reference.base_at( candidate_pos-1 ), reference.base_at( candidate_pos ), coverage ) )
       elif candidate_move < 1: # start of deletion
         if delete_start is None:
-          delete_start = pos
-          delete_variation = reference.base_at(pos)
+          delete_start = candidate_pos
+          delete_variation = reference.base_at(candidate_pos)
         else:
-          delete_variation += reference.base_at(pos)
+          delete_variation += reference.base_at(candidate_pos)
       else: # candidate_move is 1 => snp
         if candidate_variation != actual_base and candidate_variation != 'N':
           confidence = 1. * evidence / coverage
-          target_vcf.snp( pos=pos, ref=actual_base, alt=candidate_variation, coverage=coverage, confidence=confidence ) # mutation
-      pos += 1 # next base
+          target_vcf.snp( pos=candidate_pos, ref=actual_base, alt=candidate_variation, coverage=coverage, confidence=confidence ) # mutation
+          log( 'SamToVCF: snp at %i with confidence %f due to %s' % ( candidate_pos, confidence, candidate.count(candidate_pos) ) )
+      candidate_pos += 1 # next base
 
     # check for sequence finishing early
     #log( "pos %i candidate length %i reference length %i" % ( pos, candidate.length, reference.length ) )
-    if pos < candidate.length: # reference finished early
+    if candidate_pos < candidate.length: # reference finished early
       #print "pos %i rl %i cl %i" % ( pos, reference.length, candidate.length )
-      target_vcf.indel( pos=pos-1, before=reference.base_at( pos-1 ), after=candidate.consensus( start=pos-1 ) )
+      target_vcf.indel( pos=candidate_pos-1, before=reference.base_at( candidate_pos-1 ), after=candidate.consensus( start=candidate_pos-1 ) )
     # TODO this doesn't work
     #elif reference.length > candidate.length: # candidate finished early
     #  target_vcf.indel( pos=pos-1, before=reference.base_at( pos-1 ), after=reference.fragment( start=pos-1 ) )
@@ -122,25 +128,25 @@ class SamToFasta(object):
           self.stats['mapped'] += 1
         else:
           self.stats['unknown_mapping'] += 1 # still try to map
-        pos = int(fields[3]) - 1 # pos in genome; 0 based
-        fragment_pos = 0
-        genome_pos = 0
+        pos = int(fields[3]) - 1 # pos on reference genome at start of fragment; 0 based
+        fragment_pos = 0 # position on the read
+        genome_pos = 0 # position on reference
         cigar = fields[5]
         for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ):
           cigar_len = int(cigar_match[0])
 
           if cigar_match[1] == 'M': # match
             self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos ) #, debug=line )
-            genome_pos += cigar_len
-            fragment_pos += cigar_len
+            genome_pos += cigar_len # move forward on reference
+            fragment_pos += cigar_len # move forward in read
 
           if self.allow_indels and cigar_match[1] == 'I': # insertion to the reference
             self.fasta.insert( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos )
-            fragment_pos += cigar_len
+            fragment_pos += cigar_len # move on in fragment, don't move on in genome since it's an insertion
 
           if self.allow_indels and cigar_match[1] == 'D': # deletion from the reference
             self.fasta.delete( pos + genome_pos, cigar_len )
-            genome_pos += cigar_len
+            genome_pos += cigar_len # don't move on in fragment, move on in reference
 
           if cigar_match[1] == 'N': # skipped region from the reference
             genome_pos += cigar_len

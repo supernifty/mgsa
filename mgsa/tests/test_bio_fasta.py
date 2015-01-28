@@ -138,6 +138,46 @@ class TestProbabilisticFasta( unittest.TestCase ):
     self.assertEqual( 1, c[2] )
     self.assertEqual( 2, c[3] )
 
+  def test_simple_count( self ):
+    p = bio.ProbabilisticFasta( log = bio.log_quiet )
+    p.add( 'TTATT', 0, 1. )
+    self.assertEqual( 1.0, p.count(0)['T'] ) # 
+    self.assertEqual( 0.0, p.count(0)['A'] )
+
+  def test_simple( self ):
+    p = bio.ProbabilisticFasta( log = bio.log_quiet )
+    p.add( 'TTATT', 0, 1. )
+    # num = base count + 1 => 2
+    # denom = 1 (total count) + 2 (#base types) => 3
+    self.assertEqual( 2./3, p.confidence(0)['T'] ) 
+    self.assertEqual( 2./3, p.confidence(1)['T'] )
+    self.assertEqual( 2./3, p.confidence(2)['A'] )
+    self.assertEqual( 2./3, p.confidence(3)['T'] )
+    self.assertEqual( 2./3, p.confidence(4)['T'] )
+
+  def test_insert( self ):
+    p = bio.ProbabilisticFasta( log = bio.log_quiet )
+    # ref = TTATT
+    # read = TTAATT
+    # cigar = 3M1I2M
+    p.add( 'TTA', 0, 1. ) # 2M
+    p.insert( 2, 1 ) # 1I
+    p.add( 'TT', 3 )
+    self.assertEqual( [1., 1., 0, 1., 1.], p.genome['T'] )
+    self.assertEqual( [0., 0., 1.], p.genome['A'] )
+
+  def test_delete( self ):
+    p = bio.ProbabilisticFasta( log = bio.log_quiet )
+    # ref = TTAATT
+    # read = TTATT
+    # cigar = 3M1D2M
+    p.add( 'TTA', 0, 1. ) # 2M
+    p.delete( 3, 1 ) # 1D
+    p.add( 'TT', 4 )
+    self.assertEqual( [1., 1., 0, 0., 1., 1.], p.genome['T'] )
+    self.assertEqual( [0., 0., 1.], p.genome['A'] )
+    self.assertEqual( [0., 0., 0., 1.], p.genome['-'] )
+
 class TestFastaMutate( unittest.TestCase ):
   def setUp(self):
     pass

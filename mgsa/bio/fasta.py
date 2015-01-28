@@ -29,7 +29,7 @@ class ProbabilisticFasta(object):
     '''
       process a directly mapped fragment of dna
       @fragment: the piece of dna
-      @fragment: where in the genome it starts
+      @start: where in the reference genome it starts
       @confidence: how confident in this mapping
     '''
     for i in xrange(0, len(fragment) ):
@@ -84,7 +84,7 @@ class ProbabilisticFasta(object):
       TODO priors
     '''
     counts = self.count( position ) # e.g. { 'A': 4, 'C': 1 }
-    denominator = sum( counts[k] for k in counts ) + len(self.prior)
+    denominator = sum( counts[k] for k in counts ) + len(self.prior) # laplacian smoothing
     probabilities = {}
     for count in counts:
       probabilities[count] = ( counts[count] + 1.0 ) / denominator
