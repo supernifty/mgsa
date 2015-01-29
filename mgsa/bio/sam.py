@@ -182,6 +182,9 @@ class SamAccuracyEvaluator(object):
     evaluate sam accuracy given the correct sequence marker
   '''  
   def __init__( self, sam, variation_map=None, log=bio.log_stderr, verbose=False ):
+    '''
+      @sam: file like object
+    '''
     self.verbose = verbose
     self.variation_map = self.parse_variation_map( variation_map )
     if verbose:
@@ -230,6 +233,7 @@ class SamAccuracyEvaluator(object):
     #9 AAATGTCTTCATTACTTACTTTATATATAAATCCTATGTTTATTTTTATTGTTGTTTTAGATGATACTTAGAATCGTGTTTAAAAAAAAGTTTCCTGCTG
     #10 BGG=77FGBGG?GDGB7GED@CEGECDA?EG3D8:D.??06GB?-GCDGCA9G#AG?=AAEFBFFG=@DAAD#EBD;EC5#GD#5DE##A#BF#B#?=##
     #AS:i:192 #XN:i:0 #XM:i:2 #XO:i:0 #XG:i:0 #NM:i:2 #MD:Z:87G5G6 #YS:i:200 #YT:Z:CP
+    #print "parsing %s" % line
     if line.startswith( '@' ): # skip header
       pass
     else:

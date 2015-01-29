@@ -997,6 +997,87 @@ def plot_vcf_parent_vs_child():
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/malaria-3d7-p-vs-3d7-1q-vcf.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
 
+from matplotlib.ticker import FuncFormatter
+def to_percent(y, position):
+    # Ignore the passed in position. This has the effect of scaling the default
+    # tick locations.
+    #s = str(10 * y)
+    s = '%.0f' % (1000 * y)
+    return s
+
+    # The percent symbol needs escaping in latex
+    #if rcParams['text.usetex'] == True:
+    #    return s + r'$\%$'
+    #else:
+    #    return s + '%'
+
+def plot_mappability():
+  lines = open( 'out/mappability_circoviridae_bwa.out' ).readlines()
+  accuracy_list = lines[1].split(':')[1]
+  accuracy_bwa = [float(x) * 100 for x in accuracy_list.strip( ' []\n' ).split(',')]
+
+  lines = open( 'out/mappability_circoviridae_bowtie.out' ).readlines()
+  accuracy_list = lines[1].split(':')[1]
+  accuracy_bowtie = [float(x) * 100 for x in accuracy_list.strip( ' []\n' ).split(',')]
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+
+  #ax.plot(accuracy)
+  ax.scatter(range(0, len(accuracy_bwa)), accuracy_bwa, s=2, label="BWA", color='g' )#, s=2)
+  ax.scatter(range(0, len(accuracy_bowtie)), accuracy_bowtie, s=2, label="Bowtie", color='b' )#, s=2)
+  ax.set_ylabel('Mapping Accuracy')
+  ax.set_xlabel('Position')
+  ax.set_title( 'Mappability by genome position' )
+  leg = ax.legend(loc='lower left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  plt.xlim(xmin=0, xmax=8204)
+  plt.ylim(ymax=100.01, ymin=0.)
+  fig.savefig('%s/mappability-circoviridae-comparison-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.scatter(range(0, len(accuracy_bwa)), accuracy_bwa, s=2, label="BWA", color='g' )#, s=2)
+  ax.set_ylabel('Mapping Accuracy')
+  ax.set_xlabel('Position')
+  leg = ax.legend(loc='lower left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  plt.xlim(xmin=0, xmax=8204)
+  plt.ylim(ymax=100.01, ymin=0.)
+  fig.savefig('%s/mappability-circoviridae-bwa-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.scatter(range(0, len(accuracy_bowtie)), accuracy_bowtie, s=2, label="Bowtie", color='b' )#, s=2)
+  ax.set_ylabel('Mapping Accuracy')
+  ax.set_xlabel('Position')
+  leg = ax.legend(loc='lower left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  plt.xlim(xmin=0, xmax=8204)
+  plt.ylim(ymax=100.01, ymin=0.)
+  fig.savefig('%s/mappability-circoviridae-bowtie-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
+
+def plot_mappability_hist( src, mapper ):
+  #lines = open( 'results.out' ).readlines()
+  lines = open( src ).readlines()
+  accuracy_list = lines[1].split(':')[1]
+  accuracy = [float(x) * 100 for x in accuracy_list.strip( ' []\n' ).split(',')]
+  #print len(n), len(bins)
+  
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  #ax.plot( bins, n )
+  n, bins, patches = ax.hist(accuracy, 10, normed=1)#, normed=1, histtype='stepfilled')
+  formatter = FuncFormatter(to_percent)
+  #hist = np.histogram( accuracy, bins=50, density=True ) # sums to read length
+  plt.gca().yaxis.set_major_formatter(formatter)
+  ax.set_ylabel('%')
+  ax.set_xlabel('Mapping Accuracy')
+  ax.set_title( mapper )
+  ax.set_xlim(xmin=0, xmax=100)
+  
+  fig.savefig('%s/mappability-hist-circoviridae-repeated-%s-50.pdf' % ( REPORT_DIRECTORY, mapper ), format='pdf', dpi=1000)
+
 # no longer used
 # TODO ecoli-mutations-snps-unmapped-2.pdf (not used)
 # TODO mutation-f1-hiv.pdf (not used)
@@ -1027,4 +1108,10 @@ def plot_vcf_parent_vs_child():
 #plot_deletion_vs_alignment_circoviridae()
 #plot_insertion_vs_readlength_circoviridae()
 #plot_insertion_vs_readlength_ecoli()
-plot_vcf_parent_vs_child()
+#plot_vcf_parent_vs_child()
+plot_mappability()
+#plot_mappability( 'results.out', 'bwa' )
+#plot_mappability( 'results_bowtie.out', 'bowtie' )
+#plot_mappability_hist()
+plot_mappability_hist( 'out/mappability_circoviridae_bwa.out', 'bwa' )
+plot_mappability_hist( 'out/mappability_circoviridae_bowtie.out', 'bowtie' )

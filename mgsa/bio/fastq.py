@@ -5,6 +5,9 @@ import bio
 import fasta
 
 class FastqGenerator(object):
+  '''
+    generates a complete fastq with various mutation options from a fasta
+  '''
   def __init__( self, fasta_fh, cfg, vcf, variation_map=None, target_fh=sys.stdout, log=bio.log_stderr ):
     probabilistic = False
 
@@ -61,14 +64,14 @@ class FastqGenerator(object):
             if inversion:
               time_to_inversion += inversion_every
     
-            self.write( reference_position, dna_with_errors, '~' * cfg['read_length'], variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
+            self._write( reference_position, dna_with_errors, '~' * cfg['read_length'], variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
     
             max_pos = max(max_pos, reference_position + cfg['read_length'])
             time_to_next += read_every
         base_candidate_position += process
         dna = dna[process:]
 
-  def write( self, pos, sequence, quality, variation_map, target_fh, variations=set(), offset=0, length=0, debug='', inversion=False ):
+  def _write( self, pos, sequence, quality, variation_map, target_fh, variations=set(), offset=0, length=0, debug='', inversion=False ):
     '''
       write a sequence of given quality
       debug is not used and for humans only
@@ -90,3 +93,64 @@ class FastqGenerator(object):
     target_fh.write( '\n' )
   
    
+class FastqPosGenerator(object):
+  '''
+    generate reads around a specific base
+  '''
+
+  def __init__( self, fasta_fh, log=bio.log_stderr ):
+    self.fasta = fasta_fh
+    self.log = log
+    self.sequence = ''
+    self.finished_read = False
+    self._update_sequence()
+
+  def _update_sequence( self, required_length=-1 ):
+    if self.finished_read:
+      return
+    # for the moment pull in the whole sequence
+    for line in self.fasta:
+      if line.startswith( '>' ):
+        continue
+      self.sequence += line.strip()
+    self.finished_read = True
+    
+  def __len__(self):
+    return len(self.sequence)
+
+  def _variation_rule( self, ref ):
+    '''
+      default snp is A, else T
+    '''
+    if ref == 'A':
+      return 'T'
+    else:
+      return 'A'
+
+  def write( self, target_fh=sys.stdout, pos=0, read_length=100, variation=None ):
+    '''
+      fastq file to write to
+      @target_fh: fastq file
+      @pos: pos of fasta to cover
+    ''' 
+    self._update_sequence( pos + read_length )
+    start_pos = max(0, pos - read_length + 1)
+    subsequence = self.sequence[start_pos : pos + read_length]
+    if variation == 'snp':
+      snp_pos = pos - start_pos
+      ref = subsequence[snp_pos]
+      alt = self._variation_rule( ref )
+      subsequence = ''.join( ( subsequence[:snp_pos], alt, subsequence[snp_pos+1:] ) )
+    written = 0
+    #self.log('subsequence: %s' % subsequence )
+    for offset in xrange(0, len(subsequence) - read_length + 1):
+      target_fh.write( '@mgsa_seq_%i~%i~0\n' % ( start_pos, offset ) ) # sam is 0 indexed
+      read = subsequence[offset:offset+read_length]
+      quality = '~' * len(read)
+      target_fh.write( read )
+      target_fh.write( '\n+\n' )
+      target_fh.write( quality ) # quality 
+      target_fh.write( '\n' )
+      written += 1
+    return written   
+     

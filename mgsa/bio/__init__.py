@@ -1,4 +1,5 @@
 
+from bias import *
 from bio import *
 from fasta import *
 from fastq import *
