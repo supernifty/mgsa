@@ -83,3 +83,39 @@ class TestVCFDiff( unittest.TestCase ):
     self.assertEqual( 5, diff.positions['tp'][0] )
     self.assertEqual( 2, diff.positions['fn'][0] )
     self.assertEqual( 8, diff.positions['fp'][0] )
+
+class TestVCFFastaDiff( unittest.TestCase ):
+
+  def test_snp_fn( self ):
+    fa = bio.ProbabilisticFasta(log=bio.log_quiet)
+    fa.add( fragment='gg', start=1 )
+    fa.add( fragment='cc', start=3 )
+    vcf = bio.VCF()
+    vcf.snp( pos=2, ref='g', alt='t' )
+    diff = bio.VCFFastaDiff( vcf, fa, log=bio.log_quiet )
+    self.assertEqual( 1, diff.snp_stats['fn'] )
+    self.assertEqual( 0, diff.snp_stats['tp'] )
+    self.assertEqual( 0, diff.snp_stats['other'] )
+
+  def test_snp_tp( self ):
+    fa = bio.ProbabilisticFasta(log=bio.log_quiet)
+    fa.add( fragment='gt', start=1 )
+    fa.add( fragment='cc', start=3 )
+    vcf = bio.VCF()
+    vcf.snp( pos=2, ref='g', alt='t' )
+    diff = bio.VCFFastaDiff( vcf, fa, log=bio.log_quiet )
+    self.assertEqual( 0, diff.snp_stats['fn'] )
+    self.assertEqual( 1, diff.snp_stats['tp'] )
+    self.assertEqual( 0, diff.snp_stats['other'] )
+
+  def test_snp_other( self ):
+    fa = bio.ProbabilisticFasta(log=bio.log_quiet)
+    fa.add( fragment='ga', start=1 )
+    fa.add( fragment='cc', start=3 )
+    vcf = bio.VCF()
+    vcf.snp( pos=2, ref='g', alt='t' )
+    diff = bio.VCFFastaDiff( vcf, fa, log=bio.log_quiet )
+    self.assertEqual( 0, diff.snp_stats['fn'] )
+    self.assertEqual( 0, diff.snp_stats['tp'] )
+    self.assertEqual( 1, diff.snp_stats['other'] )
+
