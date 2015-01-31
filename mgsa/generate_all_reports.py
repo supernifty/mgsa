@@ -1016,6 +1016,10 @@ def plot_mappability():
   accuracy_list = lines[1].split(':')[1]
   accuracy_bwa = [float(x) * 100 for x in accuracy_list.strip( ' []\n' ).split(',')]
 
+  lines = open( 'out/mappability_circoviridae_bwa_sw.out' ).readlines()
+  accuracy_list = lines[1].split(':')[1]
+  accuracy_bwa_sw = [float(x) * 100 for x in accuracy_list.strip( ' []\n' ).split(',')]
+
   lines = open( 'out/mappability_circoviridae_bowtie.out' ).readlines()
   accuracy_list = lines[1].split(':')[1]
   accuracy_bowtie = [float(x) * 100 for x in accuracy_list.strip( ' []\n' ).split(',')]
@@ -1026,6 +1030,7 @@ def plot_mappability():
   #ax.plot(accuracy)
   ax.scatter(range(0, len(accuracy_bwa)), accuracy_bwa, s=2, label="BWA", color='g' )#, s=2)
   ax.scatter(range(0, len(accuracy_bowtie)), accuracy_bowtie, s=2, label="Bowtie", color='b' )#, s=2)
+  ax.scatter(range(0, len(accuracy_bwa_sw)), accuracy_bowtie, s=2, label="BWA-SW", color='r' )#, s=2)
   ax.set_ylabel('Mapping Accuracy')
   ax.set_xlabel('Position')
   ax.set_title( 'Mappability by genome position' )
@@ -1045,6 +1050,17 @@ def plot_mappability():
   plt.xlim(xmin=0, xmax=8204)
   plt.ylim(ymax=100.01, ymin=0.)
   fig.savefig('%s/mappability-circoviridae-bwa-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.scatter(range(0, len(accuracy_bwa_sw)), accuracy_bwa_sw, s=2, label="BWA SW", color='r' )#, s=2)
+  ax.set_ylabel('Mapping Accuracy')
+  ax.set_xlabel('Position')
+  leg = ax.legend(loc='lower left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  plt.xlim(xmin=0, xmax=8204)
+  plt.ylim(ymax=100.01, ymin=0.)
+  fig.savefig('%s/mappability-circoviridae-bwa-sw-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
 
   fig = plt.figure()
   ax = fig.add_subplot(111)
@@ -1075,6 +1091,7 @@ def plot_mappability_hist( src, mapper ):
   ax.set_xlabel('Mapping Accuracy')
   ax.set_title( mapper )
   ax.set_xlim(xmin=0, xmax=100)
+  ax.set_ylim(ymax=70./1000)
   
   fig.savefig('%s/mappability-hist-circoviridae-repeated-%s-50.pdf' % ( REPORT_DIRECTORY, mapper ), format='pdf', dpi=1000)
 
@@ -1115,3 +1132,4 @@ plot_mappability()
 #plot_mappability_hist()
 plot_mappability_hist( 'out/mappability_circoviridae_bwa.out', 'bwa' )
 plot_mappability_hist( 'out/mappability_circoviridae_bowtie.out', 'bowtie' )
+plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw.out', 'bwasw' )

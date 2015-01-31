@@ -27,7 +27,7 @@ def bwa_map( fasta_file, params ):
   def result( fastq_file, sam_file, index=True ):
     if index:
       os.system( '%s index -p %s-bwa %s' % ( config.BWA_PATH, fasta_file, fasta_file ) )
-    os.system( '%s %s %s-bwa -v 2 %s > %s' % ( config.BWA_PATH, params, fasta_file, fastq_file, sam_file ) )
+    os.system( '%s %s %s-bwa %s > %s' % ( config.BWA_PATH, params, fasta_file, fastq_file, sam_file ) ) # -v 2 for mem
   return result
 
 def soap_map( fasta_file ):
