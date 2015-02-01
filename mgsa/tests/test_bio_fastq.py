@@ -107,5 +107,33 @@ class TestFastqPosGenerator( unittest.TestCase ):
     self.assertEqual( 'CGATT', lines[13] )
     self.assertEqual( 20, len(fq) )
 
+  def test_delete_3(self):
+    fasta = StringIO.StringIO( '>comment\nCCACTCCACA\nGATTTTTTTT' )
+    fq = bio.FastqPosGenerator( fasta, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    written = fq.write( target, pos=9, read_length=5, variation='delete 3' ) # pos 9 is the A; expect to delete ACA
+    lines = target.getvalue().split( '\n' )
+    #print lines
+    self.assertEqual( 4, written )
+    self.assertEqual( 17, len(lines) )
+    self.assertEqual( 'CTCCG', lines[1] )
+    self.assertEqual( 'TCCGA', lines[5] )
+    self.assertEqual( 'CCGAT', lines[9] )
+    self.assertEqual( 'CGATT', lines[13] )
+    self.assertEqual( 20, len(fq) )
+
+  def test_delete_long(self):
+    fasta = StringIO.StringIO( '>comment\nABCDEFGHIJKLMNOPQRSTUVWXYZ' )
+    fq = bio.FastqPosGenerator( fasta, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    written = fq.write( target, pos=15, read_length=15, variation='delete 10' ) # 
+    lines = target.getvalue().split( '\n' )
+    # ['@mgsa_seq_0~0~0_variation_D5-10', 'ABCDEFQRSTUVWXY', '+', '~~~~~~~~~~~~~~~', '@mgsa_seq_0~1~0_variation_D4-10', 'BCDEFQRSTUVWXYZ', '+', '~~~~~~~~~~~~~~~', '']
+    self.assertEqual( 2, written )
+    self.assertEqual( 9, len(lines) )
+    self.assertEqual( 'ABCDEFQRSTUVWXY', lines[1] )
+    self.assertEqual( 'BCDEFQRSTUVWXYZ', lines[5] )
+    self.assertEqual( 26, len(fq) )
+
 if __name__ == '__main__':
   unittest.main()

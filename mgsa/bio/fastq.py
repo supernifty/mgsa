@@ -128,6 +128,12 @@ class FastqPosGenerator(object):
       return 'A'
 
   def _insert_rule( self, length ):
+    #result = ''
+    #options = ( 'A', 'C', 'G', 'T' )
+    #for i in xrange(length):
+    #  r = random.rand(0, 3)
+    #  result += options[r]
+    #return result
     return 'A' * length
   
   def _apply_variation( self, variation, pos, start_pos, read_length ):
@@ -149,9 +155,12 @@ class FastqPosGenerator(object):
       new_sequence = ''.join( ( subsequence[:snp_pos], extra, subsequence[snp_pos:] ) )
       return new_sequence, start_pos + length, self._format_variation( 'I', length ), 1
     elif variation.startswith( 'delete' ):
-      length = min( start_pos + 1, int( variation.split()[1] ) ) # if at start of sequence, can't delete too many. length <= start_pos + 1
-      new_sequence = ''.join( ( self.sequence[start_pos - length + 1:pos - length + 1], self.sequence[ pos + 1: pos + read_length ] ) ) # start earlier to keep same length
-      return new_sequence, start_pos - length + 1, self._format_variation( 'D', length ), -1
+      length = min( pos, int( variation.split()[1] ) ) # if at start of sequence, can't delete too many. length <= start_pos + 1
+      #print length, start_pos, pos
+      new_start_pos = max( 0, start_pos - length + 1 )
+      new_sequence = ''.join( ( self.sequence[new_start_pos: pos - length + 1], self.sequence[ pos + 1: pos + read_length ] ) ) # start earlier to keep same length
+      #print new_sequence
+      return new_sequence, new_start_pos, self._format_variation( 'D', length ), -length
     else: # unknown variation
       subsequence = self.sequence[start_pos : pos + read_length]
       return subsequence, start_pos, None, 0
