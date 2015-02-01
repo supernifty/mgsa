@@ -118,7 +118,7 @@ class FastqPosGenerator(object):
   def __len__(self):
     return len(self.sequence)
 
-  def _variation_rule( self, ref ):
+  def _snp_rule( self, ref ):
     '''
       default snp is A, else T
     '''
@@ -127,24 +127,61 @@ class FastqPosGenerator(object):
     else:
       return 'A'
 
-  def write( self, target_fh=sys.stdout, pos=0, read_length=100, variation=None ):
-    '''
-      fastq file to write to
-      @target_fh: fastq file
-      @pos: pos of fasta to cover
-    ''' 
-    self._update_sequence( pos + read_length )
-    start_pos = max(0, pos - read_length + 1)
-    subsequence = self.sequence[start_pos : pos + read_length]
-    if variation == 'snp':
+  def _insert_rule( self, length ):
+    return 'A' * length
+  
+  def _apply_variation( self, variation, pos, start_pos, read_length ):
+    if variation is None:
+      subsequence = self.sequence[start_pos : pos + read_length]
+      return subsequence, start_pos, None, 0
+    elif variation == 'snp':
+      subsequence = self.sequence[start_pos : pos + read_length]
       snp_pos = pos - start_pos
       ref = subsequence[snp_pos]
-      alt = self._variation_rule( ref )
-      subsequence = ''.join( ( subsequence[:snp_pos], alt, subsequence[snp_pos+1:] ) )
+      alt = self._snp_rule( ref )
+      new_sequence = ''.join( ( subsequence[:snp_pos], alt, subsequence[snp_pos+1:] ) )
+      return new_sequence, start_pos, None, 0
+    elif variation.startswith( 'insert' ):
+      length = int( variation.split()[1] )
+      subsequence = self.sequence[min(pos, start_pos + length) : pos + read_length] # clip prefix to fit insertion
+      snp_pos = max(0, pos - start_pos - length)
+      extra = self._insert_rule( length )
+      new_sequence = ''.join( ( subsequence[:snp_pos], extra, subsequence[snp_pos:] ) )
+      return new_sequence, start_pos + length, self._format_variation( 'I', length ), 1
+    elif variation.startswith( 'delete' ):
+      length = min( start_pos + 1, int( variation.split()[1] ) ) # if at start of sequence, can't delete too many. length <= start_pos + 1
+      new_sequence = ''.join( ( self.sequence[start_pos - length + 1:pos - length + 1], self.sequence[ pos + 1: pos + read_length ] ) ) # start earlier to keep same length
+      return new_sequence, start_pos - length + 1, self._format_variation( 'D', length ), -1
+    else: # unknown variation
+      subsequence = self.sequence[start_pos : pos + read_length]
+      return subsequence, start_pos, None, 0
+
+  def _format_variation( self, prefix, length ):
+    def result( pos ):
+      safe_pos = max( 0, pos ) # TODO hackish
+      return '%s%i-%i' % ( prefix, safe_pos, length )
+    return result
+
+  def write( self, target_fh=sys.stdout, pos=0, read_length=100, variation=None, error=None ):
+    '''
+      write all reads that span pos
+      @target_fh: fastq file
+      @pos: pos of fasta to cover
+      @variation: None, 'snp', 'insert 1'
+    ''' 
+    self._update_sequence( pos + read_length ) # ensure enough sequence available
+    start_pos = max(0, pos - read_length + 1) # correct start position of read in reference
+    #subsequence = self.sequence[start_pos : pos + read_length]
+    subsequence, start_pos, variation_fn, variation_offset = self._apply_variation( variation, pos, start_pos, read_length )
     written = 0
     #self.log('subsequence: %s' % subsequence )
     for offset in xrange(0, len(subsequence) - read_length + 1):
-      target_fh.write( '@mgsa_seq_%i~%i~0\n' % ( start_pos, offset ) ) # sam is 0 indexed
+      if variation_fn is None:
+        target_fh.write( '@mgsa_seq_%i~%i~%i\n' % ( start_pos, offset, 0 ) ) # sam is 0 indexed
+      else:
+        #print "pos", pos, "start_pos", start_pos, "offset", offset
+        variation_str = variation_fn( pos - start_pos - offset + variation_offset )
+        target_fh.write( '@mgsa_seq_%i~%i~%i_variation_%s\n' % ( start_pos, offset, 0, variation_str ) ) # sam is 0 indexed
       read = subsequence[offset:offset+read_length]
       quality = '~' * len(read)
       target_fh.write( read )

@@ -10,7 +10,7 @@ import bio
 import sam
 
 class Mappability (object):
-  def __init__( self, pos_generator, mapper_function, read_length, min_pos=0, max_pos=-1, log=bio.log_stderr ):
+  def __init__( self, pos_generator, mapper_function, read_length, min_pos=0, max_pos=-1, variation=None, log=bio.log_stderr, remove_files=True ):
     if max_pos == -1:
       max_pos = len(pos_generator)
     self.accuracy = []
@@ -20,7 +20,7 @@ class Mappability (object):
     is_first = True
     for pos in xrange(min_pos, max_pos):
       with open( target_fq_fn, 'w' ) as target_fq_fh: # make a temp file
-        pos_generator.write( target_fq_fh, pos, read_length ) # write reads to it
+        pos_generator.write( target_fq_fh, pos, read_length, variation=variation ) # write reads to it
       mapper_function( target_fq_fn, target_sam_fn, index=is_first ) # map the reads to the reference
       is_first = False
       # correct vs wrong/unmapped
@@ -38,5 +38,7 @@ class Mappability (object):
       self.summary['max_unmapped'] = max( self.summary['max_unmapped'], evaluator.stats['unmapped'] )
       if pos < 10 or int( 1. * pos / max_pos * 100 ) > int( 1. * ( pos -1 ) / max_pos * 100 ):
         log( 'Mappability pos %i (%i%%)' % ( pos, int( 1. * pos / max_pos * 100 ) ) )
-    os.remove( target_fq_fn )
-    os.remove( target_sam_fn )
+        #log( 'Mappability: incorrect: %s' % evaluator.incorrect )
+    if remove_files:
+      os.remove( target_fq_fn )
+      os.remove( target_sam_fn )

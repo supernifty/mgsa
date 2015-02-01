@@ -1011,7 +1011,31 @@ def to_percent(y, position):
     #else:
     #    return s + '%'
 
-def plot_mappability():
+def autolabel(ax, rects):
+    # attach some text labels
+    for rect in rects:
+        height = rect.get_height()
+        #ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height*1000), ha='center', va='bottom')
+        ax.text(rect.get_x()+rect.get_width()/2., height + 0., '%.1f'%(height*1000), ha='center', va='bottom')
+
+def plot_mappability( src, name, short_name ):
+  lines = open( src ).readlines()
+  accuracy_list = lines[1].split(':')[1]
+  accuracy = [float(x) * 100 for x in accuracy_list.strip( ' []\n' ).split(',')]
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.scatter(range(0, len(accuracy)), accuracy, s=2, label=name, color='b' )#, s=2)
+  ax.set_ylabel('Mapping Accuracy')
+  ax.set_xlabel('Position')
+  leg = ax.legend(loc='lower left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  plt.xlim(xmin=0, xmax=8204)
+  plt.ylim(ymax=100.01, ymin=0.)
+  fig.savefig('%s/mappability-circoviridae-%s-50.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
+
+
+def plot_mappability_comparison():
   lines = open( 'out/mappability_circoviridae_bwa.out' ).readlines()
   accuracy_list = lines[1].split(':')[1]
   accuracy_bwa = [float(x) * 100 for x in accuracy_list.strip( ' []\n' ).split(',')]
@@ -1040,39 +1064,6 @@ def plot_mappability():
   plt.ylim(ymax=100.01, ymin=0.)
   fig.savefig('%s/mappability-circoviridae-comparison-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
 
-  fig = plt.figure()
-  ax = fig.add_subplot(111)
-  ax.scatter(range(0, len(accuracy_bwa)), accuracy_bwa, s=2, label="BWA", color='g' )#, s=2)
-  ax.set_ylabel('Mapping Accuracy')
-  ax.set_xlabel('Position')
-  leg = ax.legend(loc='lower left', prop={'size':12})
-  leg.get_frame().set_alpha(0.8)
-  plt.xlim(xmin=0, xmax=8204)
-  plt.ylim(ymax=100.01, ymin=0.)
-  fig.savefig('%s/mappability-circoviridae-bwa-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
-
-  fig = plt.figure()
-  ax = fig.add_subplot(111)
-  ax.scatter(range(0, len(accuracy_bwa_sw)), accuracy_bwa_sw, s=2, label="BWA SW", color='r' )#, s=2)
-  ax.set_ylabel('Mapping Accuracy')
-  ax.set_xlabel('Position')
-  leg = ax.legend(loc='lower left', prop={'size':12})
-  leg.get_frame().set_alpha(0.8)
-  plt.xlim(xmin=0, xmax=8204)
-  plt.ylim(ymax=100.01, ymin=0.)
-  fig.savefig('%s/mappability-circoviridae-bwa-sw-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
-
-  fig = plt.figure()
-  ax = fig.add_subplot(111)
-  ax.scatter(range(0, len(accuracy_bowtie)), accuracy_bowtie, s=2, label="Bowtie", color='b' )#, s=2)
-  ax.set_ylabel('Mapping Accuracy')
-  ax.set_xlabel('Position')
-  leg = ax.legend(loc='lower left', prop={'size':12})
-  leg.get_frame().set_alpha(0.8)
-  plt.xlim(xmin=0, xmax=8204)
-  plt.ylim(ymax=100.01, ymin=0.)
-  fig.savefig('%s/mappability-circoviridae-bowtie-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
-
 def plot_mappability_hist( src, mapper ):
   #lines = open( 'results.out' ).readlines()
   lines = open( src ).readlines()
@@ -1092,7 +1083,7 @@ def plot_mappability_hist( src, mapper ):
   ax.set_title( mapper )
   ax.set_xlim(xmin=0, xmax=100)
   ax.set_ylim(ymax=70./1000)
-  
+  autolabel( ax, patches ) 
   fig.savefig('%s/mappability-hist-circoviridae-repeated-%s-50.pdf' % ( REPORT_DIRECTORY, mapper ), format='pdf', dpi=1000)
 
 # no longer used
@@ -1126,10 +1117,13 @@ def plot_mappability_hist( src, mapper ):
 #plot_insertion_vs_readlength_circoviridae()
 #plot_insertion_vs_readlength_ecoli()
 #plot_vcf_parent_vs_child()
-plot_mappability()
-#plot_mappability( 'results.out', 'bwa' )
-#plot_mappability( 'results_bowtie.out', 'bowtie' )
-#plot_mappability_hist()
-plot_mappability_hist( 'out/mappability_circoviridae_bwa.out', 'bwa' )
-plot_mappability_hist( 'out/mappability_circoviridae_bowtie.out', 'bowtie' )
-plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw.out', 'bwasw' )
+#plot_mappability_comparison()
+#plot_mappability( 'out/mappability_circoviridae_bwa_sw_snp.out', 'BWASW with SNP', 'bwasw-snp' )
+plot_mappability( 'out/mappability_circoviridae_bwa_sw_insert_1.out', 'BWASW with insertion', 'bwasw-insertion' )
+plot_mappability( 'out/mappability_circoviridae_bwa_sw_delete_1.out', 'BWASW with deletion', 'bwasw-deletion' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bwa.out', 'bwa' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bowtie.out', 'bowtie' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw.out', 'bwasw' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_snp.out', 'bwasw-snp' )
+plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_insert_1.out', 'bwasw-insertion' )
+plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_delete_1.out', 'bwasw-deletion' )

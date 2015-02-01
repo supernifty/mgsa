@@ -187,9 +187,9 @@ class SamAccuracyEvaluator(object):
     '''
     self.verbose = verbose
     self.variation_map = self.parse_variation_map( variation_map )
-    if verbose:
-      print "SamAccuracyEvaluator: variation map contains %i items" % ( len(self.variation_map) )
     self.log = log
+    if verbose:
+      self.log( "SamAccuracyEvaluator: variation map contains %i items" % ( len(self.variation_map) ) )
     self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0, 'correct': 0, 'incorrect': 0, 'soft_clipping': 0, 'hard_clipping': 0, 'matched': 0, 'correct_mapq': 0.0, 'incorrect_mapq': 0.0 }
     self.incorrect = []
     self.incorrect_diff = {}
@@ -214,10 +214,10 @@ class SamAccuracyEvaluator(object):
       actual_key = re.sub( '.*(mgsa_seq_[0-9~]*).*', '\\1', key )
       result[actual_key] = value
       if self.verbose and count < 20:
-        print "SamAccuracyEvaluator: added %s: %s to variation map" % ( actual_key, value )
+        self.log( "SamAccuracyEvaluator: added %s: %s to variation map" % ( actual_key, value ) )
       count += 1
     if self.verbose:
-      print "SamAccuracyEvaluator: added %i items to variation map" % count
+      self.log( "SamAccuracyEvaluator: added %i items to variation map" % count )
     return result
 
   def parse_line( self, line ):
@@ -324,6 +324,7 @@ class SamAccuracyEvaluator(object):
               self.stats['correct_%s' % c[0] ] = 0
             self.stats['correct_%s' % c[0] ] += 1
         else:
+          #print "incorrect: pos", pos, " correct pos", correct_pos, " correct offset", correct_offset
           self.stats['incorrect'] += 1
           self.stats['incorrect_mapq'] += int(fields[4])
           for c in variations:

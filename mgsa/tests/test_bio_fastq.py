@@ -65,5 +65,47 @@ class TestFastqPosGenerator( unittest.TestCase ):
     self.assertEqual( 'ATTTT', lines[17] )
     self.assertEqual( 20, len(fq) )
 
+  def test_insert(self):
+    fasta = StringIO.StringIO( '>comment\nCCCCCCCCCC\nGTTTTTTTTT' )
+    fq = bio.FastqPosGenerator( fasta, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    written = fq.write( target, pos=10, read_length=5, variation='insert 1' ) # pos 10 is the first T
+    self.assertEqual( 5, written )
+    lines = target.getvalue().split( '\n' )
+    self.assertEqual( 21, len(lines) )
+    self.assertEqual( 'CCCAG', lines[1] )
+    self.assertEqual( 'CCAGT', lines[5] )
+    self.assertEqual( 'CAGTT', lines[9] )
+    self.assertEqual( 'AGTTT', lines[13] )
+    self.assertEqual( 'GTTTT', lines[17] )
+    self.assertEqual( 20, len(fq) )
+
+  def test_insert_start(self):
+    fasta = StringIO.StringIO( '>comment\nGCCCCCCCCC\nTTTTTTTTTT' )
+    fq = bio.FastqPosGenerator( fasta, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    written = fq.write( target, pos=0, read_length=5, variation='insert 1' ) # pos 10 is the first T
+    self.assertEqual( 2, written )
+    lines = target.getvalue().split( '\n' )
+    self.assertEqual( 9, len(lines) )
+    self.assertEqual( 'AGCCC', lines[1] )
+    self.assertEqual( 'GCCCC', lines[5] )
+    self.assertEqual( 20, len(fq) )
+
+  def test_delete(self):
+    fasta = StringIO.StringIO( '>comment\nCCCCCCCACA\nGATTTTTTTT' )
+    fq = bio.FastqPosGenerator( fasta, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    written = fq.write( target, pos=9, read_length=5, variation='delete 1' ) # pos 10 is the G
+    lines = target.getvalue().split( '\n' )
+    #print lines
+    self.assertEqual( 4, written )
+    self.assertEqual( 17, len(lines) )
+    self.assertEqual( 'CCACG', lines[1] )
+    self.assertEqual( 'CACGA', lines[5] )
+    self.assertEqual( 'ACGAT', lines[9] )
+    self.assertEqual( 'CGATT', lines[13] )
+    self.assertEqual( 20, len(fq) )
+
 if __name__ == '__main__':
   unittest.main()
