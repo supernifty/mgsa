@@ -70,7 +70,16 @@ class TestSamToVCF( unittest.TestCase ):
     self.assertEqual( 1, len(target_vcf.manager.indel_list) )
     self.assertEqual( 'AA', target_vcf.manager.indel_list[0].before )
     self.assertEqual( 'A', target_vcf.manager.indel_list[0].after )
- 
+
+  def test_soft_clip(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_0~0~0  0       generated       3      60      2S4M       *       0       0       GGTTTT    ~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    reference = StringIO.StringIO( 'CCTTTT' )
+    target_vcf = bio.VCF()
+    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    genome = s.sam_to_fasta.fasta.genome
+    self.assertEqual( [0, 0, 1., 1., 1., 1.], genome['T'] )
+    self.assertEqual( [0, 0], genome['G'] )
+  
   def log(self, msg):
     print msg
 
