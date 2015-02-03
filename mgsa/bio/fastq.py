@@ -1,4 +1,5 @@
 
+import random
 import sys
 
 import bio
@@ -171,6 +172,21 @@ class FastqPosGenerator(object):
       return '%s%i-%i' % ( prefix, safe_pos, length )
     return result
 
+  def _apply_error( self, read, error ):
+    if error is None or error == '':
+      return read
+    error_type, count = error.split()
+    count = int(count)
+    if error_type == 'snp':
+      for i in xrange(count):
+        pos = random.randint(0, len(read) - 1)
+        if read[pos] == 'A':
+          new_base = 'T'
+        else:
+          new_base = 'A'
+        read = ''.join( ( read[:pos], new_base, read[pos+1:] ) )
+    return read
+
   def write( self, target_fh=sys.stdout, pos=0, read_length=100, variation=None, error=None ):
     '''
       write all reads that span pos
@@ -192,6 +208,7 @@ class FastqPosGenerator(object):
         variation_str = variation_fn( pos - start_pos - offset + variation_offset )
         target_fh.write( '@mgsa_seq_%i~%i~%i_variation_%s\n' % ( start_pos, offset, 0, variation_str ) ) # sam is 0 indexed
       read = subsequence[offset:offset+read_length]
+      read = self._apply_error( read, error )
       quality = '~' * len(read)
       target_fh.write( read )
       target_fh.write( '\n+\n' )

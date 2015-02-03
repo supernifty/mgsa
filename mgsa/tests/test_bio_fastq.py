@@ -135,5 +135,21 @@ class TestFastqPosGenerator( unittest.TestCase ):
     self.assertEqual( 'BCDEFQRSTUVWXYZ', lines[5] )
     self.assertEqual( 26, len(fq) )
 
+  def test_snp_error(self):
+    fasta = StringIO.StringIO( '>comment\nAAAAAAAAAA\nTTTTTTTTTT' )
+    fq = bio.FastqPosGenerator( fasta, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    written = fq.write( target, pos=10, read_length=5, variation='snp', error='snp 1' ) # pos 10 is the first T
+    self.assertEqual( 5, written )
+    lines = target.getvalue().split( '\n' )
+    self.assertEqual( 21, len(lines) )
+    self.assertEqual( 1, bio.Distance( 'AAAAA', lines[1] ).hamming() )
+    self.assertEqual( 1, bio.Distance( 'AAAAT', lines[5] ).hamming() )
+    self.assertEqual( 1, bio.Distance( 'AAATT', lines[9] ).hamming() )
+    self.assertEqual( 1, bio.Distance( 'AATTT', lines[13] ).hamming() )
+    self.assertEqual( 1, bio.Distance( 'ATTTT', lines[17] ).hamming() )
+    self.assertEqual( 20, len(fq) )
+
+
 if __name__ == '__main__':
   unittest.main()
