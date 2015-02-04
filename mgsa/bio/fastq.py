@@ -175,9 +175,9 @@ class FastqPosGenerator(object):
   def _apply_error( self, read, error ):
     if error is None or error == '':
       return read
-    error_type, count = error.split()
-    count = int(count)
-    if error_type == 'snp':
+    error_type = error.split()
+    count = int(error_type[1])
+    if error_type[0] == 'snp':
       for i in xrange(count):
         pos = random.randint(0, len(read) - 1)
         if read[pos] == 'A':
@@ -185,16 +185,45 @@ class FastqPosGenerator(object):
         else:
           new_base = 'A'
         read = ''.join( ( read[:pos], new_base, read[pos+1:] ) )
+    elif error_type[0] == 'insert':
+      length = int( error_type[2] )
+      for i in xrange(count):
+        pos = random.randint(0, len(read) - 1)
+        content = 'A' * length
+        read = ''.join( ( read[:pos], content, read[pos:] ) )
+    elif error_type[0] == 'delete':
+      length = int( error_type[2] )
+      for i in xrange(count):
+        pos = random.randint(0, len(read) - length - 1)
+        read = ''.join( ( read[:pos], read[pos+length:] ) )
     return read
 
+  def _net_error( self, error ):
+    '''return the net change in length due to error'''
+    if error is None or error == '':
+      return 0
+    error_type = error.split()
+    count = int(error_type[1])
+    if error_type[0] == 'snp':
+      return 0
+    elif error_type[0] == 'insert':
+      length = int( error_type[2] )
+      return count * length
+    elif error_type[0] == 'delete':
+      length = int( error_type[2] )
+      return -count * length
+    return 0
+ 
   def write( self, target_fh=sys.stdout, pos=0, read_length=100, variation=None, error=None ):
     '''
       write all reads that span pos
       @target_fh: fastq file
       @pos: pos of fasta to cover
       @variation: None, 'snp', 'insert 1'
+      @error: None, 'snp 1', 'insert 1 2', 'delete 1 2' --> insert 1 error of length 2
     ''' 
     self._update_sequence( pos + read_length ) # ensure enough sequence available
+    read_length = read_length - self._net_error( error )
     start_pos = max(0, pos - read_length + 1) # correct start position of read in reference
     #subsequence = self.sequence[start_pos : pos + read_length]
     subsequence, start_pos, variation_fn, variation_offset = self._apply_variation( variation, pos, start_pos, read_length )

@@ -150,6 +150,37 @@ class TestFastqPosGenerator( unittest.TestCase ):
     self.assertEqual( 1, bio.Distance( 'ATTTT', lines[17] ).hamming() )
     self.assertEqual( 20, len(fq) )
 
+  def test_ins_error(self):
+    fasta = StringIO.StringIO( '>comment\nCCCCCCCCCC\nTTTTTTTTTT' )
+    fq = bio.FastqPosGenerator( fasta, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    written = fq.write( target, pos=10, read_length=5, variation=None, error='insert 1 1' ) # pos 10 is the first T
+    self.assertEqual( 4, written )
+    lines = target.getvalue().split( '\n' )
+    self.assertEqual( 17, len(lines) )
+    self.assertEqual( 1, bio.Distance( 'CCCT', lines[1] ).simple_indel() )
+    self.assertEqual( 1, bio.Distance( 'CCTT', lines[5] ).simple_indel() )
+    self.assertEqual( 1, bio.Distance( 'CTTT', lines[9] ).simple_indel() )
+    self.assertEqual( 1, bio.Distance( 'TTTT', lines[13] ).simple_indel() )
+    self.assertEqual( 20, len(fq) )
+
+  def test_del_error(self):
+    fasta = StringIO.StringIO( '>comment\nCCCCCCCCAC\nGTATTTTTTT' )
+    fq = bio.FastqPosGenerator( fasta, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    written = fq.write( target, pos=10, read_length=5, variation=None, error='delete 1 1' ) # pos 10 is the G
+    lines = target.getvalue().split( '\n' )
+    print lines
+    self.assertEqual( 6, written )
+    self.assertEqual( 25, len(lines) )
+    self.assertEqual( -1, bio.Distance( 'CCCACG', lines[1] ).simple_indel() )
+    self.assertEqual( -1, bio.Distance( 'CCACGT', lines[5] ).simple_indel() )
+    self.assertEqual( -1, bio.Distance( 'CACGTA', lines[9] ).simple_indel() )
+    self.assertEqual( -1, bio.Distance( 'ACGTAT', lines[13] ).simple_indel() )
+    self.assertEqual( -1, bio.Distance( 'CGTATT', lines[17] ).simple_indel() )
+    self.assertEqual( -1, bio.Distance( 'GTATTT', lines[21] ).simple_indel() )
+    self.assertEqual( 20, len(fq) )
+
 
 if __name__ == '__main__':
   unittest.main()

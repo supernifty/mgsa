@@ -1074,7 +1074,9 @@ def plot_mappability_hist( src, mapper ):
   fig = plt.figure()
   ax = fig.add_subplot(111)
   #ax.plot( bins, n )
-  n, bins, patches = ax.hist(accuracy, 10, normed=1)#, normed=1, histtype='stepfilled')
+  bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+  #n, bins, patches = ax.hist(accuracy, 10, normed=1)#, normed=1, histtype='stepfilled')
+  n, bins, patches = ax.hist(accuracy, bins=bins, normed=1)#, normed=1, histtype='stepfilled')
   formatter = FuncFormatter(to_percent)
   #hist = np.histogram( accuracy, bins=50, density=True ) # sums to read length
   plt.gca().yaxis.set_major_formatter(formatter)
@@ -1133,8 +1135,13 @@ def plot_mappability_hist( src, mapper ):
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_delete_30.out', 'BWASW with 30 deletion', 'bwasw-deletion-30' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_delete_40.out', 'BWASW with 40 deletion', 'bwasw-deletion-40' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_snp_error_snp.out', 'BWASW with SNP and 1 subst error', 'bwasw-snp-subst-error' )
-plot_mappability( 'out/mappability_circoviridae_bwa_sw_snp_error_snp_2.out', 'BWASW with SNP and 2 subst error', 'bwasw-snp-subst-2-error' )
+#plot_mappability( 'out/mappability_circoviridae_bwa_sw_snp_error_snp_2.out', 'BWASW with SNP and 2 subst error', 'bwasw-snp-subst-2-error' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_snp_error_snp_5.out', 'BWASW with SNP and 5 subst error', 'bwasw-snp-subst-5-error' )
+#plot_mappability( 'out/mappability_circoviridae_bwa_sw_snp_error_ins_1.out', 'BWASW with SNP and 1 insert error', 'bwasw-snp-ins-1-error' )
+#plot_mappability( 'out/mappability_circoviridae_bwa_sw_error_ins_1.out', 'BWASW with 1 insert error', 'bwasw-ins-1-error' )
+#plot_mappability( 'out/mappability_circoviridae_bwa_sw_error_ins_1_test.out', 'BWASW with 1 insert error', 'bwasw-ins-1-error-test' )
+#plot_mappability( 'out/mappability_circoviridae_bwa_sw_error_del_1.out', 'BWASW with 1 delete error', 'bwasw-del-1-error' )
+plot_mappability( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'Bowtie with 1 insert error', 'bowtie-ins-1-error' )
 #
 #-- plot_mappability_hist( 'out/mappability_circoviridae_bwa.out', 'bwa' )
 #plot_mappability_hist( 'out/mappability_circoviridae_bowtie.out', 'bowtie' )
@@ -1153,5 +1160,10 @@ plot_mappability( 'out/mappability_circoviridae_bwa_sw_snp_error_snp_2.out', 'BW
 #plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_delete_40.out', 'bwasw-deletion-40' )
 #
 #plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_snp_error_snp.out', 'bwasw-snp-subst-error' )
-plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_snp_error_snp_2.out', 'bwasw-snp-subst-2-error' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_snp_error_snp_2.out', 'bwasw-snp-subst-2-error' )
 #plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_snp_error_snp_5.out', 'bwasw-snp-subst-5-error' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_snp_error_ins_1.out', 'bwasw-snp-ins-1-error' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_error_ins_1.out', 'bwasw-ins-1-error' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_error_ins_1_test.out', 'bwasw-ins-1-error-test' )
+plot_mappability_hist( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'bowtie-ins-1-error' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_error_del_1.out', 'bwasw-del-1-error' )

@@ -39,6 +39,7 @@ class Mappability (object):
       if pos < 10 or int( 1. * pos / max_pos * 100 ) > int( 1. * ( pos -1 ) / max_pos * 100 ):
         log( 'Mappability pos %i (%i%%)' % ( pos, int( 1. * pos / max_pos * 100 ) ) )
         #log( 'Mappability: incorrect: %s' % evaluator.incorrect )
+    self.summary['mean'] = float( sum(self.accuracy) / len(self.accuracy) )
     if remove_files:
       os.remove( target_fq_fn )
       os.remove( target_sam_fn )

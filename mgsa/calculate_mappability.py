@@ -20,7 +20,7 @@ read_length = int(sys.argv[2])
 #mappability = bio.Mappability( pos_generator, mapper_function, read_length, variation='snp', min_pos = 50, max_pos = 51, remove_files=False )
 #mappability = bio.Mappability( pos_generator, mapper_function, read_length, variation='insert 1' )#, min_pos = 0, max_pos = 1 ) #, min_pos = 50, max_pos = 51 )
 #mappability = bio.Mappability( pos_generator, mapper_function, read_length, variation='delete 1' )#, min_pos = 50, max_pos = 51, remove_files=False )
-mappability = bio.Mappability( pos_generator, mapper_function, read_length, variation=sys.argv[3], error=sys.argv[4] )#, min_pos=100, max_pos=101, remove_files=False )#, min_pos = 0, max_pos = 1 ) #, min_pos = 50, max_pos = 51 )
+mappability = bio.Mappability( pos_generator, mapper_function, read_length, variation=sys.argv[3], error=sys.argv[4], remove_files=True )#, min_pos=100, max_pos=101, remove_files=False )#, min_pos = 0, max_pos = 1 ) #, min_pos = 50, max_pos = 51 )
 
 with open( sys.argv[6], 'w' ) as output:
   output.write( 'results for %s with read length %i, variation %s, error %s, mapper %s\n' % ( sys.argv[1], read_length, sys.argv[3], sys.argv[4], sys.argv[5] ) )
