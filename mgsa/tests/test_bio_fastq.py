@@ -170,7 +170,6 @@ class TestFastqPosGenerator( unittest.TestCase ):
     target = StringIO.StringIO()
     written = fq.write( target, pos=10, read_length=5, variation=None, error='delete 1 1' ) # pos 10 is the G
     lines = target.getvalue().split( '\n' )
-    print lines
     self.assertEqual( 6, written )
     self.assertEqual( 25, len(lines) )
     self.assertEqual( -1, bio.Distance( 'CCCACG', lines[1] ).simple_indel() )
