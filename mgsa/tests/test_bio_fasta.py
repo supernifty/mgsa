@@ -260,5 +260,14 @@ class TestMultiFastaReader( unittest.TestCase ):
       count += 1
     self.assertEqual( 2, count )
 
+class TestRepeatedFastaGenerator( unittest.TestCase ):
+  def test_multi( self ):
+    mg = StringIO.StringIO( '>s1\npqr\n>s2\nstu\nvwx' )
+    mfg = bio.MultiFastaReader( mg )
+    og = StringIO.StringIO()
+    cfg = { 'mult_snp_prob': 0. }
+    bio.RepeatedMultiFastaGenerator( mfg, og, 2, cfg )
+    self.assertEqual( '>generated fasta 2x from s1\npqr\npqr\n>generated fasta 2x from s2\nstu\nvwx\nstu\nvwx\n', og.getvalue() )
+
 if __name__ == '__main__':
   unittest.main()

@@ -378,7 +378,7 @@ class BamReader(object):
     provides a sam handle like interface given a bam file
     use as an iterator.
     basically this class returns lines from a compressed (zlib) file
-    TODO now working, incomplete
+    TODO not working, incomplete
   '''
   MAGIC = '\x1f\x8b\x08\x04'
   HEADER = b"\x1f\x8b\x08\x04\x00\x00\x00\x00\x00\xff\x06\x00\x42\x43\x02\x00"

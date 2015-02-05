@@ -510,6 +510,34 @@ class ErrorGenerator(object):
         return bp
     return uniform_error_profile
 
+class RepeatedMultiFastaGenerator( object ):
+  def __init__( self, multi_reader, out_fh, multiplier, cfg ):
+    for reader in multi_reader.items():
+      RepeatedFastaGenerator( reader, out_fh, multiplier, cfg )
+
+class RepeatedFastaGenerator( object ):
+  def __init__( self, reader, out_fh, multiplier, cfg, log=bio.log_quiet ):
+    '''
+      @reader: FastaReader
+      @cfg: config dictionary
+    '''
+    # reader = bio.FastaReader( open( sys.argv[2], 'r' ) )
+    out_fh.write( '>generated fasta %ix from %s\n' % ( multiplier, reader.name ) )
+    sequence = StringIO.StringIO()
+    for item in reader.items():
+      if len(item) > 0:
+        out_fh.write( '%s\n' % item ) # write unmodified
+        sequence.write( '%s\n' % item ) # remember
+
+    for i in xrange(0, multiplier - 1):
+      sequence.seek(0)
+      reader = FastaReader( sequence )
+      mutator = FastaMutate( reader, snp_prob=float(cfg['mult_snp_prob']), insert_prob=0, delete_prob=0, log=log )
+      for item in mutator.items():
+        if len(item) > 0:
+          out_fh.write( '%s\n' % item ) # write unmodified
+       #sys.stdout.write( sequence )
+
 if __name__ == "__main__":
   #s = SamToFasta( sys.stdin, log )
   #log( 'size is %i' % s.fasta.size )
