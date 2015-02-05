@@ -176,13 +176,17 @@ class ProbabilisticFasta(object):
     #self.log( 'consensus for %i to %i is %s (%i)' % (start, end, result, len(result)) )
     return result 
 
+class MultiFastaMutate(object):
+  def __init__( self, multi_reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random', allow_end_mutate=False ):
+    for reader in multi_reader.items():
+      FastaMutate( reader, log, vcf_file, snp_prob, insert_prob, delete_prob, min_insert_len, max_insert_len, min_delete_len, max_delete_len, min_variation_dist, probabilistic, insert_source, allow_end_mutate )
+
 class FastaMutate(object):
   '''
     change a reference fasta
   '''
-  probabilities = 'AAACCTTGGG'
 
-  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random', allow_end_mutate=False ):
+  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AAACCTTGGG' ):
     '''
       @reader: FastaReader
       @vcf_file: write mutations to vcf
@@ -200,6 +204,7 @@ class FastaMutate(object):
     self.mutations = 0
     self.vcf_file = vcf_file
     self.probabilistic = probabilistic
+    self.probabilities = probabilities
     self.insert_source = insert_source
     if vcf_file is not None:
       self.vcf = vcf.VCF( writer=vcf.VCFWriter(vcf_file) )
@@ -539,26 +544,4 @@ class RepeatedFastaGenerator( object ):
        #sys.stdout.write( sequence )
 
 if __name__ == "__main__":
-  #s = SamToFasta( sys.stdin, log )
-  #log( 'size is %i' % s.fasta.size )
-
-  #log( s.fasta.prior )
-  #for i in xrange(1, 10):
-  #  print i, s.fasta.count(i), s.fasta.confidence(i)
-
-  #pos = 1
-  #while pos < s.fasta.size:
-  #  print s.fasta.consensus( pos, pos + 70 )
-  #  pos += 70
-
-  #d = FastaDiff( FastaReader( open( '../data/test/test1k.fasta', 'r' ) ), s.fasta, log )
-  #log( d.error_total )
-  #log( d.errors )
-
-  m = FastaMutate( FastaReader( open( '../data/test/test1k.fasta', 'r' ) ), log, open( '../data/test/test1ksnp.vcf', 'w' ), 0.1 )
-  o = open( '../data/test/test1ksnp.fasta', 'w' )
-  o.write( '>mutated-snp-test1k\n')
-  for line in m.items():
-    o.write( '%s\n' % line )
-  o.close()
-  log( m.mutations )
+  pass

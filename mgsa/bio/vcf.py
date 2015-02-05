@@ -12,6 +12,23 @@ import variation
 DEFAULT_VCF_COVERAGE = 10
 DEFAULT_VCF_ZYGOSITY = "1" # choose alt
 
+class MultiChromosomeVCF(object):
+  '''
+    manages a vcf with multiple chromosomes by using separate vcf objects for each chromosome
+  '''
+  def __init__( self, reader, log=bio.log_stderr ):
+    self.vcfs = {}
+    for line in reader:
+      # get the chromosome
+      if line.startswith( '#' ):
+        continue
+      fields = line.split()
+      if len(fields) > 6:
+        chromosome = fields[0] # not used!
+        if chromosome not in self.vcfs:
+          self.vcfs[chromosome] = VCF(log=log)
+        self.vcfs[chromosome].load_line( line )
+
 class VCF(object):
   '''
     manage a VCF set
@@ -37,27 +54,32 @@ class VCF(object):
     '''
     count = 0
     for line in reader:
-      if line.startswith( '#' ):
-        continue
-      fields = line.split()
-      if len(fields) > 6:
-        pos = int( fields[1] ) - 1 # vcf file is 1-based; bio uses 0-based
-        ref = fields[3]
-        alt = fields[4]
-        qual = fields[5]
-        if qual == '' or qual == '.':
-          confidence = 0.5
-        else:
-          confidence = 1. - 10 ** ( float(qual) / -10. )
-        if len(ref) == 1 and len(alt) == 1:
-          self.snp_map[pos] = len(self.snp_list)
-          self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt, 'conf': confidence } )
-        else:
-          self.manager.indel_map[int(pos)] = len(self.manager.indel_list)
-          self.manager.indel_list.append( variation.IndelVariation( pos, ref, alt ) )
+      self.load_line( line )
       count += 1
     self.log( 'VCF.load: %i lines loaded' % count )
 
+  def load_line( self, line ):
+    if line.startswith( '#' ):
+      return
+    fields = line.split()
+    if len(fields) > 6:
+      chromosome = fields[0] # not used!
+      pos = int( fields[1] ) - 1 # vcf file is 1-based; bio uses 0-based
+      # id is fields[2]
+      ref = fields[3]
+      alt = fields[4]
+      qual = fields[5]
+      if qual == '' or qual == '.':
+        confidence = 0.5
+      else:
+        confidence = 1. - 10 ** ( float(qual) / -10. )
+      if len(ref) == 1 and len(alt) == 1:
+        self.snp_map[pos] = len(self.snp_list)
+        self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt, 'conf': confidence } )
+      else:
+        self.manager.indel_map[int(pos)] = len(self.manager.indel_list)
+        self.manager.indel_list.append( variation.IndelVariation( pos, ref, alt ) )
+ 
   def snp( self, pos, ref, alt, coverage=None, confidence=0.5 ):
     '''
       adds a snp
@@ -223,7 +245,7 @@ class VCFWriter(object):
 ##chr\tpos\tid\tref\talt\tqual\tfilter\tinfo\tformat\tna00001
 ''' % datetime.datetime.now().strftime("%Y%m%d") )
 
-  def snp( self, pos, ref, alt, confidence=0.5, coverage=None, zygosity=None ):
+  def snp( self, pos, ref, alt, confidence=0.5, coverage=None, zygosity=None, chromosome='.' ):
     '''
       note that pos in a vcf is 1-based
       @coverage: depth of coverage on this variation
@@ -236,10 +258,10 @@ class VCFWriter(object):
 
     self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\tDP=%i\tGT\t%s\n' % (
         # chrom, pos, id, ref, alt, qual, filter, info
-        '.', (pos + 1), '.', ref, alt, quality, 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
+        chromosome, (pos + 1), '.', ref, alt, quality, 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
       ) )
 
-  def indel( self, pos, before, after, confidence=0.5, coverage=None, zygosity=None ):
+  def indel( self, pos, before, after, confidence=0.5, coverage=None, zygosity=None, chromosome='.' ):
     if confidence < 1.:
       quality = '%.0f' % ( -10 * math.log(1.-confidence, 10 ))
     else:
@@ -247,7 +269,7 @@ class VCFWriter(object):
 
     self.writer.write( '%s\t%i\t%s\t%s\t%s\t%s\t%s\tDP=%i\tGT\t%s\n' % (
         # chrom, pos, id, ref, alt, qual, filter, info
-        '.', (pos + 1), '.', before, after, quality, 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
+        chromosome, (pos + 1), '.', before, after, quality, 'PASS', coverage or DEFAULT_VCF_COVERAGE, zygosity or DEFAULT_VCF_ZYGOSITY
       ) )
 
 class VCFDiff(object):

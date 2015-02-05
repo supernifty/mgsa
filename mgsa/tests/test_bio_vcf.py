@@ -45,6 +45,23 @@ class TestVCF( unittest.TestCase ):
     self.assertEqual( 1, len(vcf.variations( 0, 10 )) )
     self.assertTrue( 'I5-1[5,0,10]' in vcf.variations( 0, 10 ) )
 
+class TestMultiChromosomeVCF( unittest.TestCase ):
+  def test_read( self ):
+    target = StringIO.StringIO()
+    vcf = bio.VCFWriter(target)
+    vcf.snp( pos=1, ref='A', alt='G', chromosome='X' )
+    vcf.snp( pos=1, ref='C', alt='T', chromosome='Y' )
+    lines = target.getvalue().split('\n')
+    self.assertEqual( 'X\t2\t.\tA\tG\t3\tPASS\tDP=10\tGT\t1', lines[4] )
+    self.assertEqual( 'Y\t2\t.\tC\tT\t3\tPASS\tDP=10\tGT\t1', lines[5] )
+    target.seek(0)
+    multi_vcf = bio.MultiChromosomeVCF( target )
+    self.assertEqual( 2, len( multi_vcf.vcfs ) )
+    self.assertEqual( 'A', multi_vcf.vcfs['X'].snp_list[0]['ref'] )
+    self.assertEqual( 'G', multi_vcf.vcfs['X'].snp_list[0]['alt'] )
+    self.assertEqual( 'C', multi_vcf.vcfs['Y'].snp_list[0]['ref'] )
+    self.assertEqual( 'T', multi_vcf.vcfs['Y'].snp_list[0]['alt'] )
+
 class TestVCFWriter( unittest.TestCase ):
   def setUp(self):
     pass
