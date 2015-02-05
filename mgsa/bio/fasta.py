@@ -3,6 +3,7 @@ import collections
 import datetime
 import random
 import re
+import StringIO
 import sys
 
 import bio
@@ -378,18 +379,14 @@ class Fasta(object):
   def length(self):
     if self._length is None:
       # read the whole thing
-      #print "getlength"
       for item in self.reader.items():
-         #print "lgot", item
          self.fasta += item
       self._length = len(self.fasta)
-    #print "getlength out"
     return self._length
 
   def base_at(self, i):
     if i >= len(self.fasta):
       for item in self.reader.items():
-        #print "got", item
         self.fasta += item
         if i < len(self.fasta): # success
           break
@@ -417,6 +414,7 @@ class FastaReader(object):
   '''
   def __init__(self, genome, include_headers=False):
     self.genome = genome
+    self.name = None
     self.has_next = True
     self.include_headers = include_headers
     self.future_fragment = self._next_item()
@@ -428,7 +426,6 @@ class FastaReader(object):
         break
       self.future_fragment = self._next_item()
       self.has_next = self.future_fragment is not None
-      #print "current %s future %s" % ( current_fragment, self.future_fragment )
       yield current_fragment
 
   #def items(self):
@@ -446,8 +443,10 @@ class FastaReader(object):
  
   def _next_item(self):
     for line in self.genome:
-      if not self.include_headers and line.startswith( '>' ):
-        pass
+      if line.startswith( '>' ):
+        self.name = line[1:].strip()
+      if line.startswith( '>' ) and not self.include_headers:
+          pass
       else:
         return line.strip()
     return None
@@ -466,7 +465,30 @@ class FastaStats(object):
     log( self.stats )
 
 class MultiFastaReader(object):
-  pass
+  '''
+    genome is a file like object
+    use items to iterate over a list of FastaReader objects
+  '''
+  def __init__(self, genome):
+    self.genome = genome
+
+  def items( self ):
+    '''
+      iterate over fasta sequences
+    '''
+    current = []
+    found_header = False
+    for line in self.genome:
+      if line.startswith( '>' ):
+        if found_header:
+          yield FastaReader( genome=StringIO.StringIO( ''.join(current) ) ) # TODO inefficient
+          current = [ line ]
+        else:
+          found_header = True
+          current.append( line )
+      else:
+        current.append( line )
+    yield FastaReader( genome = StringIO.StringIO( ''.join(current) ) )
 
 class ErrorGenerator(object):
   def __init__( self, error_profile ):

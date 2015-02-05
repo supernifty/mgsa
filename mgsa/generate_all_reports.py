@@ -1034,6 +1034,21 @@ def plot_mappability( src, name, short_name ):
   plt.ylim(ymax=100.01, ymin=0.)
   fig.savefig('%s/mappability-circoviridae-%s-50.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
+def plot_bias( src, name, short_name ):
+  lines = open( src ).readlines()
+  bias_list = lines[2].split(':')[1]
+  bias = [float(x) * 100 for x in bias_list.strip( ' []\n' ).split(',')]
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.scatter(range(0, len(bias)), bias, s=2, label=name, color='b' )#, s=2)
+  ax.set_ylabel('Bias')
+  ax.set_xlabel('Position')
+  leg = ax.legend(loc='upper right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  plt.xlim(xmin=0, xmax=8204)
+  plt.ylim(ymax=100.01) #, ymin=0.)
+  fig.savefig('%s/bias-circoviridae-%s-50.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
 def plot_mappability_comparison():
   lines = open( 'out/mappability_circoviridae_bwa.out' ).readlines()
@@ -1088,6 +1103,37 @@ def plot_mappability_hist( src, mapper ):
   autolabel( ax, patches ) 
   fig.savefig('%s/mappability-hist-circoviridae-repeated-%s-50.pdf' % ( REPORT_DIRECTORY, mapper ), format='pdf', dpi=1000)
 
+def plot_bias_hist( src, mapper ):
+  #lines = open( 'results.out' ).readlines()
+  lines = open( src ).readlines()
+  bias_list = lines[2].split(':')[1]
+  bias = [float(x) * 100 for x in bias_list.strip( ' []\n' ).split(',')]
+  #print len(bias)
+  #bias = [ x for x in bias if x != 0.0 ]
+  #print len(bias)
+  
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  #ax.plot( bins, n )
+  #n, bins, patches = ax.hist(accuracy, 10, normed=1)#, normed=1, histtype='stepfilled')
+  bins = [-100, -90, -80, -70, -60, -50, -40, -30, -20, -10, -0.01, +0.01, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+  n, bins, patches = ax.hist(bias, bins=bins, normed=1)#, normed=1, histtype='stepfilled')
+  #print n, bins, patches
+  print "*** Bias for %s with %s: %s ***" % ( src, mapper, bio.sign_bucket( bias ) )
+  values = bio.bucket( bias, bins )
+  for i in xrange(len(bins)):
+    print "%.2f\t%i" % ( bins[i], values[i] )
+  formatter = FuncFormatter(to_percent)
+  #hist = np.histogram( accuracy, bins=50, density=True ) # sums to read length
+  plt.gca().yaxis.set_major_formatter(formatter)
+  ax.set_ylabel('%')
+  ax.set_xlabel('Bias')
+  ax.set_title( mapper )
+  ax.set_xlim(xmin=-100, xmax=100)
+  ax.set_ylim(ymax=100./1000)
+  autolabel( ax, patches ) 
+  fig.savefig('%s/bias-hist-circoviridae-repeated-%s-50.pdf' % ( REPORT_DIRECTORY, mapper ), format='pdf', dpi=1000)
+
 # no longer used
 # TODO ecoli-mutations-snps-unmapped-2.pdf (not used)
 # TODO mutation-f1-hiv.pdf (not used)
@@ -1141,7 +1187,7 @@ def plot_mappability_hist( src, mapper ):
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_error_ins_1.out', 'BWASW with 1 insert error', 'bwasw-ins-1-error' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_error_ins_1_test.out', 'BWASW with 1 insert error', 'bwasw-ins-1-error-test' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_error_del_1.out', 'BWASW with 1 delete error', 'bwasw-del-1-error' )
-plot_mappability( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'Bowtie with 1 insert error', 'bowtie-ins-1-error' )
+#plot_mappability( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'Bowtie with 1 insert error', 'bowtie-ins-1-error' )
 #
 #-- plot_mappability_hist( 'out/mappability_circoviridae_bwa.out', 'bwa' )
 #plot_mappability_hist( 'out/mappability_circoviridae_bowtie.out', 'bowtie' )
@@ -1165,5 +1211,8 @@ plot_mappability( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'Bowtie
 #plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_snp_error_ins_1.out', 'bwasw-snp-ins-1-error' )
 #plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_error_ins_1.out', 'bwasw-ins-1-error' )
 #plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_error_ins_1_test.out', 'bwasw-ins-1-error-test' )
-plot_mappability_hist( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'bowtie-ins-1-error' )
+#plot_mappability_hist( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'bowtie-ins-1-error' )
 #plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_error_del_1.out', 'bwasw-del-1-error' )
+#
+plot_bias( 'out/bias_circoviridae_bwa_sw_snp_error_snp_1.out', 'BWASW with SNP and 1 subst error', 'bwasw-snp-subst-error' )
+plot_bias_hist( 'out/bias_circoviridae_bwa_sw_snp_error_snp_1.out', 'bwasw-snp-subst-error' )

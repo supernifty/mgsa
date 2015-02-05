@@ -122,10 +122,11 @@ for line in open( config_file, 'r' ):
   # build candidate vcf
   candidate_vcf = bio.VCF( writer=bio.VCFWriter( open( recovered_vcf_file, 'w' ) ) ) # empty vcf
   bio.SamToVCF( sam=open( sam_file, 'r' ), reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
-  # compare correct vcf to candidate vcf
   if cfg['command'] == 'vcf':
+    # don't compare correct vcf to candidate vcf, we just wanted to generate a vcf
     target.write( '%s' % ( line.strip() ) )
   else:
+    # compare correct vcf to candidate vcf
     vcf_diff = bio.VCFDiff( vcf_correct=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr), vcf_candidate=candidate_vcf, log=bio.log_stderr )
     #print vcf_diff.stats
     vcf_precision = 0

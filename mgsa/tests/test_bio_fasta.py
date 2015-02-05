@@ -243,5 +243,22 @@ class TestFastaReader( unittest.TestCase ):
       count += 1
     self.assertEqual( 2, count )
 
+class TestMultiFastaReader( unittest.TestCase ):
+  def test_simple( self ):
+    mg = StringIO.StringIO( '>s1\npqr\n>s2\nstu\nvwx' )
+    mfg = bio.MultiFastaReader( mg )
+    count = 0
+    for fr in mfg.items():
+      if count == 0:
+        self.assertEqual( 's1', fr.name )
+        items = [ f for f in fr.items() ]
+        self.assertEqual( [ 'pqr' ], items )
+      if count == 1:
+        self.assertEqual( 's2', fr.name )
+        items = [ f for f in fr.items() ]
+        self.assertEqual( [ 'stu', 'vwx' ], items )
+      count += 1
+    self.assertEqual( 2, count )
+
 if __name__ == '__main__':
   unittest.main()

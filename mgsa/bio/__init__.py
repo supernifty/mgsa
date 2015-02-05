@@ -8,5 +8,6 @@ from helpers import *
 from mapper import *
 from report import *
 from sam import *
+from statistics import *
 from variation import *
 from vcf import *
