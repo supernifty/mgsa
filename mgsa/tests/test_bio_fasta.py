@@ -216,6 +216,23 @@ class TestFastaMutate( unittest.TestCase ):
     self.assertNotEqual( 'c', items[1][0] )
     self.assertNotEqual( 'c', items[1][1] )
 
+  def test_insert(self):
+    #print "test_snp: start"
+    reader = self._make_reader( ( 'gg', 'cc' ) )
+    mutator = bio.FastaMutate( reader, log=self.quiet_log, snp_prob=0, insert_prob=1, delete_prob=0, allow_end_mutate=True )
+    items = []
+    for item in mutator.items():
+      items.append(item)
+    self.assertTrue( 2, len(items) )
+    self.assertTrue( 2, len(items[0]) )
+    self.assertTrue( 2, len(items[1]) )
+    # 1st two don't have insertions
+    self.assertEqual( 'gg', items[0] )
+    # 2nd two do have insertions
+    self.assertEqual( 4, len(items[1]) )
+    self.assertEqual( 'c', items[1][1] )
+    self.assertEqual( 'c', items[1][3] )
+
   def quiet_log(self, msg):
     pass
 
