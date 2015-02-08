@@ -113,8 +113,8 @@ class SamToMultiChromosomeFasta(object):
           self.fastas[chromosome] = SamToFasta( sam=None, log=log, allow_indels=allow_indels )
         self.fastas[chromosome].parse_line( line )
       self.stats['total_lines'] += 1
-      if self.stats['total_lines'] < 5000 and self.stats['total_lines'] % 1000 == 0 or self.stats['total_lines'] % 10000 == 0:
-        self.log( 'SamToMultiChromosomeFasta: %i lines processed' % self.stats['lines'] )
+      if self.stats['total_lines'] < 10 or self.stats['total_lines'] < 5000 and self.stats['total_lines'] % 1000 == 0 or self.stats['total_lines'] % 10000 == 0:
+        log( 'SamToMultiChromosomeFasta: %i lines processed' % self.stats['total_lines'] )
     # combine stats
     for chromosome in self.fastas:
       for stat in self.fastas[chromosome].stats:
