@@ -459,6 +459,9 @@ class FastaReader(object):
   def has_next_item(self):
     return self.has_next
 
+  def __repr__(self):
+    return "name: %s" % self.name
+
 class FastaStats(object):
   '''calculate some overall stats for a fasta file'''
   def __init__( self, fasta, log=bio.log_stderr ):
@@ -469,12 +472,29 @@ class FastaStats(object):
         self.stats['count'] += len(line)
     log( self.stats )
 
+class MultiFastaReaderContainer(object):
+  def __init__(self, genome):
+    reader = MultiFastaReader( genome )
+    self.fastas = {}
+    for item in reader.items():
+      self.fastas[item.name] = item
+
+  def find_chromosome( self, name ):
+    if name in self.fastas:
+      return self.fastas[name]
+    for key in self.fastas:
+      if key.split( ' ' )[0] == name:
+        return self.fastas[key]
+    return None
+
 class MultiFastaReader(object):
   '''
-    genome is a file like object
     use items to iterate over a list of FastaReader objects
   '''
   def __init__(self, genome):
+    '''
+      genome is a file like object
+    '''
     self.genome = genome
 
   def items( self ):

@@ -260,6 +260,30 @@ class TestFastaReader( unittest.TestCase ):
       count += 1
     self.assertEqual( 2, count )
 
+class TestMultiFastaReaderContainer( unittest.TestCase ):
+  def test_simple( self ):
+    mg = StringIO.StringIO( '>s1\npqr\n>s2\nstu\nvwx' )
+    mfg = bio.MultiFastaReaderContainer( mg )
+    self.assertEqual( 2, len(mfg.fastas) )
+    items = [ f for f in mfg.fastas['s1'].items() ]
+    self.assertEqual( [ 'pqr' ], items )
+    items = [ f for f in mfg.fastas['s2'].items() ]
+    self.assertEqual( [ 'stu', 'vwx' ], items )
+
+  def test_simple( self ):
+    mg = StringIO.StringIO( '>s1\npqr\n>s2\nstu\nvwx' )
+    mfg = bio.MultiFastaReaderContainer( mg )
+    f = mfg.find_chromosome( 's1' )
+    items = [ x for x in f.items() ]
+    self.assertEqual( [ 'pqr' ], items )
+
+  def test_space( self ):
+    mg = StringIO.StringIO( '>s1 hi\npqr\n>s2\nstu\nvwx' )
+    mfg = bio.MultiFastaReaderContainer( mg )
+    f = mfg.find_chromosome( 's1' )
+    items = [ x for x in f.items() ]
+    self.assertEqual( [ 'pqr' ], items )
+ 
 class TestMultiFastaReader( unittest.TestCase ):
   def test_simple( self ):
     mg = StringIO.StringIO( '>s1\npqr\n>s2\nstu\nvwx' )

@@ -16,31 +16,33 @@ class MultiChromosomeVCF(object):
   '''
     manages a vcf with multiple chromosomes by using separate vcf objects for each chromosome
   '''
-  def __init__( self, reader, log=bio.log_stderr ):
+  def __init__( self, reader=None, writer=None, log=bio.log_stderr ):
     self.vcfs = {}
-    for line in reader:
-      # get the chromosome
-      if line.startswith( '#' ):
-        continue
-      fields = line.split()
-      if len(fields) > 6:
-        chromosome = fields[0] # not used!
-        if chromosome not in self.vcfs:
-          self.vcfs[chromosome] = VCF(log=log)
-        self.vcfs[chromosome].load_line( line )
+    if reader is not None:
+      for line in reader:
+        # get the chromosome
+        if line.startswith( '#' ):
+          continue
+        fields = line.split()
+        if len(fields) > 6:
+          chromosome = fields[0] # not used!
+          if chromosome not in self.vcfs:
+            self.vcfs[chromosome] = VCF(log=log, chromosome=chromosome)
+          self.vcfs[chromosome].load_line( line )
 
 class VCF(object):
   '''
-    manage a VCF set
+    manage a VCF set (for a single chromosome)
     @reader: fh like object
   '''
 
-  def __init__( self, reader=None, writer=None, log=bio.log_stderr ):
+  def __init__( self, reader=None, writer=None, log=bio.log_stderr, chromosome='.' ):
     '''
       @reader: file handle
       @writer: VCFWriter object
     '''
     self.log = log
+    self.chromosome = chromosome
     self.manager = variation.VariationManager()
     self.snp_list = []
     self.snp_map = {} # maps pos snp
@@ -75,7 +77,7 @@ class VCF(object):
         confidence = 1. - 10 ** ( float(qual) / -10. )
       if len(ref) == 1 and len(alt) == 1:
         self.snp_map[pos] = len(self.snp_list)
-        self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt, 'conf': confidence } )
+        self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt, 'conf': confidence, 'chr': self.chromosome } )
       else:
         self.manager.indel_map[int(pos)] = len(self.manager.indel_list)
         self.manager.indel_list.append( variation.IndelVariation( pos, ref, alt ) )
@@ -85,9 +87,9 @@ class VCF(object):
       adds a snp
     '''
     self.snp_map[int(pos)] = len(self.snp_list)
-    self.snp_list.append( { 'pos': int(pos), 'ref': ref, 'alt': alt, 'conf': confidence } )
+    self.snp_list.append( { 'pos': int(pos), 'ref': ref, 'alt': alt, 'conf': confidence, 'chr': self.chromosome } )
     if self.writer is not None:
-      self.writer.snp( pos, ref, alt, coverage=coverage, confidence=confidence )
+      self.writer.snp( pos, ref, alt, coverage=coverage, confidence=confidence, chromosome=self.chromosome )
 
   def indel( self, pos, before, after, coverage=None, confidence=0.5 ):
     '''
@@ -95,7 +97,7 @@ class VCF(object):
     '''
     self.manager.indel( pos, before, after )
     if self.writer is not None:
-      self.writer.indel( pos, before, after, coverage=coverage, confidence=confidence )
+      self.writer.indel( pos, before, after, coverage=coverage, confidence=confidence, chromosome=self.chromosome )
 
   def write_all( self, writer ):
     '''
@@ -103,9 +105,9 @@ class VCF(object):
     '''
     vcf_writer = VCFWriter(writer)
     for snp in self.snp_list:
-      vcf_writer.snp( snp['pos'], snp['ref'], snp['alt'] )
+      vcf_writer.snp( snp['pos'], snp['ref'], snp['alt'], chromosome=self.chromosome )
     for indel in self.manager.indel_list:
-      vcf_writer.indel( indel.pos, indel.before, indel.after )
+      vcf_writer.indel( indel.pos, indel.before, indel.after, chromosome=self.chromosome )
 
   def net_insertions_to_reference_position(self, position):
     '''
@@ -274,7 +276,7 @@ class VCFWriter(object):
 
 class VCFDiff(object):
   '''
-    compare two vcfs
+    compare two vcfs (with 1 chromosome)
   '''
 
   def __init__( self, vcf_correct, vcf_candidate, log=bio.log_stderr, generate_positions=False ):
@@ -283,6 +285,8 @@ class VCFDiff(object):
       @vcf_correct: the correct VCF()
       @vcf_candidate: the candidate VCF()
     '''
+    self.candidate = vcf_candidate
+    self.correct = vcf_correct
     self.stats = { 'tp': 0, 'fp': 0, 'fn': 0 }
     self.generate_positions = generate_positions
     self.positions = { 'tp': [], 'fp': [], 'fn': [] }
@@ -362,6 +366,27 @@ class VCFDiff(object):
         log( 'fp: %s' % candidate_indel )
       else:
         pass # tp already found
+
+  def confidence_map( self, style ):
+    '''
+      style: tp|fp|fn
+    '''
+    x = []
+    y = []
+    if style in ('tp', 'fp'):
+      source = self.candidate # child
+    else:
+      source = self.correct # parent
+    for p in self.positions[style]: # both
+      x.append( p )
+      if p in source.snp_map:
+        snp = source.snp_list[source.snp_map[p]]
+        confidence = snp['conf']
+      else:
+        confidence = 0.5
+      qual = -10 * math.log( 1. - confidence, 10 )
+      y.append( qual )
+    return x, y
 
 class VCFFastaDiff(object):
   '''

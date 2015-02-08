@@ -919,8 +919,6 @@ def plot_deletion_vs_alignment_ecoli():
     y_recall.append( find_column( line, 'vcf_recall' ) )
     #y_snp.append( find_column( line, 'vcf_f1' ) )
 
-  print "x", x
-  print "y", y
   # draw graph
   fig = plt.figure()
   ax = fig.add_subplot(111)
@@ -944,44 +942,48 @@ def plot_vcf_parent_vs_child():
   fig = plt.figure()
   ax = fig.add_subplot(111)
   
-  x_tp = []
-  y_tp = []
-  for p in diff.positions['tp']: # both
-    x_tp.append( p )
-    if p in child.snp_map:
-      snp = child.snp_list[child.snp_map[p]]
-      confidence = snp['conf']
-    else:
-      confidence = 0.5
-    qual = -10 * math.log( 1. - confidence, 10 )
-    y_tp.append( qual )
-    #y_tp.append( confidence )
+  x_tp, y_tp = diff.confidence_map( 'tp' )
+  x_fp, y_fp = diff.confidence_map( 'fp' )
+  x_fn, y_fn = diff.confidence_map( 'fn' )
 
-  x_fp = []
-  y_fp = []
-  for p in diff.positions['fp']: # child only
-    x_fp.append( p )
-    if p in child.snp_map: # onl
-      snp = child.snp_list[child.snp_map[p]]
-      confidence = snp['conf']
-    else:
-      confidence = 0.5
-    qual = -10 * math.log( 1. - confidence, 10 )
-    y_fp.append( qual )
-    #y_fp.append( confidence )
-
-  x_fn = []
-  y_fn = []
-  for p in diff.positions['fn']: # parent only
-    x_fn.append( p )
-    if p in parent.snp_map:
-      snp = parent.snp_list[parent.snp_map[p]]
-      confidence = snp['conf']
-    else:
-      confidence = 0.5
-    qual = -10 * math.log( 1. - confidence, 10 )
-    y_fn.append( qual )
-    #y_fn.append( confidence )
+#   x_tp = []
+#   y_tp = []
+#   for p in diff.positions['tp']: # both
+#     x_tp.append( p )
+#     if p in child.snp_map:
+#       snp = child.snp_list[child.snp_map[p]]
+#       confidence = snp['conf']
+#     else:
+#       confidence = 0.5
+#     qual = -10 * math.log( 1. - confidence, 10 )
+#     y_tp.append( qual )
+#     #y_tp.append( confidence )
+# 
+#   x_fp = []
+#   y_fp = []
+#   for p in diff.positions['fp']: # child only
+#     x_fp.append( p )
+#     if p in child.snp_map: # onl
+#       snp = child.snp_list[child.snp_map[p]]
+#       confidence = snp['conf']
+#     else:
+#       confidence = 0.5
+#     qual = -10 * math.log( 1. - confidence, 10 )
+#     y_fp.append( qual )
+#     #y_fp.append( confidence )
+# 
+#   x_fn = []
+#   y_fn = []
+#   for p in diff.positions['fn']: # parent only
+#     x_fn.append( p )
+#     if p in parent.snp_map:
+#       snp = parent.snp_list[parent.snp_map[p]]
+#       confidence = snp['conf']
+#     else:
+#       confidence = 0.5
+#     qual = -10 * math.log( 1. - confidence, 10 )
+#     y_fn.append( qual )
+#     #y_fn.append( confidence )
 
 #  ax.bar(x_tp, y_tp, width=4096, color='g', label='Present in both (%i)' % len(x_tp), edgecolor = "none")#, log=True)
 #  ax.bar(x_fp, y_fp, width=4096, color='r', label='Present in child (%i)' % len(x_fp), edgecolor = "none")#, log=True)

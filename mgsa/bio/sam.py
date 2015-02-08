@@ -11,20 +11,47 @@ import fasta
 
 SOFT_CLIP_CONFIDENCE = 0.0
 
+class SamToMultiChromosomeVCF(object):
+  def __init__( self, sam, multi_fasta_reference, target_vcf, log, sam_sorted=False, call_strategy='consensus' ):
+    '''
+      @sam: file like sam file with multiple chromosomes
+      @reference: file like fasta reference with multiple fastas
+      @target_vcf: where to write the variations
+    '''
+    self.sam_to_multi_chromosome_fasta = SamToMultiChromosomeFasta( sam, log ) # builds sam_to_fasta
+    self.multi_fasta_reference = fasta.MultiFastaReaderContainer( multi_fasta_reference )
+    self.sam_to_vcf = {}
+    for chromosome in self.sam_to_multi_chromosome_fasta.fastas: # sam_to_fasta for each chromosome 
+      target_vcf.chromosome = chromosome
+      self.sam_to_vcf[chromosome] = SamToVCF( self.sam_to_multi_chromosome_fasta.fastas[chromosome], self.multi_fasta_reference.find_chromosome( chromosome ), target_vcf, log, sam_sorted, call_strategy ) # sam_to_vcf for each fasta
+  
+
 class SamToVCF(object):
   '''
     similar to SamToFasta but use a reference to only get variants
+    deals with a single chromosome
   '''
-  def __init__( self, sam, reference, target_vcf, log, sam_sorted=False, call_strategy='consensus' ):
+
+  @staticmethod
+  def instance( sam, reference, target_vcf, log, sam_sorted=False, call_strategy='consensus' ):
     '''
       @sam: file handle to sam file
       @reference: file handle to fasta file
       @target: VCF object
       @call_strategy: consensus|conservative|aggressive TODO not implemented
     '''
-    self.sam_to_fasta = SamToFasta( sam, log ) # builds fasta
+    return SamToVCF( SamToFasta( sam, log ), fasta.FastaReader( reference ), target_vcf, log, sam_sorted, call_strategy )
+
+  def __init__( self, sam_to_fasta, fasta_reader_reference, target_vcf, log, sam_sorted=False, call_strategy='consensus' ):
+    '''
+      @sam_to_fasta: sam to fasta object
+      @fasta_reader_reference: fasta_reader
+      @target: VCF object
+      @call_strategy: consensus|conservative|aggressive TODO not implemented
+    '''
+    self.sam_to_fasta = sam_to_fasta
     candidate = self.sam_to_fasta.fasta # ProbabilisticFasta
-    reference = fasta.Fasta( fasta.FastaReader( reference ) )
+    reference = fasta.Fasta( fasta_reader_reference )
     candidate_pos = 0
     delete_start = None
     # TODO ploidy; make heterozygous calls and pass on to target vcf
@@ -68,6 +95,34 @@ class SamToVCF(object):
     #elif reference.length > candidate.length: # candidate finished early
     #  target_vcf.indel( pos=pos-1, before=reference.base_at( pos-1 ), after=reference.fragment( start=pos-1 ) )
 
+class SamToMultiChromosomeFasta(object):
+  '''
+    processes sam files with multiple chromosomes to generate independent pileups
+  '''
+  def __init__( self, sam, log, allow_indels=True ):
+    self.fastas = {} # collection of sam_to_fastas by chromosome
+    self.stats = { 'total_lines': 0 }
+    for line in sam:
+      if line.startswith( '@' ): # skip header
+        pass
+      else:
+        line = line.strip()
+        fields = line.split()
+        chromosome = fields[2] # rline
+        if chromosome not in self.fastas:
+          self.fastas[chromosome] = SamToFasta( sam=None, log=log, allow_indels=allow_indels )
+        self.fastas[chromosome].parse_line( line )
+      self.stats['total_lines'] += 1
+      if self.stats['total_lines'] < 5000 and self.stats['total_lines'] % 1000 == 0 or self.stats['total_lines'] % 10000 == 0:
+        self.log( 'SamToMultiChromosomeFasta: %i lines processed' % self.stats['lines'] )
+    # combine stats
+    for chromosome in self.fastas:
+      for stat in self.fastas[chromosome].stats:
+        if stat not in self.stats:
+          self.stats[stat] = 0
+        self.stats[stat] += self.fastas[chromosome].stats[stat]
+    log( self.stats )
+
 class SamToFasta(object):
   '''
     read and evaluate assembler data
@@ -82,12 +137,12 @@ class SamToFasta(object):
     self.log = log
     self.fasta = fasta.ProbabilisticFasta( log )
     self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0, 'inversions': 0 }
-    for line in sam:
-      self.parse_line( line.strip() )
-      self.stats['lines'] += 1
-      if self.stats['lines'] < 5000 and self.stats['lines'] % 1000 == 0 or self.stats['lines'] % 10000 == 0:
-        self.log( 'SamToFasta: %i lines processed' % self.stats['lines'] )
-    self.log( self.stats )
+    if sam is not None:
+      for line in sam:
+        self.parse_line( line.strip() )
+        if self.stats['lines'] < 5000 and self.stats['lines'] % 1000 == 0 or self.stats['lines'] % 10000 == 0:
+          self.log( 'SamToFasta: %i lines processed' % self.stats['lines'] )
+      self.log( self.stats )
 
   def write( self, fh ):
     self.log( 'length is %i' % self.fasta.length )
@@ -112,6 +167,7 @@ class SamToFasta(object):
     #10 BGG=77FGBGG?GDGB7GED@CEGECDA?EG3D8:D.??06GB?-GCDGCA9G#AG?=AAEFBFFG=@DAAD#EBD;EC5#GD#5DE##A#BF#B#?=##
     #AS:i:192 #XN:i:0 #XM:i:2 #XO:i:0 #XG:i:0 #NM:i:2 #MD:Z:87G5G6 #YS:i:200 #YT:Z:CP
 
+    self.stats['lines'] += 1
     if line.startswith( '@' ): # skip header
       pass
     else:
@@ -176,6 +232,9 @@ class SamToFasta(object):
           if key not in self.stats:
             self.stats[key] = 0
           self.stats[key] += cigar_len
+
+  def __repr__(self):
+    return "stats: %s" % self.stats
 
 class SamAccuracyEvaluator(object):
   '''

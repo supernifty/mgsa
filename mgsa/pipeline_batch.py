@@ -70,7 +70,7 @@ for line in open( config_file, 'r' ):
   else:
     vcf_file = "../../data/%s" % cfg['vcf_source']
 
-  # generates a donor sequence that contains mutations from the reference sequence
+  # generates a donor sequence that contains mutations from the reference sequence and writes the mutations to vcf_file
   if cfg['command'] == 'mutations':  
     run( "python generate_mutation.py %s %s %s > ../../data/%s_%s_x%s.fasta" % ( fasta_file, vcf_file, cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
     continue
@@ -116,12 +116,19 @@ for line in open( config_file, 'r' ):
   #consensus_file = "../../data/%s_%s_x%s_%s_%s_recovered.fasta" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
   #run( "python generate_consensus.py < %s > %s" % ( sam_file, consensus_file ) )
   # generate vcf
-  recovered_vcf_file = "../../data/%s_%s_x%s_%s_%s_recovered.vcf" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
+  if cfg['vcf_out'] == 'generated':
+    recovered_vcf_file = "../../data/%s_%s_x%s_%s_%s_recovered.vcf" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
+  else:
+    recovered_vcf_file = "../../data/%s" % ( cfg['vcf_out'] )
   #run( "python generate_vcf.py %s < %s > %s" % ( fasta_file, sam_file, recovered_vcf_file ) )
 
   # build candidate vcf
   candidate_vcf = bio.VCF( writer=bio.VCFWriter( open( recovered_vcf_file, 'w' ) ) ) # empty vcf
-  bio.SamToVCF( sam=open( sam_file, 'r' ), reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+  if cfg['chromosomes'] == 'true':
+    bio.SamToMultiChromosomeVCF( sam=open( sam_file, 'r' ), multi_fasta_reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+  else:
+    bio.SamToVCF.instance( sam=open( sam_file, 'r' ), reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+
   if cfg['command'] == 'vcf':
     # don't compare correct vcf to candidate vcf, we just wanted to generate a vcf
     target.write( '%s' % ( line.strip() ) )

@@ -101,6 +101,27 @@ class TestVCFDiff( unittest.TestCase ):
     self.assertEqual( 2, diff.positions['fn'][0] )
     self.assertEqual( 8, diff.positions['fp'][0] )
 
+  def test_confidence_map( self ):
+    correct = bio.VCF()
+    candidate = bio.VCF()
+    correct.snp( 2, 'G', 'T' )
+    correct.snp( 5, 'G', 'T' )
+    candidate.snp( 5, 'G', 'T' )
+    candidate.snp( 8, 'G', 'T' )
+    diff = bio.VCFDiff( correct, candidate, log = bio.log_quiet, generate_positions = True )
+    x, y = diff.confidence_map( 'tp' )
+    self.assertEqual( 1, len(x) )
+    self.assertEqual( 5, x[0] )
+    self.assertAlmostEqual( 3.0102999566398116, y[0] ) # 0.5 conf
+    x, y = diff.confidence_map( 'fp' )
+    self.assertEqual( 1, len(x) )
+    self.assertEqual( 8, x[0] )
+    self.assertAlmostEqual( 3.0102999566398116, y[0] ) # 0.5 conf
+    x, y = diff.confidence_map( 'fn' )
+    self.assertEqual( 1, len(x) )
+    self.assertEqual( 2, x[0] )
+    self.assertAlmostEqual( 3.0102999566398116, y[0] ) # 0.5 conf
+ 
 class TestVCFFastaDiff( unittest.TestCase ):
 
   def test_snp_fn( self ):

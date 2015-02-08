@@ -8,4 +8,4 @@ if len(sys.argv) != 2:
   sys.exit(0)
 
 # python generate_fasta .reference < .sam > .vcf
-converter = bio.SamToVCF( sam=sys.stdin, reference=open( sys.argv[1], 'r' ), target_vcf=bio.VCF( writer=bio.VCFWriter( sys.stdout ) ), log=bio.log_stderr )
+converter = bio.SamToVCF.instance( sam=sys.stdin, reference=open( sys.argv[1], 'r' ), target_vcf=bio.VCF( writer=bio.VCFWriter( sys.stdout ) ), log=bio.log_stderr )

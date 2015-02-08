@@ -13,7 +13,7 @@ class TestSamToVCF( unittest.TestCase ):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AAAAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     reference = StringIO.StringIO( 'AAAAAAAAAA\nTTTTTTTTTT' )
     target_vcf = bio.VCF()
-    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    s = bio.SamToVCF.instance( sam, reference, target_vcf, bio.log_quiet )
     self.assertEqual( 0, len(target_vcf.snp_list) )
     self.assertEqual( 0, len(target_vcf.manager.indel_list) )
 
@@ -21,7 +21,7 @@ class TestSamToVCF( unittest.TestCase ):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     reference = StringIO.StringIO( 'AAAAAAAAAA\nTTTTTTTTTT' )
     target_vcf = bio.VCF()
-    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    s = bio.SamToVCF.instance( sam, reference, target_vcf, bio.log_quiet )
     self.assertEqual( 1, len(target_vcf.snp_list) )
     self.assertEqual( 0, len(target_vcf.manager.indel_list) )
 
@@ -29,7 +29,7 @@ class TestSamToVCF( unittest.TestCase ):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      2M2I15M       *       0       0       AACCAAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     reference = StringIO.StringIO( 'AAAAAAAAAA\nTTTTTTTTTT' )
     target_vcf = bio.VCF()
-    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    s = bio.SamToVCF.instance( sam, reference, target_vcf, bio.log_quiet )
     self.assertEqual( 0, len(target_vcf.snp_list) )
     self.assertEqual( 1, len(target_vcf.manager.indel_list) )
 
@@ -37,7 +37,7 @@ class TestSamToVCF( unittest.TestCase ):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_0~0~0  0       generated       1      60      2M2D18M       *       0       0       AAAAAAAAAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     reference = StringIO.StringIO( 'AACCAAAAAAAA\nTTTTTTTTTT' ) # 10A, 10T
     target_vcf = bio.VCF()
-    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    s = bio.SamToVCF.instance( sam, reference, target_vcf, bio.log_quiet )
     #print target_vcf
     self.assertEqual( 0, len(target_vcf.snp_list) )
     self.assertEqual( 1, len(target_vcf.manager.indel_list) )
@@ -48,7 +48,7 @@ class TestSamToVCF( unittest.TestCase ):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_0~0~0  0       generated       1      60      3M1I2M       *       0       0       TTAATT    ~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     reference = StringIO.StringIO( 'TTATT' )
     target_vcf = bio.VCF()
-    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    s = bio.SamToVCF.instance( sam, reference, target_vcf, bio.log_quiet )
     genome = s.sam_to_fasta.fasta.genome
     self.assertEqual( [1., 1., 0, 1., 1.], genome['T'] )
     self.assertEqual( [0., 0., 1.], genome['A'] )
@@ -61,7 +61,7 @@ class TestSamToVCF( unittest.TestCase ):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_0~0~0  0       generated       1      60      3M1D2M       *       0       0       TTATT    ~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     reference = StringIO.StringIO( 'TTAATT' )
     target_vcf = bio.VCF()
-    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    s = bio.SamToVCF.instance( sam, reference, target_vcf, bio.log_quiet )
     genome = s.sam_to_fasta.fasta.genome
     self.assertEqual( [1., 1., 0, 0., 1., 1.], genome['T'] )
     self.assertEqual( [0., 0., 1.], genome['A'] )
@@ -75,13 +75,30 @@ class TestSamToVCF( unittest.TestCase ):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_0~0~0  0       generated       3      60      2S4M       *       0       0       GGTTTT    ~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     reference = StringIO.StringIO( 'CCTTTT' )
     target_vcf = bio.VCF()
-    s = bio.SamToVCF( sam, reference, target_vcf, bio.log_quiet )
+    s = bio.SamToVCF.instance( sam, reference, target_vcf, bio.log_quiet )
     genome = s.sam_to_fasta.fasta.genome
     self.assertEqual( [0, 0, 1., 1., 1., 1.], genome['T'] )
     self.assertEqual( [0, 0], genome['G'] )
   
   def log(self, msg):
     print msg
+
+class TestSamToMultiChromosomeVCF( unittest.TestCase ):
+  def test_snp(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       chr1       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_5~0~0  0       chr2       6      60      15M       *       0       0       GGGCATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0',)
+    reference = StringIO.StringIO( '>chr1\nNNNNNAAAAA\nTTTTTTTTTT\n>chr2\nNNNNNGGGGA\nTTTTTTTTTT\n' )
+    target_vcf = bio.VCF()
+    s = bio.SamToMultiChromosomeVCF( sam, reference, target_vcf, bio.log_quiet )
+    self.assertEqual( 2, len(target_vcf.snp_list) )
+    self.assertEqual( 0, len(target_vcf.manager.indel_list) )
+    if target_vcf.snp_list[0]['chr'] == 'chr1':
+      chr1pos = 0
+    else:
+      chr1pos = 1
+    self.assertEqual( 'A', target_vcf.snp_list[chr1pos]['ref'] )
+    self.assertEqual( 'G', target_vcf.snp_list[1-chr1pos]['ref'] )
+    self.assertEqual( 7, target_vcf.snp_list[chr1pos]['pos'] )
+    self.assertEqual( 8, target_vcf.snp_list[1-chr1pos]['pos'] )
 
 class TestSamToFasta( unittest.TestCase ):
 
@@ -96,6 +113,28 @@ class TestSamToFasta( unittest.TestCase ):
     self.assertEqual( (1, 'A', 1.0, 1.0), s.fasta.consensus_at( 5 ) )
     self.assertEqual( (1, 'A', 1.0, 1.0), s.fasta.consensus_at( 6 ) )
     self.assertEqual( (1, 'C', 1.0, 1.0), s.fasta.consensus_at( 7 ) )
+
+class TestSamToMultiChromosomeFasta( unittest.TestCase ):
+
+  def test_simple(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       chr1       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_5~0~0  0       chr2       6      60      15M       *       0       0       GGTAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0')
+    s = bio.SamToMultiChromosomeFasta( sam, log=bio.log_quiet )
+    # stats
+    self.assertEqual( 2, s.stats['unknown_mapping'] )
+    self.assertEqual( 3, s.stats['total_lines'] )
+    self.assertEqual( 2, s.stats['lines'] )
+    self.assertEqual( 1, s.fastas['chr1'].stats['unknown_mapping'] )
+    self.assertEqual( 1, s.fastas['chr1'].stats['lines'] )
+    self.assertEqual( 1, s.fastas['chr2'].stats['unknown_mapping'] )
+    self.assertEqual( 1, s.fastas['chr2'].stats['lines'] )
+    # consensus (note sequence starts at 6)
+    # move, result, best, coverage
+    self.assertEqual( (1, 'A', 1.0, 1.0), s.fastas['chr1'].fasta.consensus_at( 5 ) )
+    self.assertEqual( (1, 'A', 1.0, 1.0), s.fastas['chr1'].fasta.consensus_at( 6 ) )
+    self.assertEqual( (1, 'C', 1.0, 1.0), s.fastas['chr1'].fasta.consensus_at( 7 ) )
+    self.assertEqual( (1, 'G', 1.0, 1.0), s.fastas['chr2'].fasta.consensus_at( 5 ) )
+    self.assertEqual( (1, 'G', 1.0, 1.0), s.fastas['chr2'].fasta.consensus_at( 6 ) )
+    self.assertEqual( (1, 'T', 1.0, 1.0), s.fastas['chr2'].fasta.consensus_at( 7 ) )
 
 class TestFastaMutate( unittest.TestCase ):
 
