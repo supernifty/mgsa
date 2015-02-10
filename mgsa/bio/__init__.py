@@ -1,6 +1,7 @@
 
 from bias import *
 from bio import *
+from chart import *
 from distance import *
 from fasta import *
 from fastq import *

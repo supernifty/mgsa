@@ -25,10 +25,12 @@ class MultiChromosomeVCF(object):
           continue
         fields = line.split()
         if len(fields) > 6:
-          chromosome = fields[0] # not used!
+          chromosome = fields[0]
           if chromosome not in self.vcfs:
             self.vcfs[chromosome] = VCF(log=log, chromosome=chromosome)
           self.vcfs[chromosome].load_line( line )
+    for chromosome in self.vcfs:
+      log( 'chromosome: %s max_snp_pos: %i count: %i' % ( chromosome, self.vcfs[chromosome].snp_list[-1]['pos'], len( self.vcfs[chromosome].snp_list ) ) )
 
 class VCF(object):
   '''
@@ -293,17 +295,16 @@ class VCFDiff(object):
     self.buckets = [ { 'tp': 0, 'fp': 0, 'fn': 0 } for _ in xrange(0, 20) ]
     max_snp_pos = 0
     if len( vcf_correct.snp_list ) > 0:
-      max_snp_pos = vcf_correct.snp_list[-1]['pos']
+      max_snp_pos = max( max_snp_pos, vcf_correct.snp_list[-1]['pos'] )
     if len( vcf_candidate.snp_list ) > 0 and vcf_candidate.snp_list[-1]['pos'] > max_snp_pos:
-      max_snp_pos = vcf_candidate.snp_list[-1]['pos']
+      max_snp_pos = max( max_snp_pos, vcf_candidate.snp_list[-1]['pos'] )
     max_indel_pos = 0
     if len( vcf_correct.manager.indel_list ) > 0:
-      max_snp_pos = vcf_correct.manager.indel_list[-1].pos
+      max_indel_pos = max( max_indel_pos, vcf_correct.manager.indel_list[-1].pos )
     if len( vcf_candidate.manager.indel_list ) > 0 and vcf_candidate.manager.indel_list[-1].pos > max_indel_pos:
-      max_indel_pos = vcf_candidate.manager.indel_list[-1].pos
-    bucket_size = ( 1 + max( max_snp_pos, max_indel_pos ) ) / 20.
-    log( '%i correct snps, %i candidate snps; %i correct snp map; %i candidate snp map' % ( len(vcf_correct.snp_list), len(vcf_candidate.snp_list), len(vcf_correct.snp_map), len(vcf_candidate.snp_map) ) )
-    log( '%i correct indels, %i candidate indels; %i correct indels map; %i candidate indels map' % ( len(vcf_correct.manager.indel_list), len(vcf_candidate.manager.indel_list), len(vcf_correct.manager.indel_map), len(vcf_candidate.manager.indel_map) ) )
+      max_indel_pos = max( max_indel_pos, vcf_candidate.manager.indel_list[-1].pos )
+    self.length = 1 + max( max_snp_pos, max_indel_pos )
+    bucket_size = self.length / 20.
     # snps
     for true_snp in vcf_correct.snp_list:
       bucket = int( math.floor( true_snp['pos'] / bucket_size ) )

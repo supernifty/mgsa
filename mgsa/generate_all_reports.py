@@ -934,60 +934,48 @@ def plot_deletion_vs_alignment_ecoli():
   fig.savefig('%s/ecoli-deletion-vs-alignment.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
-def plot_vcf_parent_vs_child():
-  parent = bio.VCF( reader = open( '../../data/Plasmodium_falciparum_3d_p_CHR02_recovered.vcf' ) )
-  child = bio.VCF( reader = open( '../../data/Plasmodium_falciparum_3d7_1q_CHR02_recovered.vcf' ) )
-  diff = bio.VCFDiff( vcf_correct = parent, vcf_candidate = child, generate_positions = True )
-  
+def plot_vcf_parent_vs_child_chromosomes( parent_fn, child_fn, true_fn, out_fn ):
+  parent = bio.MultiChromosomeVCF( reader=open( '../../data/%s' % parent_fn ) )
+  child = bio.MultiChromosomeVCF( reader=open( '../../data/%s' % child_fn ) )
+  truth = bio.MultiChromosomeVCF( reader=open( '../../data/%s' % true_fn ) )
+
+  result = bio.multi_chromosome_comparison( parent, child, truth )
+
   fig = plt.figure()
   ax = fig.add_subplot(111)
+
+  ax.scatter(result['x_fp'], result['y_fp'], color='r', label='Present only in child (%i)' % len(result['x_fp']), edgecolor = "none")#, log=True)
+  ax.scatter(result['x_tp'], result['y_tp'], color='g', label='Present in both (%i)' % len(result['x_tp']), edgecolor="none", alpha=0.2)#, log=True)
+  ax.scatter(result['x_fn'], result['y_fn'], color='b', label='Present only in parent (%i)' % len(result['x_fn']), edgecolor = "none")#, log=True)
+  ax.scatter(result['x_t'], result['y_t'], color='#000000', marker='s', s=80, facecolors='none')#, log=True)
+
+  ax.set_ylabel('Quality')
+  ax.set_xlabel('Position')
+  ax.set_xlim( xmin=0, xmax=result['offset'] )
+  ax.set_ylim( ymin=0 )#, ymax=60 )
+  leg = ax.legend(loc='lower left', prop={'size':9})
+  leg.get_frame().set_alpha(0.8)
+
+  ymin, ymax = ax.get_ylim()
+  ax.vlines(x=result['chromosome_offsets'][:-1], ymin=ymin, ymax=ymax-0.1, color='#909090')
+  for item in result['chromosome_names']:
+    ax.text(item[0], ymax - 1 - 1 * item[1], item[2], color='k', fontsize=6 )
+
+  fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
+
+  
+def plot_vcf_parent_vs_child( parent_fn, child_fn ):
+  parent = bio.VCF( reader=open( '../../data/%s' % parent_fn ) )
+  child = bio.VCF( reader=open( '../../data/%s' % child_fn ) )
+  diff = bio.VCFDiff( vcf_correct=parent, vcf_candidate=child, generate_positions = True )
   
   x_tp, y_tp = diff.confidence_map( 'tp' )
   x_fp, y_fp = diff.confidence_map( 'fp' )
   x_fn, y_fn = diff.confidence_map( 'fn' )
 
-#   x_tp = []
-#   y_tp = []
-#   for p in diff.positions['tp']: # both
-#     x_tp.append( p )
-#     if p in child.snp_map:
-#       snp = child.snp_list[child.snp_map[p]]
-#       confidence = snp['conf']
-#     else:
-#       confidence = 0.5
-#     qual = -10 * math.log( 1. - confidence, 10 )
-#     y_tp.append( qual )
-#     #y_tp.append( confidence )
-# 
-#   x_fp = []
-#   y_fp = []
-#   for p in diff.positions['fp']: # child only
-#     x_fp.append( p )
-#     if p in child.snp_map: # onl
-#       snp = child.snp_list[child.snp_map[p]]
-#       confidence = snp['conf']
-#     else:
-#       confidence = 0.5
-#     qual = -10 * math.log( 1. - confidence, 10 )
-#     y_fp.append( qual )
-#     #y_fp.append( confidence )
-# 
-#   x_fn = []
-#   y_fn = []
-#   for p in diff.positions['fn']: # parent only
-#     x_fn.append( p )
-#     if p in parent.snp_map:
-#       snp = parent.snp_list[parent.snp_map[p]]
-#       confidence = snp['conf']
-#     else:
-#       confidence = 0.5
-#     qual = -10 * math.log( 1. - confidence, 10 )
-#     y_fn.append( qual )
-#     #y_fn.append( confidence )
-
-#  ax.bar(x_tp, y_tp, width=4096, color='g', label='Present in both (%i)' % len(x_tp), edgecolor = "none")#, log=True)
-#  ax.bar(x_fp, y_fp, width=4096, color='r', label='Present in child (%i)' % len(x_fp), edgecolor = "none")#, log=True)
-#  ax.bar(x_fn, y_fn, width=4096, color='b', label='Present in parent (%i)' % len(x_fn), edgecolor = "none")#, log=True)
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  
   ax.scatter(x_fp, y_fp, color='r', label='Present only in child (%i)' % len(x_fp), edgecolor = "none")#, log=True)
   ax.scatter(x_tp, y_tp, color='g', label='Present in both (%i)' % len(x_tp), edgecolor = "none")#, log=True)
   ax.scatter(x_fn, y_fn, color='b', label='Present only in parent (%i)' % len(x_fn), edgecolor = "none")#, log=True)
@@ -997,7 +985,7 @@ def plot_vcf_parent_vs_child():
   ax.set_xlim( xmin=0 )
   leg = ax.legend(loc='upper left', prop={'size':10})
   leg.get_frame().set_alpha(0.8)
-  fig.savefig('%s/malaria-3d7-p-vs-3d7-1q-vcf.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  fig.savefig('%s/.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
 
 from matplotlib.ticker import FuncFormatter
 def to_percent(y, position):
@@ -1166,7 +1154,10 @@ def plot_bias_hist( src, mapper ):
 #plot_deletion_vs_alignment_circoviridae()
 #plot_insertion_vs_readlength_circoviridae()
 #plot_insertion_vs_readlength_ecoli()
-#plot_vcf_parent_vs_child()
+#old plot_vcf_parent_vs_child()
+#plot_vcf_parent_vs_child( 'Plasmodium_falciparum_3d_p_CHR02_recovered.vcf', 'Plasmodium_falciparum_3d7_1q_CHR02_recovered.vcf', 'malaria-3d7-p-vs-3d7-1q-vcf' )
+#plot_vcf_parent_vs_child_chromosomes( 'sample_multi.vcf', 'sample_multi_recovered.vcf', 'sample_multi' )
+plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_3d_p_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d_1q_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d7_1q.vcf', 'malaria_vcf_1q_snp' )
 #plot_mappability_comparison()
 #plot_mappability( 'out/mappability_circoviridae_bowtie.out', 'Bowtie', 'bowtie' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw.out', 'BWASW', 'bwasw' )
@@ -1216,5 +1207,5 @@ def plot_bias_hist( src, mapper ):
 #plot_mappability_hist( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'bowtie-ins-1-error' )
 #plot_mappability_hist( 'out/mappability_circoviridae_bwa_sw_error_del_1.out', 'bwasw-del-1-error' )
 #
-plot_bias( 'out/bias_circoviridae_bwa_sw_snp_error_snp_1.out', 'BWASW with SNP and 1 subst error', 'bwasw-snp-subst-error' )
-plot_bias_hist( 'out/bias_circoviridae_bwa_sw_snp_error_snp_1.out', 'bwasw-snp-subst-error' )
+#plot_bias( 'out/bias_circoviridae_bwa_sw_snp_error_snp_1.out', 'BWASW with SNP and 1 subst error', 'bwasw-snp-subst-error' )
+#plot_bias_hist( 'out/bias_circoviridae_bwa_sw_snp_error_snp_1.out', 'bwasw-snp-subst-error' )

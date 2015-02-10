@@ -60,7 +60,7 @@ class SamToVCF(object):
       if actual_base is None:
         break # reference is done
       candidate_move, candidate_variation, evidence, coverage = candidate.consensus_at( candidate_pos )
-      log( 'SamToVCF: candidate_pos %i move %i base %s evidence %s coverage %f actual_base %s' % ( candidate_pos, candidate_move, candidate_variation, evidence, coverage, actual_base ) )
+      #log( 'SamToVCF: candidate_pos %i move %i base %s evidence %s coverage %f actual_base %s' % ( candidate_pos, candidate_move, candidate_variation, evidence, coverage, actual_base ) )
 
       if candidate_move > 0 and delete_start: # the end of a delete
          #target_vcf.indel( pos=delete_start - 1, before='%s%s' % ( reference.base_at( delete_start-1 ), delete_variation ), after='%s' % ( reference.base_at( delete_start-1 ) ), coverage=coverage )
@@ -114,7 +114,7 @@ class SamToMultiChromosomeFasta(object):
         self.fastas[chromosome].parse_line( line )
       self.stats['total_lines'] += 1
       if self.stats['total_lines'] < 10 or self.stats['total_lines'] < 5000 and self.stats['total_lines'] % 1000 == 0 or self.stats['total_lines'] % 10000 == 0:
-        log( 'SamToMultiChromosomeFasta: %i lines processed' % self.stats['total_lines'] )
+        log( 'SamToMultiChromosomeFasta: %i lines processed' % ( self.stats['total_lines'] ) )
     # combine stats
     for chromosome in self.fastas:
       for stat in self.fastas[chromosome].stats:
