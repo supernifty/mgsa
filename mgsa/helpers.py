@@ -18,7 +18,7 @@ def make_ymap(bias_report, has_no_variation=False):
       y_map[key] += 1
   return y_map
 
-def series_from_pipeline_batch( fh, x, y, bias_report=True, column_offset=0 ):
+def series_from_pipeline_batch( fh, x, y, bias_report=True, column_offset=0, has_no_variation=False ):
   '''
     given a pipeline batch result file, return a list of result arrays
     @fh: file .out
@@ -26,7 +26,7 @@ def series_from_pipeline_batch( fh, x, y, bias_report=True, column_offset=0 ):
     @y: e.g. vcf_f1
     @column_offset: use if older version of output with missing columns
   '''
-  y_map = make_ymap(bias_report)
+  y_map = make_ymap(bias_report, has_no_variation)
   xs = []
   ys = []
   for line in fh:
@@ -54,12 +54,12 @@ def series_from_line( line, y, bias_report=False, column_offset=0 ):
   return xs, ys # e.g. [ 0.00 0.25 0.5 0.75 ], [ values ]
 
  
-def series_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset=0 ):
+def series_from_pipeline_result( fh, y, bias_report=False, item=1, column_offset=0, has_no_variation=False ):
   '''
     given a pipeline batch result file, look at each row starting from item and return [xs, ys], where
     xs is the proportion; ys is the field specified by y 
   '''
-  y_map = make_ymap(bias_report)
+  y_map = make_ymap(bias_report, has_no_variation)
   xs = []
   ys = []
   for line in fh:

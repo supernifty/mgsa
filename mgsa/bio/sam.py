@@ -245,8 +245,8 @@ class SamAccuracyEvaluator(object):
       @sam: file like object
     '''
     self.verbose = verbose
-    self.variation_map = self.parse_variation_map( variation_map )
     self.log = log
+    self.variation_map = self.parse_variation_map( variation_map )
     if verbose:
       self.log( "SamAccuracyEvaluator: variation map contains %i items" % ( len(self.variation_map) ) )
     self.stats = { 'mapped': 0, 'unmapped': 0, 'unknown_mapping': 0, 'lines': 0, 'correct': 0, 'incorrect': 0, 'soft_clipping': 0, 'hard_clipping': 0, 'matched': 0, 'correct_mapq': 0.0, 'incorrect_mapq': 0.0 }

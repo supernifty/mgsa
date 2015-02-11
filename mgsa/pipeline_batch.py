@@ -161,7 +161,7 @@ for line in open( config_file, 'r' ):
     #bias_report_file = "out/%s_%s_x%s_%s_%s_bias.txt" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
     #print "stats", report.stats, "reference", report.reference_histogram, "error", report.error_histogram
     #target.write( ',%s,%s,%.2f,%.2f,%f,%f,%s' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ), report.stats['unmapped'], report.stats['total'], report.stats['mean_reference'], report.stats['mean_error'], '|'.join( [str(x) for x in report.error_histogram_no_variation ] ) ) )
-    target.write( ',%s,%s,%.2f,%.2f,%f,%f' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ), report.stats['unmapped'], report.stats['total'], report.stats['mean_reference'] ) )
+    target.write( ',%s,%s,%.2f,%.2f,%f,%f' % ( '|'.join( [str(x) for x in report.reference_histogram ] ), '|'.join( [ str(x) for x in report.error_histogram ] ), report.stats['unmapped'], report.stats['total'], report.stats['mean_reference'], report.stats['mean_error'] ) )
 
   target.write( '\n' )
   target.flush()

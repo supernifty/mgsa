@@ -13,7 +13,7 @@ class TestChart( unittest.TestCase ):
     writer.snp( pos=2, ref='G', alt='T', chromosome='X' )
     writer.snp( pos=1, ref='C', alt='T', chromosome='Y' )
     target.seek(0)
-    parent = bio.MultiChromosomeVCF( target )
+    parent = bio.MultiChromosomeVCF( target, log=bio.log_quiet )
 
     target = StringIO.StringIO()
     writer = bio.VCFWriter(target)
@@ -21,7 +21,7 @@ class TestChart( unittest.TestCase ):
     writer.snp( pos=1, ref='C', alt='T', chromosome='Y' )
     writer.snp( pos=2, ref='C', alt='T', chromosome='Y' )
     target.seek(0)
-    child = bio.MultiChromosomeVCF( target )
+    child = bio.MultiChromosomeVCF( target, log=bio.log_quiet )
 
     target = StringIO.StringIO()
     writer = bio.VCFWriter(target)
@@ -29,7 +29,7 @@ class TestChart( unittest.TestCase ):
     writer.snp( pos=1, ref='C', alt='T', chromosome='Y' )
     writer.snp( pos=2, ref='C', alt='T', chromosome='Y' )
     target.seek(0)
-    truth = bio.MultiChromosomeVCF( target )
+    truth = bio.MultiChromosomeVCF( target, log=bio.log_quiet )
 
     result = bio.multi_chromosome_comparison( parent, child, truth )
     self.assertEqual( [(0, 1, 'X'), (3, 0, 'Y')], result['chromosome_names'] )

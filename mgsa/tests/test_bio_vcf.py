@@ -45,6 +45,15 @@ class TestVCF( unittest.TestCase ):
     self.assertEqual( 1, len(vcf.variations( 0, 10 )) )
     self.assertTrue( 'I5-1[5,0,10]' in vcf.variations( 0, 10 ) )
 
+  def test_load(self):
+    src = StringIO.StringIO( '.\t3\t.\tA\tG\t3.0\tPASS\tDP=10\tGT\t1' )
+    vcf = bio.VCF( reader=src, log=bio.log_quiet )
+    self.assertEqual( 1, len(vcf.snp_list) )
+    snp = vcf.snp_list[0]
+    self.assertEqual( 'A', snp['ref'] )
+    self.assertEqual( 'G', snp['alt'] )
+    self.assertEqual( 2, snp['pos'] )
+
 class TestMultiChromosomeVCF( unittest.TestCase ):
   def test_read( self ):
     target = StringIO.StringIO()
@@ -52,10 +61,10 @@ class TestMultiChromosomeVCF( unittest.TestCase ):
     vcf.snp( pos=1, ref='A', alt='G', chromosome='X' )
     vcf.snp( pos=1, ref='C', alt='T', chromosome='Y' )
     lines = target.getvalue().split('\n')
-    self.assertEqual( 'X\t2\t.\tA\tG\t3\tPASS\tDP=10\tGT\t1', lines[4] )
-    self.assertEqual( 'Y\t2\t.\tC\tT\t3\tPASS\tDP=10\tGT\t1', lines[5] )
+    self.assertEqual( 'X\t2\t.\tA\tG\t3.0\tPASS\tDP=10\tGT\t1', lines[4] )
+    self.assertEqual( 'Y\t2\t.\tC\tT\t3.0\tPASS\tDP=10\tGT\t1', lines[5] )
     target.seek(0)
-    multi_vcf = bio.MultiChromosomeVCF( target )
+    multi_vcf = bio.MultiChromosomeVCF( target, log=bio.log_quiet )
     self.assertEqual( 2, len( multi_vcf.vcfs ) )
     self.assertEqual( 'A', multi_vcf.vcfs['X'].snp_list[0]['ref'] )
     self.assertEqual( 'G', multi_vcf.vcfs['X'].snp_list[0]['alt'] )
@@ -72,7 +81,7 @@ class TestVCFWriter( unittest.TestCase ):
     vcf.snp( pos=1, ref='A', alt='G' )
     lines = target.getvalue().split('\n')
     self.assertEqual( 6, len(lines) )
-    self.assertEqual( '.\t2\t.\tA\tG\t3\tPASS\tDP=10\tGT\t1', lines[4] ) # 3 is default quality
+    self.assertEqual( '.\t2\t.\tA\tG\t3.0\tPASS\tDP=10\tGT\t1', lines[4] ) # 3 is default quality
 
   def test_write_snp_confidence( self ):
     target = StringIO.StringIO()
@@ -80,7 +89,7 @@ class TestVCFWriter( unittest.TestCase ):
     vcf.snp( pos=1, ref='A', alt='G', confidence=0.5 )
     lines = target.getvalue().split('\n')
     self.assertEqual( 6, len(lines) )
-    self.assertEqual( '.\t2\t.\tA\tG\t3\tPASS\tDP=10\tGT\t1', lines[4] )
+    self.assertEqual( '.\t2\t.\tA\tG\t3.0\tPASS\tDP=10\tGT\t1', lines[4] )
 
 class TestVCFDiff( unittest.TestCase ):
   def setUp(self):

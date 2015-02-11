@@ -12,6 +12,8 @@ import variation
 DEFAULT_VCF_COVERAGE = 10
 DEFAULT_VCF_ZYGOSITY = "1" # choose alt
 
+MAX_QUALITY = 160 # else too many 9s for Python
+
 class MultiChromosomeVCF(object):
   '''
     manages a vcf with multiple chromosomes by using separate vcf objects for each chromosome
@@ -256,7 +258,7 @@ class VCFWriter(object):
       @zygosity: for diploid, "0/1" = heterozygous; "1/1" = alt homozygous
     '''
     if confidence < 1.:
-      quality = '%.0f' % ( -10 * math.log(1.-confidence, 10 ))
+      quality = '%.1f' % ( -10 * math.log(1.-confidence, 10 ))
     else:
       quality = '.'
 
@@ -385,7 +387,11 @@ class VCFDiff(object):
         confidence = snp['conf']
       else:
         confidence = 0.5
-      qual = -10 * math.log( 1. - confidence, 10 )
+      #print "confidence", confidence
+      if confidence >= 1.:
+        qual = MAX_QUALITY
+      else:
+        qual = -10 * math.log( 1. - confidence, 10 )
       y.append( qual )
     return x, y
 

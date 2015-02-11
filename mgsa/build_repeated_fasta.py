@@ -11,4 +11,4 @@ cfg = bio.Config().read_config_file( open( sys.argv[1], 'r' ) )
 multiplier = int(cfg['mult'])
 
 multi_reader = bio.MultiFastaReader( open( sys.argv[2], 'r' ) )
-bio.MultiRepeatedFastaGenerator( multi_reader, sys.stdout, multiplier, cfg )
+bio.RepeatedMultiFastaGenerator( multi_reader, sys.stdout, multiplier, cfg )
