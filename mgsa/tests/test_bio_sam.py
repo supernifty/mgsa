@@ -114,6 +114,16 @@ class TestSamToFasta( unittest.TestCase ):
     self.assertEqual( (1, 'A', 1.0, 1.0), s.fasta.consensus_at( 6 ) )
     self.assertEqual( (1, 'C', 1.0, 1.0), s.fasta.consensus_at( 7 ) )
 
+  def test_write(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    s = bio.SamToFasta( sam, log=bio.log_quiet )
+    target = StringIO.StringIO()
+    s.write( target )
+    lines = target.getvalue().split( '\n' )
+    self.assertEqual( 3, len(lines) )
+    self.assertTrue( lines[0].startswith('>') )
+    self.assertEqual( 'NNNNAACAATTTTTTTTTT', lines[1] )
+ 
 class TestSamToMultiChromosomeFasta( unittest.TestCase ):
 
   def test_simple(self):
