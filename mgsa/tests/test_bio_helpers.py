@@ -44,6 +44,27 @@ class TestHelpers( unittest.TestCase ):
     self.assertEqual( 'AATG', lines[1] )
     self.assertEqual( 2, len(lines) )
 
+  def test_fasta_filter_start(self):
+    fasta = StringIO.StringIO( '>comment\nAATG\nCCTG>another\nTTTT\n' )
+    target = StringIO.StringIO()
+    bio.fasta_filter( fasta, target, 'comment:1-4' )
+    lines = target.getvalue().split()
+    self.assertEqual( ['AATG'], lines )
+
+  def test_fasta_filter_cross(self):
+    fasta = StringIO.StringIO( '>comment\nAATG\nCCTG>another\nTTTT\n' )
+    target = StringIO.StringIO()
+    bio.fasta_filter( fasta, target, 'comment:3-6' )
+    lines = target.getvalue().split()
+    self.assertEqual( ['TGCC'], lines )
+
+  def test_fasta_filter_next_end(self):
+    fasta = StringIO.StringIO( '>comment\nAATG\nCCTG\n>another\nGGTT\n' )
+    target = StringIO.StringIO()
+    bio.fasta_filter( fasta, target, 'another:3-4' )
+    lines = target.getvalue().split()
+    self.assertEqual( ['TT'], lines )
+
   def log(self, msg):
     print msg
 

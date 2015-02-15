@@ -251,8 +251,8 @@ def quick_view( fh, bias_report=False ):
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
-    print "%s (quick_view|fasta_stats|fasta_width width|fasta_edit command width)" % sys.argv[0]
-  elif sys.argv[1] == 'quick_view':
+    print "%s (quick_view|fasta_stats|fasta_width width|fasta_edit command width|fasta_filter command)" % sys.argv[0]
+  elif sys.argv[1] == 'quick_view': # pipeline batch output
     quick_view( sys.stdin )
   elif sys.argv[1] == 'fasta_stats':
     print bio.fasta_stats( sys.stdin ).stats
@@ -263,6 +263,11 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
       width = int(sys.argv[3])
     bio.fasta_edit( sys.stdin, sys.stdout, commands=sys.argv[2], width=width )
+  elif sys.argv[1] == 'fasta_filter':
+    width = 50
+    if len(sys.argv) > 3:
+      width = int(sys.argv[3])
+    bio.fasta_filter( sys.stdin, sys.stdout, commands=sys.argv[2] )
   else:
     print "unrecognized command"
   #import doctest

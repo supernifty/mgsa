@@ -942,7 +942,12 @@ def plot_deletion_vs_alignment_ecoli():
   fig.savefig('%s/ecoli-deletion-vs-alignment.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
-def plot_vcf_parent_vs_child_chromosomes( parent_fn, child_fn, true_fn, out_fn, ymax=None ):
+import re
+def _simplify_chromosome_name( n ):
+  x = re.sub( '.*_([^_]*)_.*', '\\1', n )
+  return x
+
+def plot_vcf_parent_vs_child_chromosomes( parent_fn, child_fn, true_fn, out_fn, ymax=None, legend_loc='upper left', legend_bbox=(0., 0.9)):
   parent = bio.MultiChromosomeVCF( reader=open( '../../data/%s' % parent_fn ) )
   child = bio.MultiChromosomeVCF( reader=open( '../../data/%s' % child_fn ) )
   truth = bio.MultiChromosomeVCF( reader=open( '../../data/%s' % true_fn ) )
@@ -964,14 +969,14 @@ def plot_vcf_parent_vs_child_chromosomes( parent_fn, child_fn, true_fn, out_fn, 
     ax.set_ylim( ymin=0 )#, ymax=60 )
   else:
     ax.set_ylim( ymin=0, ymax=ymax )
-  leg = ax.legend(loc='upper left', bbox_to_anchor=(0., 0.9), prop={'size':8})
+  leg = ax.legend(loc=legend_loc, bbox_to_anchor=legend_bbox, prop={'size':8})
   leg.get_frame().set_alpha(0.8)
 
   ymin, ymax = ax.get_ylim()
   ax.vlines(x=result['chromosome_offsets'][:-1], ymin=ymin, ymax=ymax-0.1, color='#909090')
   prop = ymax / 30
   for item in result['chromosome_names']:
-    ax.text(item[0], ymax - prop - prop * item[1], item[2], color='k', fontsize=6 )
+    ax.text(item[0], ymax - prop - prop * item[1], _simplify_chromosome_name( item[2] ), color='k', fontsize=6 )
 
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
 
@@ -1167,12 +1172,15 @@ def plot_bias_hist( src, mapper ):
 #plot_insertion_vs_readlength_circoviridae()
 #plot_insertion_vs_readlength_ecoli()
 #old plot_vcf_parent_vs_child()
+#
 #plot_vcf_parent_vs_child( 'Plasmodium_falciparum_3d_p_CHR02_recovered.vcf', 'Plasmodium_falciparum_3d7_1q_CHR02_recovered.vcf', 'malaria-3d7-p-vs-3d7-1q-vcf' )
 #plot_vcf_parent_vs_child_chromosomes( 'sample_multi.vcf', 'sample_multi_recovered.vcf', 'sample_multi' )
 #plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_3d_p_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d_1q_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d7_1q.vcf', 'malaria_vcf_1q_snp' )
 #plot_vcf_parent_vs_child_chromosomes( 'freebayes_3d_p_filtered_normed.vcf', 'freebayes_1q_filtered_normed.vcf', 'Plasmodium_falciparum_3d7_1q.vcf', 'freebayes_malaria_vcf_1q_snp', ymax=120 )
 #plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_3d_p_resequenced_recovered.vcf', 'Plasmodium_falciparum_1a_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d7_1a.vcf', 'malaria_vcf_1a_snp' )
 #plot_vcf_parent_vs_child_chromosomes( 'freebayes_3d_p_filtered_normed.vcf', 'freebayes_1a_normed.vcf', 'Plasmodium_falciparum_3d7_1a.vcf', 'freebayes_malaria_vcf_1a_snp', ymax=50 )
+plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_p_ref13_resequenced_recovered.vcf', 'Plasmodium_falciparum_1q_ref13_resequenced_recovered.vcf', 'Plasmodium_falciparum_1q_ref13.vcf', 'malaria_vcf_1q_ref13_snp', legend_loc='upper right', legend_bbox=(1.,0.9) )
+#
 #plot_mappability_comparison()
 #plot_mappability( 'out/mappability_circoviridae_bowtie.out', 'Bowtie', 'bowtie' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw.out', 'BWASW', 'bwasw' )
@@ -1226,4 +1234,4 @@ def plot_bias_hist( src, mapper ):
 #plot_bias_hist( 'out/bias_circoviridae_bwa_sw_snp_error_snp_1.out', 'bwasw-snp-subst-error' )
 
 #plot_reference_bias( 'out/hiv_reference_bias_vs_repeats_150212.out', 'hiv' )
-plot_reference_bias( 'out/ecoli_reference_bias_vs_repeats_150212.out', 'ecoli' )
+#plot_reference_bias( 'out/ecoli_reference_bias_vs_repeats_150212.out', 'ecoli' )

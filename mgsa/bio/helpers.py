@@ -69,3 +69,42 @@ def fasta_edit( fh, out, commands, width=50 ):
         b = b[width:]
   out.write( '%s\n' %  b )
   
+def fasta_filter( fh, out, commands ):
+  '''
+    command is comma separated list of commands of the form [i|d].pos.[bases|count]
+    e.g. CHR1:123456-654321
+    ignore CHR2 for now
+  '''
+  start, finish = commands.split('-')
+  start_chr, start_pos = start.split( ':' )
+  start_pos = int(start_pos) - 1
+  finish_pos = int(finish) - 1
+
+  fr = fasta.FastaReader( fh, include_headers = True )
+  pos = 0
+  chromosome = ''
+  in_filter = False
+  for line in fr.items():
+    if line.startswith( '>' ):
+      chromosome = line[1:].split(' ')[0]
+      pos = 0
+      if in_filter and chromosome != start_chr:
+        in_filter = False
+    else:
+      line_len = len(line)
+      if in_filter:
+        if finish_pos + 1 >= pos + line_len:
+          out.write( '%s' % line )
+        else:
+          out.write( '%s' % line[:finish_pos - pos + 1] )
+          in_filter = False
+      else: # not in_filter
+        if chromosome == start_chr and start_pos >= pos and start_pos < pos + line_len:
+          in_filter = True
+          if finish_pos >= pos + line_len:
+            out.write( '%s' % line[start_pos - pos:] )
+          else:
+            out.write( '%s' % line[start_pos - pos:finish_pos - pos + 1] )
+            in_filter = False
+      pos += line_len 
+  out.write('\n')
