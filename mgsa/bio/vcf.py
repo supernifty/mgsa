@@ -32,7 +32,7 @@ class MultiChromosomeVCF(object):
             self.vcfs[chromosome] = VCF(log=log, chromosome=chromosome)
           self.vcfs[chromosome].load_line( line )
     for chromosome in self.vcfs:
-      log( 'chromosome: %s max_snp_pos: %i count: %i' % ( chromosome, self.vcfs[chromosome].snp_list[-1]['pos'], len( self.vcfs[chromosome].snp_list ) ) )
+      log( 'chromosome: %s max_snp_pos: %i count: %i' % ( chromosome, self.vcfs[chromosome].max_snp_pos(), len( self.vcfs[chromosome].snp_list ) ) )
 
 class VCF(object):
   '''
@@ -231,6 +231,9 @@ class VCF(object):
         #print "added partial indel 0 %i" % ( start - indel['pos'] )
       #print result, " for", start, "", end
     return result
+
+  def max_snp_pos( self ):
+    return self.snp_list[-1]['pos']
 
   def __str__( self ):
     return 'snps: %s indels: %s' % ( self.snp_list, self.manager )

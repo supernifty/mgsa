@@ -180,6 +180,20 @@ class TestSamAccuracyEvaluator( unittest.TestCase ):
     self.assertEqual( 0, acc.stats['unmapped'] )
     self.assertEqual( 0.0, acc.stats['incorrect_mapq'] )
 
+class TestBamReaderExternal( unittest.TestCase ):
+  def test_simple(self):
+    ext = bio.BamReaderExternal( "echo %s", "'hello'" )
+    lines = [ x for x in ext ]
+    self.assertEqual( 1, len(lines) )
+    self.assertEqual( 'hello\n', lines[0] )
+
+  def test_multiple(self):
+    ext = bio.BamReaderExternal( "echo 'hello\n%s'", "goodbye" )
+    lines = [ x for x in ext ]
+    self.assertEqual( 2, len(lines) )
+    self.assertEqual( 'hello\n', lines[0] )
+    self.assertEqual( 'goodbye\n', lines[1] )
+
 class TestBamReader( unittest.TestCase ):
   def setUp(self):
     pass

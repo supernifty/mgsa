@@ -12,7 +12,8 @@ def multi_chromosome_comparison( parent, child, truth ):
   chromosome_names = []
   x_tp, x_fp, x_fn, y_tp, y_fp, y_fn, x_t, y_t = [], [], [], [], [], [], [], []
   sorted_chromosomes = child.vcfs.keys()
-  sorted_chromosomes.sort()
+  #sorted_chromosomes.sort()
+  sorted_chromosomes.sort( key = lambda chromosome: child.vcfs[chromosome].max_snp_pos() )
 
   count = 0
   for chromosome in sorted_chromosomes:

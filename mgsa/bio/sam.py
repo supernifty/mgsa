@@ -3,6 +3,7 @@ import datetime
 import random
 import re
 import struct
+import subprocess
 import sys
 import zlib
 
@@ -172,66 +173,69 @@ class SamToFasta(object):
       pass
     else:
       fields = line.split()
-      flag = int(fields[1])
-      #if self.stats['lines'] < 100:
-      #  log( 'flag is %i' % flag )
-      if flag & 0x10 != 0:
-        self.stats['inversions'] += 1
-      if flag & 0x04 != 0:
-        self.stats['unmapped'] += 1
+      if len(fields) < 4:
+        self.log( 'WARN: %i: unexpected format: %s' % ( self.stats['lines'], line.strip() ) )
       else:
-        if flag & 0x02 != 0:
-          self.stats['mapped'] += 1
+        flag = int(fields[1])
+        #if self.stats['lines'] < 100:
+        #  log( 'flag is %i' % flag )
+        if flag & 0x10 != 0:
+          self.stats['inversions'] += 1
+        if flag & 0x04 != 0:
+          self.stats['unmapped'] += 1
         else:
-          self.stats['unknown_mapping'] += 1 # still try to map
-        pos = int(fields[3]) - 1 # pos on reference genome at start of fragment; 0 based
-        fragment_pos = 0 # position on the read
-        genome_pos = 0 # position on reference
-        cigar = fields[5]
-        for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ):
-          cigar_len = int(cigar_match[0])
-
-          if cigar_match[1] == 'M': # match
-            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos ) #, debug=line )
-            genome_pos += cigar_len # move forward on reference
-            fragment_pos += cigar_len # move forward in read
-
-          if self.allow_indels and cigar_match[1] == 'I': # insertion to the reference
-            self.fasta.insert( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos )
-            fragment_pos += cigar_len # move on in fragment, don't move on in genome since it's an insertion
-
-          if self.allow_indels and cigar_match[1] == 'D': # deletion from the reference
-            self.fasta.delete( pos + genome_pos, cigar_len )
-            genome_pos += cigar_len # don't move on in fragment, move on in reference
-
-          if cigar_match[1] == 'N': # skipped region from the reference
-            genome_pos += cigar_len
-
-          if cigar_match[1] == 'S': # soft clipping
-            #self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos, confidence=0.5 )
-            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos - cigar_len, confidence=SOFT_CLIP_CONFIDENCE ) #, debug=line )
-            #genome_pos += cigar_len
-            fragment_pos += cigar_len
-
-          if cigar_match[1] == 'H': # hard clipping
-            fragment_pos += cigar_len
-
-          if cigar_match[1] == 'P': # padding
-            genome_pos += cigar_len
-
-          if cigar_match[1] == '=': # sequence match
-            self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos ) #, debug=line )
-            genome_pos += cigar_len
-            fragment_pos += cigar_len
-
-          if cigar_match[1] == 'X': # sequence mismatch
-            genome_pos += cigar_len
-            fragment_pos += cigar_len
-
-          key = 'cigar_%s' % cigar_match[1]
-          if key not in self.stats:
-            self.stats[key] = 0
-          self.stats[key] += cigar_len
+          if flag & 0x02 != 0:
+            self.stats['mapped'] += 1
+          else:
+            self.stats['unknown_mapping'] += 1 # still try to map
+          pos = int(fields[3]) - 1 # pos on reference genome at start of fragment; 0 based
+          fragment_pos = 0 # position on the read
+          genome_pos = 0 # position on reference
+          cigar = fields[5]
+          for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ):
+            cigar_len = int(cigar_match[0])
+  
+            if cigar_match[1] == 'M': # match
+              self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos ) #, debug=line )
+              genome_pos += cigar_len # move forward on reference
+              fragment_pos += cigar_len # move forward in read
+  
+            if self.allow_indels and cigar_match[1] == 'I': # insertion to the reference
+              self.fasta.insert( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos )
+              fragment_pos += cigar_len # move on in fragment, don't move on in genome since it's an insertion
+  
+            if self.allow_indels and cigar_match[1] == 'D': # deletion from the reference
+              self.fasta.delete( pos + genome_pos, cigar_len )
+              genome_pos += cigar_len # don't move on in fragment, move on in reference
+  
+            if cigar_match[1] == 'N': # skipped region from the reference
+              genome_pos += cigar_len
+  
+            if cigar_match[1] == 'S': # soft clipping
+              #self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos, confidence=0.5 )
+              self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + fragment_pos - cigar_len, confidence=SOFT_CLIP_CONFIDENCE ) #, debug=line )
+              #genome_pos += cigar_len
+              fragment_pos += cigar_len
+  
+            if cigar_match[1] == 'H': # hard clipping
+              fragment_pos += cigar_len
+  
+            if cigar_match[1] == 'P': # padding
+              genome_pos += cigar_len
+  
+            if cigar_match[1] == '=': # sequence match
+              self.fasta.add( fields[9][fragment_pos:fragment_pos+cigar_len], pos + genome_pos ) #, debug=line )
+              genome_pos += cigar_len
+              fragment_pos += cigar_len
+  
+            if cigar_match[1] == 'X': # sequence mismatch
+              genome_pos += cigar_len
+              fragment_pos += cigar_len
+  
+            key = 'cigar_%s' % cigar_match[1]
+            if key not in self.stats:
+              self.stats[key] = 0
+            self.stats[key] += cigar_len
 
   def __repr__(self):
     return "stats: %s" % self.stats
@@ -297,117 +301,120 @@ class SamAccuracyEvaluator(object):
       pass
     else:
       fields = line.split()
-      flag = int(fields[1])
-      #if self.stats['lines'] < 100:
-      #  log( 'flag is %i' % flag )
-      if flag & 0x04 != 0: # unmapped
-        self.stats['unmapped'] += 1
+      if len(fields) < 4:
+        self.log( 'WARN: %i: unexpected format: %s' % ( self.stats['lines'], line.strip() ) )
       else:
-        if flag & 0x02 != 0: # mapped
-          self.stats['mapped'] += 1
+        flag = int(fields[1])
+        #if self.stats['lines'] < 100:
+        #  log( 'flag is %i' % flag )
+        if flag & 0x04 != 0: # unmapped
+          self.stats['unmapped'] += 1
         else:
-          self.stats['unknown_mapping'] += 1 # but still try to map
-        original_pos = int(fields[3]) - 1 # pos in genome; conver to 0 based
-        pos = original_pos
-        cigar = fields[5]
-        prematch = True # clipping at start
-        correct_pos, correct_offset, insertion_len = [ int(x) for x in re.sub( 'mgsa_seq_([0-9~]*).*', '\\1', fields[0] ).split('~') ]
-        if correct_offset != 0:
-          correct_offset = correct_offset - insertion_len
-        variation_map_field_name = re.sub( '(mgsa_seq_[0-9~]*).*', '\\1', fields[0] )
-        if 'variation_' in fields[0]:
-          variations = re.sub( '.*variation_([SID0-9,-]*).*', '\\1', fields[0] ).split(',')
-          #print "field %s -> %s" % ( fields[0], variations )
-        elif self.variation_map is not None and variation_map_field_name in self.variation_map:
-          variations = re.sub( '([SID0-9,-]*).*', '\\1', self.variation_map[variation_map_field_name] ).split(',')
-        else:
-          #print "SamAccuracyEvaluator: warning: variation %s not found" % variation_map_field_name
-          variations = ()
-        for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ): # match description
-          cigar_len = int(cigar_match[0])
-          if cigar_match[1] == 'M': # match
-            if prematch:
-              indel_offset = 0
-              for variation in variations:
-                variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
-                if variation_pos <= 0:
-                  if variation[0] == 'I':
-                    indel_offset -= variation_length
-                  if variation[0] == 'D':
-                    indel_offset += variation_length
-              pos -= indel_offset
-
-            prematch = False # no pre clipping
-            self.stats['matched'] += cigar_len
-
-          if cigar_match[1] == 'S': # soft clipping
-            self.stats['soft_clipping'] += cigar_len
-            if prematch:
-              indel_offset = 0
-              for variation in variations:
-                variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
-                # migrate insertion to start of pattern
-                while variation_pos > 0 and fields[9][variation_pos-1] == fields[9][variation_pos]:
-                  variation_pos -= 1
-                  #print "variation %s at read %i migrated from %s to %i slen %i" % ( variation, correct_pos, variation[1:], variation_pos, cigar_len )
-                if variation_pos <= cigar_len: # variant in clipped region TODO variant could be partially in clipped area
-                  #print "included", variation
-                  if variation[0] == 'I':
-                    indel_offset -= variation_length
-                  if variation[0] == 'D':
-                    indel_offset += variation_length
-                else:
-                  pass #print "ignored", variation
-              pos -= cigar_len + indel_offset
-              #print "newpos %i cigarlen %i offset %i" % ( pos, cigar_len, indel_offset )
-
-          if cigar_match[1] == 'H': # hard clipping
-            self.stats['hard_clipping'] += cigar_len
-            if prematch:
-              indel_offset = 0
-              for variation in variations:
-                variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
-                if variation_pos <= cigar_len:
-                  if variation[0] == 'I':
-                    indel_offset -= variation_length
-                  if variation[0] == 'D':
-                    indel_offset += variation_length
-              pos -= cigar_len + indel_offset
-
-        #print "variations", variations
-        if correct_pos + correct_offset == pos:
-          self.stats['correct'] += 1
-          self.stats['correct_mapq'] += int(fields[4])
-          for c in variations:
-            if 'correct_%s' % c[0] not in self.stats:
-              self.stats['correct_%s' % c[0] ] = 0
-            self.stats['correct_%s' % c[0] ] += 1
-        else:
-          #print "incorrect: pos", pos, " correct pos", correct_pos, " correct offset", correct_offset
-          self.stats['incorrect'] += 1
-          self.stats['incorrect_mapq'] += int(fields[4])
-          for c in variations:
-            if 'incorrect_%s' % c[0] not in self.stats:
-              self.stats['incorrect_%s' % c[0] ] = 0
-            self.stats['incorrect_%s' % c[0] ] += 1
-          if self.verbose:
-            self.incorrect.append( { 
-              'original_pos': original_pos, 
-              'correct_pos': correct_pos, 
-              'correct_offset': correct_offset, 
-              'provided_pos': pos, 
-              'mapq': fields[4],
-              'cigar': cigar,
-              'label': fields[0],
-              'read': fields[9][:10],
-              'variations': variations
-            } )
+          if flag & 0x02 != 0: # mapped
+            self.stats['mapped'] += 1
           else:
-            self.incorrect.append( { 'correct_pos': correct_pos, 'provided_pos': pos, 'mapq': fields[4] } )
-          diff = pos - ( correct_pos + correct_offset )
-          if diff not in self.incorrect_diff:
-            self.incorrect_diff[ diff ] = 0
-          self.incorrect_diff[ diff ] += 1
+            self.stats['unknown_mapping'] += 1 # but still try to map
+          original_pos = int(fields[3]) - 1 # pos in genome; conver to 0 based
+          pos = original_pos
+          cigar = fields[5]
+          prematch = True # clipping at start
+          correct_pos, correct_offset, insertion_len = [ int(x) for x in re.sub( 'mgsa_seq_([0-9~]*).*', '\\1', fields[0] ).split('~') ]
+          if correct_offset != 0:
+            correct_offset = correct_offset - insertion_len
+          variation_map_field_name = re.sub( '(mgsa_seq_[0-9~]*).*', '\\1', fields[0] )
+          if 'variation_' in fields[0]:
+            variations = re.sub( '.*variation_([SID0-9,-]*).*', '\\1', fields[0] ).split(',')
+            #print "field %s -> %s" % ( fields[0], variations )
+          elif self.variation_map is not None and variation_map_field_name in self.variation_map:
+            variations = re.sub( '([SID0-9,-]*).*', '\\1', self.variation_map[variation_map_field_name] ).split(',')
+          else:
+            #print "SamAccuracyEvaluator: warning: variation %s not found" % variation_map_field_name
+            variations = ()
+          for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ): # match description
+            cigar_len = int(cigar_match[0])
+            if cigar_match[1] == 'M': # match
+              if prematch:
+                indel_offset = 0
+                for variation in variations:
+                  variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
+                  if variation_pos <= 0:
+                    if variation[0] == 'I':
+                      indel_offset -= variation_length
+                    if variation[0] == 'D':
+                      indel_offset += variation_length
+                pos -= indel_offset
+  
+              prematch = False # no pre clipping
+              self.stats['matched'] += cigar_len
+  
+            if cigar_match[1] == 'S': # soft clipping
+              self.stats['soft_clipping'] += cigar_len
+              if prematch:
+                indel_offset = 0
+                for variation in variations:
+                  variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
+                  # migrate insertion to start of pattern
+                  while variation_pos > 0 and fields[9][variation_pos-1] == fields[9][variation_pos]:
+                    variation_pos -= 1
+                    #print "variation %s at read %i migrated from %s to %i slen %i" % ( variation, correct_pos, variation[1:], variation_pos, cigar_len )
+                  if variation_pos <= cigar_len: # variant in clipped region TODO variant could be partially in clipped area
+                    #print "included", variation
+                    if variation[0] == 'I':
+                      indel_offset -= variation_length
+                    if variation[0] == 'D':
+                      indel_offset += variation_length
+                  else:
+                    pass #print "ignored", variation
+                pos -= cigar_len + indel_offset
+                #print "newpos %i cigarlen %i offset %i" % ( pos, cigar_len, indel_offset )
+  
+            if cigar_match[1] == 'H': # hard clipping
+              self.stats['hard_clipping'] += cigar_len
+              if prematch:
+                indel_offset = 0
+                for variation in variations:
+                  variation_pos, variation_length = [ int(v) for v in variation[1:].split( '-' ) ]
+                  if variation_pos <= cigar_len:
+                    if variation[0] == 'I':
+                      indel_offset -= variation_length
+                    if variation[0] == 'D':
+                      indel_offset += variation_length
+                pos -= cigar_len + indel_offset
+  
+          #print "variations", variations
+          if correct_pos + correct_offset == pos:
+            self.stats['correct'] += 1
+            self.stats['correct_mapq'] += int(fields[4])
+            for c in variations:
+              if 'correct_%s' % c[0] not in self.stats:
+                self.stats['correct_%s' % c[0] ] = 0
+              self.stats['correct_%s' % c[0] ] += 1
+          else:
+            #print "incorrect: pos", pos, " correct pos", correct_pos, " correct offset", correct_offset
+            self.stats['incorrect'] += 1
+            self.stats['incorrect_mapq'] += int(fields[4])
+            for c in variations:
+              if 'incorrect_%s' % c[0] not in self.stats:
+                self.stats['incorrect_%s' % c[0] ] = 0
+              self.stats['incorrect_%s' % c[0] ] += 1
+            if self.verbose:
+              self.incorrect.append( { 
+                'original_pos': original_pos, 
+                'correct_pos': correct_pos, 
+                'correct_offset': correct_offset, 
+                'provided_pos': pos, 
+                'mapq': fields[4],
+                'cigar': cigar,
+                'label': fields[0],
+                'read': fields[9][:10],
+                'variations': variations
+              } )
+            else:
+              self.incorrect.append( { 'correct_pos': correct_pos, 'provided_pos': pos, 'mapq': fields[4] } )
+            diff = pos - ( correct_pos + correct_offset )
+            if diff not in self.incorrect_diff:
+              self.incorrect_diff[ diff ] = 0
+            self.incorrect_diff[ diff ] += 1
  
 class SamWriter(object):
   def __init__( self, fh ):
@@ -432,6 +439,17 @@ class SamWriter(object):
     match = matches[ random.randint( 0, len(matches) - 1 ) ]
     self._fh.write( '%s\t%i\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%s\t%s\t%s\n' % ( name[1:], 0, 'generated', match + 1, 1, '%iM' % len(dna), '*', 0, 0, dna, confidence, '' ) )
 
+class BamReaderExternal(object):
+  '''
+    sam handle interface using an external BamToSam
+  '''
+  def __init__( self, cmd, sam_file ):
+    p = subprocess.Popen(cmd % sam_file, shell=True, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE) #, close_fds=True)
+    self.stdout = p.stdout
+
+  def __iter__(self):
+    return self.stdout.__iter__()
+  
 class BamReader(object):
   '''
     provides a sam handle like interface given a bam file

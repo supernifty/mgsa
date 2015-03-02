@@ -76,7 +76,11 @@ def fasta_filter( fh, out, commands ):
     ignore CHR2 for now
   '''
   start, finish = commands.split('-')
-  start_chr, start_pos = start.split( ':' )
+  if ':' in start:
+    start_chr, start_pos = start.split( ':' )
+  else:
+    start_chr = ''
+    start_pos = start
   start_pos = int(start_pos) - 1
   finish_pos = int(finish) - 1
 
@@ -88,7 +92,7 @@ def fasta_filter( fh, out, commands ):
     if line.startswith( '>' ):
       chromosome = line[1:].split(' ')[0]
       pos = 0
-      if in_filter and chromosome != start_chr:
+      if in_filter and start_chr != '' and chromosome != start_chr:
         in_filter = False
     else:
       line_len = len(line)
@@ -99,7 +103,7 @@ def fasta_filter( fh, out, commands ):
           out.write( '%s' % line[:finish_pos - pos + 1] )
           in_filter = False
       else: # not in_filter
-        if chromosome == start_chr and start_pos >= pos and start_pos < pos + line_len:
+        if ( start_chr == '' or chromosome == start_chr ) and start_pos >= pos and start_pos < pos + line_len:
           in_filter = True
           if finish_pos >= pos + line_len:
             out.write( '%s' % line[start_pos - pos:] )

@@ -835,6 +835,42 @@ def plot_deletion_vs_alignment_circoviridae():
   fig.savefig('%s/circoviridae-deletion-vs-alignment.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
+def plot_insertion_vs_variation_distance( out_file, x_col, x_name, title, report_fn ):
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y = []
+  y_precision = []
+  y_recall = []
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, x_col ) )
+    y.append( find_column( line, 'vcf_f1' ) )
+    y_precision.append( find_column( line, 'vcf_precision' ) )
+    y_recall.append( find_column( line, 'vcf_recall' ) )
+    #y_snp.append( find_column( line, 'vcf_f1' ) )
+
+  print "x", x
+  print "y", y
+  print "y_p", y_precision
+  print "y_r", y_recall
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='F1', color='r')
+  ax.plot(x, y_precision, label='Precision', color='g')
+  ax.plot(x, y_recall, label='Recall', color='b')
+  #ax.plot(x, y_snp, label='SNV Call', color='b')
+  ax.set_ylabel('%')
+  ax.set_xlabel(x_name)
+  ax.set_title( title)
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='upper left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, report_fn ), format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
 def plot_insertion_vs_readlength_circoviridae():
   out_file = "out/insert_readlength_150108.out"
   bio.log_stderr( 'extracting values from %s...' % out_file )
@@ -981,7 +1017,30 @@ def plot_vcf_parent_vs_child_chromosomes( parent_fn, child_fn, true_fn, out_fn, 
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
 
   
-def plot_vcf_parent_vs_child( parent_fn, child_fn ):
+def plot_vcf( fn, out_fn ):
+  vcf = bio.VCF( reader=open( '../../data/%s' % fn ) )
+  x = []
+  y = []
+  for snp in vcf.snp_list:
+    x.append( snp['pos'] )
+    confidence = snp['conf']
+    if confidence >= 1.:
+      qual = MAX_QUALITY
+    else:
+      qual = -10 * math.log( 1. - confidence, 10 )
+    y.append( qual )
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.scatter(x, y, color='g', edgecolor = "none")#, log=True)
+  ax.set_ylabel('Quality')
+  ax.set_xlabel('Position')
+  ax.set_xlim( xmin=0 )
+  #leg = ax.legend(loc='upper left', prop={'size':10})
+  #leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
+
+def plot_vcf_parent_vs_child( parent_fn, child_fn, out_fn, parent_label='parent', child_label='child' ):
   parent = bio.VCF( reader=open( '../../data/%s' % parent_fn ) )
   child = bio.VCF( reader=open( '../../data/%s' % child_fn ) )
   diff = bio.VCFDiff( vcf_correct=parent, vcf_candidate=child, generate_positions = True )
@@ -993,16 +1052,19 @@ def plot_vcf_parent_vs_child( parent_fn, child_fn ):
   fig = plt.figure()
   ax = fig.add_subplot(111)
   
-  ax.scatter(x_fp, y_fp, color='r', label='Present only in child (%i)' % len(x_fp), edgecolor = "none")#, log=True)
-  ax.scatter(x_tp, y_tp, color='g', label='Present in both (%i)' % len(x_tp), edgecolor = "none")#, log=True)
-  ax.scatter(x_fn, y_fn, color='b', label='Present only in parent (%i)' % len(x_fn), edgecolor = "none")#, log=True)
+  ax.set_xlim( xmin=0, xmax=max(x_fp + x_tp + x_fn ) * 1.05 )
+  ax.set_ylim( ymin=0, ymax=max(y_fp + y_tp + y_fn) * 1.05 )
+
+  ax.scatter(x_fp, y_fp, color='g', label='Present only in %s (%i)' % (child_label, len(x_fp) ), edgecolor = "none", alpha=0.4)#, log=True)
+  ax.scatter(x_tp, y_tp, color='r', label='Present in both (%i)' % len(x_tp), edgecolor = "none")#, log=True)
+  ax.scatter(x_fn, y_fn, color='b', label='Present only in %s (%i)' % ( parent_label, len(x_fn) ), edgecolor = "none", alpha=0.4)#, log=True)
 
   ax.set_ylabel('Quality')
   ax.set_xlabel('Position')
   ax.set_xlim( xmin=0 )
-  leg = ax.legend(loc='upper left', prop={'size':10})
+  leg = ax.legend(loc='upper right', prop={'size':8})
   leg.get_frame().set_alpha(0.8)
-  fig.savefig('%s/.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
+  fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
 
 from matplotlib.ticker import FuncFormatter
 def to_percent(y, position):
@@ -1025,6 +1087,12 @@ def autolabel(ax, rects):
         #ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height*1000), ha='center', va='bottom')
         ax.text(rect.get_x()+rect.get_width()/2., height + 0., '%.1f'%(height*1000), ha='center', va='bottom')
 
+def plot_all_mappability( infile, title, outfile ):
+  plot_mappability( infile, title, outfile )
+  plot_mappability_hist( infile, title, outfile )
+  plot_bias( infile, title, outfile )
+  plot_bias_hist( infile, title, outfile )
+
 def plot_mappability( src, name, short_name ):
   lines = open( src ).readlines()
   accuracy_list = lines[1].split(':')[1]
@@ -1037,9 +1105,9 @@ def plot_mappability( src, name, short_name ):
   ax.set_xlabel('Position')
   leg = ax.legend(loc='lower left', prop={'size':12})
   leg.get_frame().set_alpha(0.8)
-  plt.xlim(xmin=0, xmax=8204)
+  plt.xlim(xmin=0, xmax=len(accuracy))#, xmax=8204)
   plt.ylim(ymax=100.01, ymin=0.)
-  fig.savefig('%s/mappability-circoviridae-%s-50.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
+  fig.savefig('%s/mappability-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
 def plot_bias( src, name, short_name ):
   lines = open( src ).readlines()
@@ -1053,9 +1121,10 @@ def plot_bias( src, name, short_name ):
   ax.set_xlabel('Position')
   leg = ax.legend(loc='upper right', prop={'size':12})
   leg.get_frame().set_alpha(0.8)
-  plt.xlim(xmin=0, xmax=8204)
-  plt.ylim(ymax=100.01) #, ymin=0.)
-  fig.savefig('%s/bias-circoviridae-%s-50.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
+  plt.xlim(xmin=0, xmax=len(bias))#, xmax=8204)
+  #plt.ylim(ymin=max(-100.01, min(bias)), ymax=min(100.01, max(bias))) #, ymin=0.)
+  plt.ylim(ymin=-100.01, ymax=100.01) #, ymin=0.)
+  fig.savefig('%s/bias-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
 def plot_mappability_comparison():
   lines = open( 'out/mappability_circoviridae_bwa.out' ).readlines()
@@ -1082,11 +1151,11 @@ def plot_mappability_comparison():
   ax.set_title( 'Mappability by genome position' )
   leg = ax.legend(loc='lower left', prop={'size':12})
   leg.get_frame().set_alpha(0.8)
-  plt.xlim(xmin=0, xmax=8204)
+  plt.xlim(xmin=0, xmax=max(len(accuracy_bwa)))#8204)
   plt.ylim(ymax=100.01, ymin=0.)
   fig.savefig('%s/mappability-circoviridae-comparison-50.pdf' % (REPORT_DIRECTORY), format='pdf', dpi=1000)
 
-def plot_mappability_hist( src, mapper ):
+def plot_mappability_hist( src, title, fn ):
   #lines = open( 'results.out' ).readlines()
   lines = open( src ).readlines()
   accuracy_list = lines[1].split(':')[1]
@@ -1104,13 +1173,13 @@ def plot_mappability_hist( src, mapper ):
   plt.gca().yaxis.set_major_formatter(formatter)
   ax.set_ylabel('%')
   ax.set_xlabel('Mapping Accuracy')
-  ax.set_title( mapper )
+  ax.set_title( title )
   ax.set_xlim(xmin=0, xmax=100)
   ax.set_ylim(ymax=70./1000)
   autolabel( ax, patches ) 
-  fig.savefig('%s/mappability-hist-circoviridae-repeated-%s-50.pdf' % ( REPORT_DIRECTORY, mapper ), format='pdf', dpi=1000)
+  fig.savefig('%s/mappability-hist-%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
-def plot_bias_hist( src, mapper ):
+def plot_bias_hist( src, title, fn ):
   #lines = open( 'results.out' ).readlines()
   lines = open( src ).readlines()
   bias_list = lines[2].split(':')[1]
@@ -1126,7 +1195,7 @@ def plot_bias_hist( src, mapper ):
   bins = [-100, -90, -80, -70, -60, -50, -40, -30, -20, -10, -0.01, +0.01, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
   n, bins, patches = ax.hist(bias, bins=bins, normed=1)#, normed=1, histtype='stepfilled')
   #print n, bins, patches
-  print "*** Bias for %s with %s: %s ***" % ( src, mapper, bio.sign_bucket( bias ) )
+  print "*** Bias for %s with %s: %s ***" % ( src, title, bio.sign_bucket( bias ) )
   values = bio.bucket( bias, bins )
   for i in xrange(len(bins)):
     print "%.2f\t%i" % ( bins[i], values[i] )
@@ -1135,11 +1204,11 @@ def plot_bias_hist( src, mapper ):
   plt.gca().yaxis.set_major_formatter(formatter)
   ax.set_ylabel('%')
   ax.set_xlabel('Bias')
-  ax.set_title( mapper )
+  ax.set_title( title )
   ax.set_xlim(xmin=-100, xmax=100)
   ax.set_ylim(ymax=100./1000)
   autolabel( ax, patches ) 
-  fig.savefig('%s/bias-hist-circoviridae-repeated-%s-50.pdf' % ( REPORT_DIRECTORY, mapper ), format='pdf', dpi=1000)
+  fig.savefig('%s/bias-hist-%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
 # no longer used
 # TODO ecoli-mutations-snps-unmapped-2.pdf (not used)
@@ -1171,16 +1240,24 @@ def plot_bias_hist( src, mapper ):
 #plot_deletion_vs_alignment_circoviridae()
 #plot_insertion_vs_readlength_circoviridae()
 #plot_insertion_vs_readlength_ecoli()
+plot_insertion_vs_variation_distance( 'out/insert_variation_distance_150226.out', 'min_variation_distance', 'Variation Distance', 'Accuracy vs Variation Distance', 'circoviridae-insert-variation-distance' )
 #old plot_vcf_parent_vs_child()
 #
 #plot_vcf_parent_vs_child( 'Plasmodium_falciparum_3d_p_CHR02_recovered.vcf', 'Plasmodium_falciparum_3d7_1q_CHR02_recovered.vcf', 'malaria-3d7-p-vs-3d7-1q-vcf' )
+#plot_vcf( 'hiv_efree.vcf', 'hiv_vcf_error_free' )
+#plot_vcf_parent_vs_child( 'freebayes_hiv_efree_2015-02-18_normed.vcf', 'hiv_efree.vcf', 'hiv_vcf_vs_freebayes_error_free', 'FreeBayes', 'MGSA' )
+#plot_vcf_parent_vs_child( 'hiv_efree_bowtie.vcf', 'hiv_efree.vcf', 'hiv_vcf_error_free_bowtie_vs_bwamem', 'Bowtie', 'BWA mem' )
+#plot_vcf_parent_vs_child( 'hiv_efree_bwasw.vcf', 'hiv_efree.vcf', 'hiv_vcf_error_free_bwasw_vs_bwamem', 'BWASW', 'BWA mem' )
+#plot_vcf_parent_vs_child( 'freebayes_hiv_raw_bowtie_normed_2015-02-25.vcf', 'hiv_raw_bowtie_filtered.vcf', 'hiv_vcf_vs_freebayes_raw', 'FreeBayes', 'MGSA' )
+#plot_vcf_parent_vs_child( 'freebayes_hiv_raw_bowtie_10_normed.vcf', 'hiv_raw_bowtie_filtered.vcf', 'hiv_vcf_vs_freebayes_raw_20150225', 'FreeBayes', 'MGSA' )
 #plot_vcf_parent_vs_child_chromosomes( 'sample_multi.vcf', 'sample_multi_recovered.vcf', 'sample_multi' )
-#plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_3d_p_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d_1q_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d7_1q.vcf', 'malaria_vcf_1q_snp' )
-#plot_vcf_parent_vs_child_chromosomes( 'freebayes_3d_p_filtered_normed.vcf', 'freebayes_1q_filtered_normed.vcf', 'Plasmodium_falciparum_3d7_1q.vcf', 'freebayes_malaria_vcf_1q_snp', ymax=120 )
-#plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_3d_p_resequenced_recovered.vcf', 'Plasmodium_falciparum_1a_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d7_1a.vcf', 'malaria_vcf_1a_snp' )
-#plot_vcf_parent_vs_child_chromosomes( 'freebayes_3d_p_filtered_normed.vcf', 'freebayes_1a_normed.vcf', 'Plasmodium_falciparum_3d7_1a.vcf', 'freebayes_malaria_vcf_1a_snp', ymax=50 )
-plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_p_ref13_resequenced_recovered.vcf', 'Plasmodium_falciparum_1q_ref13_resequenced_recovered.vcf', 'Plasmodium_falciparum_1q_ref13.vcf', 'malaria_vcf_1q_ref13_snp', legend_loc='upper right', legend_bbox=(1.,0.9) )
-#
+#plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_p_resequenced_recovered.vcf', 'Plasmodium_falciparum_1q_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d7_1q.vcf', 'malaria_vcf_1q_snp', legend_loc='upper right', legend_bbox=(1.,0.9) )
+#plot_vcf_parent_vs_child_chromosomes( 'freebayes_3d_p_filtered_normed.vcf', 'freebayes_1q_filtered_normed.vcf', 'Plasmodium_falciparum_3d7_1q.vcf', 'freebayes_malaria_vcf_1q_snp', ymax=120, legend_loc='upper right', legend_bbox=(1.,0.9) )
+#plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_3d_p_resequenced_recovered.vcf', 'Plasmodium_falciparum_1a_resequenced_recovered.vcf', 'Plasmodium_falciparum_3d7_1a.vcf', 'malaria_vcf_1a_snp', legend_loc='upper right', legend_bbox=(1.,0.9) )
+#plot_vcf_parent_vs_child_chromosomes( 'freebayes_3d_p_filtered_normed.vcf', 'freebayes_1a_normed.vcf', 'Plasmodium_falciparum_3d7_1a.vcf', 'freebayes_malaria_vcf_1a_snp', ymax=50, legend_loc='upper right', legend_bbox=(1.,0.9) )
+#plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_p_ref13_resequenced_recovered.vcf', 'Plasmodium_falciparum_1q_ref13_resequenced_recovered.vcf', 'Plasmodium_falciparum_1q_ref13.vcf', 'malaria_vcf_1q_ref13_snp', legend_loc='upper right', legend_bbox=(1.,0.9) )
+#plot_vcf_parent_vs_child_chromosomes( 'freebayes_p_ref13_normed.vcf', 'freebayes_1q_ref13_normed.vcf', 'Plasmodium_falciparum_1q_ref13.vcf', 'freebayes_malaria_vcf_1q_ref13_snp', ymax=10, legend_loc='upper right', legend_bbox=(1.,0.9) )
+# ----- mappability -----
 #plot_mappability_comparison()
 #plot_mappability( 'out/mappability_circoviridae_bowtie.out', 'Bowtie', 'bowtie' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw.out', 'BWASW', 'bwasw' )
@@ -1204,6 +1281,19 @@ plot_vcf_parent_vs_child_chromosomes( 'Plasmodium_falciparum_p_ref13_resequenced
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_error_ins_1_test.out', 'BWASW with 1 insert error', 'bwasw-ins-1-error-test' )
 #plot_mappability( 'out/mappability_circoviridae_bwa_sw_error_del_1.out', 'BWASW with 1 delete error', 'bwasw-del-1-error' )
 #plot_mappability( 'out/mappability_circoviridae_bowtie_error_ins_1.out', 'Bowtie with 1 insert error', 'bowtie-ins-1-error' )
+#plot_mappability( 'out/mappability_hiv-NC_001722_bwasw_snp_rl88.out', 'HIV NC001722 with 1 SNP', 'hiv001722-bwasw-snp' )
+#plot_mappability_hist( 'out/mappability_hiv-NC_001722_bwasw_snp_rl88.out', 'HIV NC001722 with 1 SNP', 'hiv001722-bwasw-snp' )
+#plot_bias( 'out/mappability_hiv-NC_001722_bwasw_snp_rl88.out', 'HIV NC001722 with 1 SNP', 'hiv001722-bwasw-snp' )
+#plot_bias_hist( 'out/mappability_hiv-NC_001722_bwasw_snp_rl88.out', 'HIV NC001722 with 1 SNP', 'hiv001722-bwasw-snp' )
+#plot_all_mappability( 'out/mappability_hiv-NC_001722_bwasw_snp_rl88_ins2-2.out', 'HIV NC001722 with 2x2 inserts', 'hiv001722-bwasw-snp-ins22' )
+#plot_all_mappability( 'out/mappability_hiv-NC_001722_bwasw_snp_rl88_snp10.out', 'HIV NC001722 with 10 SNPs', 'hiv001722-bwasw-snp-snp10' )
+#plot_all_mappability( 'out/mappability_hiv-NC_001722_bwasw_snp_rl88_snp5.out', 'HIV NC001722 with 5 SNPs', 'hiv001722-bwasw-snp-snp5' )
+#plot_all_mappability( 'out/mappability_hiv-NC_001722_bwasw_snp_rl88_ins5.out', 'HIV NC001722 with 5 inserts', 'hiv001722-bwasw-snp-ins5' )
+#
+#plot_all_mappability( 'out/mappability_hiv-NC_001802_bwasw_snp_rl88_ins2-2.out', 'HIV NC001802 with 2x2 inserts', 'hiv001802-bwasw-snp-ins22' )
+#plot_all_mappability( 'out/mappability_hiv-NC_001802_bwasw_snp_rl88_snp10.out', 'HIV NC001802 with 10 SNPs', 'hiv001802-bwasw-snp-snp10' )
+#plot_all_mappability( 'out/mappability_hiv-NC_001802_bwasw_snp_rl88_snp5.out', 'HIV NC001802 with 5 SNPs', 'hiv001802-bwasw-snp-snp5' )
+#plot_all_mappability( 'out/mappability_hiv-NC_001802_bwasw_snp_rl88_ins5.out', 'HIV NC001802 with 5 inserts', 'hiv001802-bwasw-snp-ins5' )
 #
 #-- plot_mappability_hist( 'out/mappability_circoviridae_bwa.out', 'bwa' )
 #plot_mappability_hist( 'out/mappability_circoviridae_bowtie.out', 'bowtie' )

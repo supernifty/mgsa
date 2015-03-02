@@ -124,10 +124,14 @@ for line in open( config_file, 'r' ):
 
   # build candidate vcf
   candidate_vcf = bio.VCF( writer=bio.VCFWriter( open( recovered_vcf_file, 'w' ) ) ) # empty vcf
-  if cfg['chromosomes'] == 'true':
-    bio.SamToMultiChromosomeVCF( sam=open( sam_file, 'r' ), multi_fasta_reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+  if sam_file.endswith('.bam'):
+    sam_fh = bio.BamReaderExternal( Config.BAM_TO_SAM, sam_file )
   else:
-    bio.SamToVCF.instance( sam=open( sam_file, 'r' ), reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+    sam_fh = open( sam_file, 'r' )
+  if cfg['chromosomes'] == 'true':
+    bio.SamToMultiChromosomeVCF( sam=sam_fh, multi_fasta_reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+  else:
+    bio.SamToVCF.instance( sam=sam_fh, reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
 
   if cfg['command'] == 'vcf':
     # don't compare correct vcf to candidate vcf, we just wanted to generate a vcf
