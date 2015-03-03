@@ -43,7 +43,8 @@ def _update_range( line, start, command_list ):
 def fasta_edit( fh, out, commands, width=50 ):
   '''
     command is comma separated list of commands of the form [i|d].pos.[bases|count]
-    e.g. i.50.A
+    e.g. i.50.A -> insert at pos 50, the base A
+         d.80.20 -> delete at pos 80, 20 bases
   '''
   command_list = []
   for command in commands.split(','):

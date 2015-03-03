@@ -1240,11 +1240,12 @@ def plot_bias_hist( src, title, fn ):
 #plot_deletion_vs_alignment_circoviridae()
 #plot_insertion_vs_readlength_circoviridae()
 #plot_insertion_vs_readlength_ecoli()
-plot_insertion_vs_variation_distance( 'out/insert_variation_distance_150226.out', 'min_variation_distance', 'Variation Distance', 'Accuracy vs Variation Distance', 'circoviridae-insert-variation-distance' )
+#plot_insertion_vs_variation_distance( 'out/insert_variation_distance_150226.out', 'min_variation_distance', 'Variation Distance', 'Accuracy vs Variation Distance', 'circoviridae-insert-variation-distance' )
 #old plot_vcf_parent_vs_child()
 #
 #plot_vcf_parent_vs_child( 'Plasmodium_falciparum_3d_p_CHR02_recovered.vcf', 'Plasmodium_falciparum_3d7_1q_CHR02_recovered.vcf', 'malaria-3d7-p-vs-3d7-1q-vcf' )
 #plot_vcf( 'hiv_efree.vcf', 'hiv_vcf_error_free' )
+plot_vcf( 'hiv_raw_bwa_150303.vcf', 'hiv_vcf_raw_bwa_150303' )
 #plot_vcf_parent_vs_child( 'freebayes_hiv_efree_2015-02-18_normed.vcf', 'hiv_efree.vcf', 'hiv_vcf_vs_freebayes_error_free', 'FreeBayes', 'MGSA' )
 #plot_vcf_parent_vs_child( 'hiv_efree_bowtie.vcf', 'hiv_efree.vcf', 'hiv_vcf_error_free_bowtie_vs_bwamem', 'Bowtie', 'BWA mem' )
 #plot_vcf_parent_vs_child( 'hiv_efree_bwasw.vcf', 'hiv_efree.vcf', 'hiv_vcf_error_free_bwasw_vs_bwamem', 'BWASW', 'BWA mem' )

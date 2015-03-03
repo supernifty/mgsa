@@ -14,6 +14,7 @@
 #####################################
 
 import bio
+import config
 import datetime
 import os
 import sys
@@ -64,6 +65,8 @@ for line in open( config_file, 'r' ):
       continue # next line
   else:
     fasta_file = "../../data/%s" % cfg['fasta_reference']
+
+  bio.log_stderr( "fasta reference: %s" % fasta_file )
 
   if cfg['vcf_source'] == 'generated':
     vcf_file = "../../data/%s_%s_x%s.vcf" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
@@ -125,7 +128,7 @@ for line in open( config_file, 'r' ):
   # build candidate vcf
   candidate_vcf = bio.VCF( writer=bio.VCFWriter( open( recovered_vcf_file, 'w' ) ) ) # empty vcf
   if sam_file.endswith('.bam'):
-    sam_fh = bio.BamReaderExternal( Config.BAM_TO_SAM, sam_file )
+    sam_fh = bio.BamReaderExternal( config.BAM_TO_SAM, sam_file )
   else:
     sam_fh = open( sam_file, 'r' )
   if cfg['chromosomes'] == 'true':

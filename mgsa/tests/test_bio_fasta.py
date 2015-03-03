@@ -310,5 +310,19 @@ class TestRepeatedFastaGenerator( unittest.TestCase ):
     bio.RepeatedMultiFastaGenerator( mfg, og, 2, cfg )
     self.assertEqual( '>generated fasta 2x from s1\npqr\npqr\n>generated fasta 2x from s2\nstu\nvwx\nstu\nvwx\n', og.getvalue() )
 
+class TestFastaReaderFromVCF( unittest.TestCase ):
+  def test_simple( self ):
+    mg = StringIO.StringIO( '>s1\npqrstu\nvwxyz' )
+    r = bio.FastaReader( mg )
+    vcf = bio.VCF()
+    vcf.snp( 2, 'r', 'A' )
+    vcf.snp( 6, 'v', 'B' )
+    ffv = bio.FastaReaderFromVCF( r, vcf )
+    items = [ item for item in ffv.items() ]
+    self.assertEqual( 2, len(items))
+    self.assertEqual( 'pqAstu', items[0] )
+    self.assertEqual( 'Bwxyz', items[1] )
+  
+
 if __name__ == '__main__':
   unittest.main()

@@ -218,7 +218,7 @@ class FastaMutate(object):
     random.seed(seed)
     if log is not None:
       log( 'seed: %i' % seed )
-  
+
   def items(self):
     while True:
       fragment = self.reader.next_item()
@@ -407,6 +407,33 @@ class Fasta(object):
     for i in xrange(start, end):
       result += self.base_at(i)
     return result
+
+class FastaReaderFromVCF(object):
+  def __init__(self, fasta, vcf):
+    self.reader = fasta
+    self.vcf = vcf
+    self.pos = 0
+
+  def items(self):
+    while True:
+      next_fragment = self.next_item()
+      if next_fragment is None:
+        break
+      else:
+        yield next_fragment
+
+  def next_item(self):
+    fragment = self.reader.next_item()
+    if fragment is None:
+      return None
+    else:
+      fragment = list(fragment)
+      new_pos = self.pos + len(fragment)
+      for i in xrange(self.pos, new_pos):
+        if i in self.vcf.snp_map:
+          fragment[i - self.pos] = self.vcf.snp_list[self.vcf.snp_map[i]]['alt']
+      self.pos = new_pos
+      return ''.join(fragment)
 
 class FastaReader(object):
   '''
