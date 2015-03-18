@@ -186,7 +186,7 @@ class FastaMutate(object):
     change a reference fasta
   '''
 
-  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AAACCTTGGG' ):
+  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AACCCTTGGG' ):
     '''
       @reader: FastaReader
       @vcf_file: write mutations to vcf
@@ -206,6 +206,7 @@ class FastaMutate(object):
     self.probabilistic = probabilistic
     self.probabilities = probabilities
     self.insert_source = insert_source
+    self.insert_source_data = []
     if vcf_file is not None:
       self.vcf = vcf.VCF( writer=vcf.VCFWriter(vcf_file) )
     else:
@@ -217,7 +218,8 @@ class FastaMutate(object):
     seed = random.randint(0, sys.maxint)
     random.seed(seed)
     if log is not None:
-      log( 'seed: %i' % seed )
+      log( 'seed: %i; insert_source %s' % (seed, insert_source) )
+    self.log = log
 
   def items(self):
     while True:
@@ -226,6 +228,8 @@ class FastaMutate(object):
         if self.deletion_remain > 0:
           self.end_deletion()
         break
+      if self.insert_source == 'repeat':
+        self.insert_source_data.append( fragment )
       # apply mutations
       if self.allow_end_mutate or self.reader.has_next_item(): # don't mutate last fragment
         fragment = self.mutate( fragment )
@@ -249,15 +253,22 @@ class FastaMutate(object):
     '''
     insert_len = random.randint(self.min_insert_len, self.max_insert_len) # decide insertion len
     # generate actual insertion
-    if self.insert_source == 'random':
+    if self.insert_source == 'repeat' and len(self.insert_source_data) > 1:
+      fragment = random.randint(0, len(self.insert_source_data) - 1)
+      position = random.randint(0, len(self.insert_source_data[fragment]) - insert_len)
+      new_c = self.insert_source_data[fragment][position:position + insert_len]
+      #self.log( "repeat %s from %i:%i" % ( new_c, fragment, position ) )
+    elif self.insert_source == 'random':
       new_c = ''
       while insert_len > 0:
         insert_len -= 1
         new_c += self.probabilities[random.randint(0, len(self.probabilities)-1)]
-    elif self.insert_source == 'repeated':
-      pass
-    elif self.insert_source == 'novel':
-      pass
+      #self.log( "random %s" % ( new_c ) )
+    else: #if self.insert_source == 'simple':
+      possibles = 'ACGT'
+      new_c = possibles[random.randint(0, len(possibles)-1)] * insert_len
+    #elif self.insert_source == 'novel':
+    #  pass
     self.mutations += 1
     # add to vcf
     if self.vcf is not None:
@@ -554,6 +565,7 @@ class ErrorGenerator(object):
 
   @staticmethod
   def create_uniform_error_profile( error_prob ):
+    '''snv errors with probability error_prob'''
     transitions = { 'A': 'TGC', 'T': 'GCA', 'G': 'ACT', 'C': 'AGT', 'N': 'N' }
     def uniform_error_profile( bp ):
       if random.random() < error_prob:
@@ -561,6 +573,16 @@ class ErrorGenerator(object):
       else:
         return bp
     return uniform_error_profile
+
+  @staticmethod
+  def create_homopolymer_error_profile( error_prob, error_length ):
+    possibles = 'ACGT' 
+    def homopolymer_error_profile( bp ):
+      if random.random() < error_prob:
+        return ''.join( ( bp, possibles[random.randint(0, len(possibles)-1)] * error_length ) )
+      else:
+        return bp
+    return homopolymer_error_profile
 
 class RepeatedMultiFastaGenerator( object ):
   def __init__( self, multi_reader, out_fh, multiplier, cfg ):

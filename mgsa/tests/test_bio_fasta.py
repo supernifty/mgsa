@@ -323,6 +323,33 @@ class TestFastaReaderFromVCF( unittest.TestCase ):
     self.assertEqual( 'pqAstu', items[0] )
     self.assertEqual( 'Bwxyz', items[1] )
   
+class TestErrorGenerator( unittest.TestCase ):
+  def test_snp( self ):
+    eg = bio.ErrorGenerator( bio.ErrorGenerator.create_uniform_error_profile( 1. ) )
+    m = eg.apply_errors( 'AGTC' )
+    self.assertEqual( 4, len(m) )
+    self.assertNotEqual( 'A', m[0] )
+    self.assertNotEqual( 'G', m[1] )
+    self.assertNotEqual( 'T', m[2] )
+    self.assertNotEqual( 'C', m[3] )
 
+  def test_no_snp( self ):
+    eg = bio.ErrorGenerator( bio.ErrorGenerator.create_uniform_error_profile( 0. ) )
+    m = eg.apply_errors( 'AGTC' )
+    self.assertEqual( 4, len(m) )
+    self.assertEqual( 'A', m[0] )
+    self.assertEqual( 'G', m[1] )
+    self.assertEqual( 'T', m[2] )
+    self.assertEqual( 'C', m[3] )
+
+  def test_homopolymer( self ):
+    eg = bio.ErrorGenerator( bio.ErrorGenerator.create_homopolymer_error_profile( 1., 2 ) )
+    m = eg.apply_errors( 'GG' )
+    self.assertEqual( 6, len(m) )
+    self.assertEqual( 'G', m[0] )
+    self.assertEqual( m[1], m[2] )
+    self.assertEqual( 'G', m[3] )
+    self.assertEqual( m[4], m[5] )
+ 
 if __name__ == '__main__':
   unittest.main()

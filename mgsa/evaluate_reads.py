@@ -32,8 +32,11 @@ for incorrect in ev.incorrect_diff:
   print 'diff:', incorrect, ' frequency:', ev.incorrect_diff[incorrect]
 
 # calculate some stuff
-print "%mapped_unmapped", ( ev.stats['unmapped'] * 100. / ( ev.stats['unmapped'] + ev.stats['incorrect'] + ev.stats['correct'] ) )
-print "%mapped_recall", ( ev.stats['correct'] * 100. / ( ev.stats['unmapped'] + ev.stats['incorrect'] + ev.stats['correct'] ) )
+total = ev.stats['unmapped'] + ev.stats['incorrect'] + ev.stats['correct']
+if total == 0:
+  print "WARNING: no reads: %s" % ev.stats
+print "%mapped_unmapped", ( ev.stats['unmapped'] * 100. / total )
+print "%mapped_recall", ( ev.stats['correct'] * 100. / total )
 if ev.stats['incorrect'] + ev.stats['correct'] > 0:
   print "%mapped_incorrectly_(1-precision)", ( ev.stats['incorrect'] * 100. / ( ev.stats['incorrect'] + ev.stats['correct'] ) )
   print "%clipped", ( ( ev.stats['soft_clipping'] + ev.stats['hard_clipping'] ) * 100. / ( ev.stats['incorrect'] + ev.stats['correct'] ) / READ_LENGTH )

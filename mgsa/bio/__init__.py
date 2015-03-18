@@ -5,6 +5,7 @@ from chart import *
 from distance import *
 from fasta import *
 from fastq import *
+from features import *
 from helpers import *
 from mapper import *
 from report import *

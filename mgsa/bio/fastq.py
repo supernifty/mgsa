@@ -20,7 +20,10 @@ class FastqGenerator(object):
     else:
       inversion_every = 1e12
 
-    error_generator = fasta.ErrorGenerator( fasta.ErrorGenerator.create_uniform_error_profile( cfg['error_prob'] ) )
+    if cfg['error_type'].startswith( 'homopolymer' ):
+      error_generator = fasta.ErrorGenerator( fasta.ErrorGenerator.create_homopolymer_error_profile( cfg['error_prob'], int( cfg['error_type'].split( '_' )[1] ) ) )
+    else: # snv
+      error_generator = fasta.ErrorGenerator( fasta.ErrorGenerator.create_uniform_error_profile( cfg['error_prob'] ) )
 
     # read candidate fasta
     dna = ''
@@ -65,7 +68,8 @@ class FastqGenerator(object):
             if inversion:
               time_to_inversion += inversion_every
     
-            self._write( reference_position, dna_with_errors, '~' * cfg['read_length'], variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
+            #self._write( reference_position, dna_with_errors, '~' * len(dna_with_errors), variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
+            self._write( reference_position, dna_with_errors[:cfg['read_length']], '~' * cfg['read_length'], variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
     
             max_pos = max(max_pos, reference_position + cfg['read_length'])
             time_to_next += read_every
