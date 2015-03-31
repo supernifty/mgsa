@@ -1,6 +1,9 @@
 
 def bucket( values, buckets ):
-  '''speed this up by sorting values'''
+  '''
+    puts values into buckets
+    speed this up by sorting values
+  '''
   result = [ 0 ] * len(buckets)
   for value in values:
     for i in xrange(len(buckets)):

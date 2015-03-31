@@ -1139,6 +1139,36 @@ def plot_mappability( src, name, short_name ):
   plt.ylim(ymax=100.01, ymin=0.)
   fig.savefig('%s/mappability-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
+def plot_entropy( src, short_name ):
+  lines = open( src ).readlines()
+  # find accuracy
+  # find entropy
+  for line in lines:
+    if line.startswith('accuracy'):
+      accuracy_list = [ float(x) for x in line.split(':')[1].strip( ' []\n' ).split(',')]
+    if line.startswith('entropy'):
+      entropy_list = [ float(x) for x in line.split(':')[1].strip( ' []\n' ).split(',') ]
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.scatter(entropy_list, accuracy_list, s=2, color='b' )#, s=2)
+  fig.savefig('%s/entropy-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
+
+def plot_depth( src, short_name, range_start=0, range_stop=-1 ):
+  lines = open( src ).readlines()
+  for line in lines:
+    if line.startswith( '#' ):
+      continue
+    depths = [ float(x) for x in line.split(',') ]
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    if range_stop < 0:
+      range_stop = len(depths)
+    plt.ylim(ymax=max(depths)+0.5, ymin=-0.5)
+    ax.plot(range(range_start, range_stop), depths[range_start:range_stop], marker='o' )#, s=2)
+    fig.savefig('%s/depth-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
+    break
+
 def plot_bias( src, name, short_name ):
   lines = open( src ).readlines()
   bias_list = lines[2].split(':')[1]
@@ -1477,6 +1507,13 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
 
+#### experimental
+#plot_entropy( 'out/entropy_test_150319.out', 'circoviridae-x2' )
+#plot_entropy( 'out/entropy_circ_150319.out', 'circoviridae' )
+#plot_depth( 'out/read-depth-deletion-150330.out', 'circoviridae-100', 900, 1200 )
+#plot_depth( 'out/read-depth-deletion-150331.out', 'circoviridae-10' )#, 900, 1200 )
+plot_depth( 'out/read-depth-deletion-150331.out', 'circoviridae-10-zoom', 980, 1030 )
+
 #### in report
 #plot_heatmap( 'out/circoviridae-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'circoviridae-insertion-heatmap', 'Insertion length' )
 #plot_heatmap( 'out/ecoli-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'ecoli-insertion-heatmap', 'Insertion length' )
@@ -1499,7 +1536,9 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_insertion_vs_variation_distance( 'out/ecoli-cluster-delete-150309.out', 'min_variation_distance', 'Variation Distance', 'Accuracy vs Variation Distance', 'ecoli-delete-cluster' )
 #plot_comparison( 'out/insert-mutations-150310.out', (0, 11, 22), ('Novel', 'Homopolymer', 'Duplication'), "error_prob", "Substitution Rate (%)", "vcf_f1", "F1 Accuracy (%)", 'vcf_precision', 'Precision', 'vcf_recall', 'Recall', 'insertion-vs-mutation-150311' )
 #plot_comparison( 'out/ecoli-insert-homopolymer-compare-150311.out', (0, 11, 22), ('Novel', 'Homopolymer', 'Duplication'), "error_prob", "Homopolymer Insertion Rate (%)", "vcf_f1", "F1 Accuracy (%)", 'vcf_precision', 'Precision', 'vcf_recall', 'Recall', 'insertion-vs-homopolymer-150311', with_precision_recall=False )
-plot_insertion_vs_variation_distance( 'out/ecoli-insert-homopolymer-150311a.out', 'custom', 'Homopolymer Insertion Length', 'title', 'ecoli-insert-homopolymer-150311', legend="lower left" )
+#plot_insertion_vs_variation_distance( 'out/ecoli-insert-homopolymer-150311a.out', 'custom', 'Homopolymer Insertion Length', 'title', 'ecoli-insert-homopolymer-150311', legend="lower left" )
+
+#plot_reference_bias_ecoli_example() # reference-bias-profile.pdf
 
 #### in report - migrated from ipython
 #error_unmapped_hiv()
@@ -1523,7 +1562,6 @@ plot_insertion_vs_variation_distance( 'out/ecoli-insert-homopolymer-150311a.out'
 #read_length_ecoli() # ecoli-read-length-bowtie-snp.pdf
 #read_length_ecoli_map() # ecoli-read-length-bowtie-mapping.pdf
 #read_length_hiv() # hiv-read-length-vcf-snps.pdf (lots of noise)
-#plot_reference_bias_ecoli_example() # 
 
 ##### experimental
 #read_length_ecoli_map_low_mutation() # ecoli-read-length-bowtie-mapping.pdf

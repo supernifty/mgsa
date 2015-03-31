@@ -139,8 +139,14 @@ for line in open( config_file, 'r' ):
   if cfg['command'] == 'vcf':
     # don't compare correct vcf to candidate vcf, we just wanted to generate a vcf
     target.write( '%s' % ( line.strip() ) )
-  else:
-    # compare correct vcf to candidate vcf
+
+  if cfg['command'] == 'depth':
+    fasta = bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta
+    feature = bio.MapFeature( fasta ) # what the aligner has built
+    depths = [ str( feature.depth( x ) ) for x in xrange(0, fasta.length) ]
+    target.write( ','.join( depths ) )
+
+  if cfg['command'] is None: # else: # if no command, compare correct vcf to candidate vcf
     vcf_diff = bio.VCFDiff( vcf_correct=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr), vcf_candidate=candidate_vcf, log=bio.log_stderr )
     #print vcf_diff.stats
     vcf_precision = 0

@@ -8,6 +8,7 @@ import os
 import sys
 
 import bio
+import config
 
 import matplotlib.pyplot as plt
 
@@ -38,7 +39,7 @@ cfg = configparser.ConfigParser()
 
 ALLOW_SAM_INDELS = True
 
-def config( name ):
+def config_string( name ):
   return cfg.get( 'evaluate', name )
 
 def config_float( name ):
@@ -53,9 +54,9 @@ def config_bool( name ):
 # assume snp is there TODO later
 def generate_mutant():
   '''generates a mutated fasta file (candidate)'''
-  m = bio.FastaMutate( bio.FastaReader( open( '../../data/test/%s.fasta' % config('reference_prefix'), 'r' ) ), log, open( '../../data/test/%s.vcf' % config('candidate_prefix'), 'w' ), config_float('snp_prob'), config_float('insert_prob'), config_float('delete_prob') )
-  o = open( '../../data/test/%s.fasta' % config('candidate_prefix'), 'w' ) 
-  o.write( '>%s\n' % config('candidate_prefix') )
+  m = bio.FastaMutate( bio.FastaReader( open( '../../data/test/%s.fasta' % ( config.DATA_PATH, config_string('reference_prefix'), 'r' ) ) ), log, open( '../../data/test/%s.vcf' % config_string('candidate_prefix'), 'w' ), config_float('snp_prob'), config_float('insert_prob'), config_float('delete_prob') )
+  o = open( '../../data/test/%s.fasta' % config_string('candidate_prefix'), 'w' ) 
+  o.write( '>%s\n' % config_string('candidate_prefix') )
   for line in m.items():
     o.write( '%s\n' % line )
   o.close()
@@ -69,16 +70,16 @@ def generate_reads():
   # -l library insert size mean
   # -s library insert size stdev
   # -u duplicate probability
-  os.system( 'java -jar -Xmx2048m ../../tools/SimSeq/SimSeqNBProject/store/SimSeq.jar -1 %i -2 %i --error ../../tools/SimSeq/examples/hiseq_mito_default_bwa_mapping_mq10_1.txt --error2 ../../tools/SimSeq/examples/hiseq_mito_default_bwa_mapping_mq10_2.txt -l %i -s 30 -n %i -r ../../data/test/%s.fasta -o ../../data/test/%s.sam -u 0.01' % ( config_int('read_length'), config_int('read_length'), config_int('read_library_length'), config_int('read_count'), config('candidate_prefix'), config('candidate_prefix') ) )
+  os.system( 'java -jar -Xmx2048m ../../tools/SimSeq/SimSeqNBProject/store/SimSeq.jar -1 %i -2 %i --error ../../tools/SimSeq/examples/hiseq_mito_default_bwa_mapping_mq10_1.txt --error2 ../../tools/SimSeq/examples/hiseq_mito_default_bwa_mapping_mq10_2.txt -l %i -s 30 -n %i -r ../../data/test/%s.fasta -o ../../data/test/%s.sam -u 0.01' % ( config_int('read_length'), config_int('read_length'), config_int('read_library_length'), config_int('read_count'), config_string('candidate_prefix'), config_string('candidate_prefix') ) )
 
   # generate reads (.fastq)
-  os.system( 'java -jar ../../tools/picard-tools-1.96/SamToFastq.jar I=../../data/test/%s.sam FASTQ=../../data/test/%s_R1.fastq F2=../../data/test/%s_R2.fastq VALIDATION_STRINGENCY=SILENT' % ( config('candidate_prefix'), config('candidate_prefix'), config('candidate_prefix') ) )
+  os.system( 'java -jar ../../tools/picard-tools-1.96/SamToFastq.jar I=../../data/test/%s.sam FASTQ=../../data/test/%s_R1.fastq F2=../../data/test/%s_R2.fastq VALIDATION_STRINGENCY=SILENT' % ( config_string('candidate_prefix'), config_string('candidate_prefix'), config_string('candidate_prefix') ) )
 
 def bowtie_assemble():
   '''build candidate.sam from candidate.fastq and reference.fasta'''
   # evaluate bowtie - build bowtie sam
-  os.system( '../../tools/bowtie2-2.1.0/bowtie2-build ../../data/test/%s.fasta ../../data/test/%s-bt2' % ( config('reference_prefix'), config('reference_prefix') ) )
-  os.system( '../../tools/bowtie2-2.1.0/bowtie2 --local -p 16 -x ../../data/test/%s-bt2 -1 ../../data/test/%s_R1.fastq -2 ../../data/test/%s_R2.fastq -S ../../data/test/%s_bowtie.sam -t' % ( config('reference_prefix'), config('candidate_prefix'), config('candidate_prefix'), config('candidate_prefix') ) )
+  os.system( '../../tools/bowtie2-2.1.0/bowtie2-build ../../data/test/%s.fasta ../../data/test/%s-bt2' % ( config_string('reference_prefix'), config_string('reference_prefix') ) )
+  os.system( '../../tools/bowtie2-2.1.0/bowtie2 --local -p 16 -x ../../data/test/%s-bt2 -1 ../../data/test/%s_R1.fastq -2 ../../data/test/%s_R2.fastq -S ../../data/test/%s_bowtie.sam -t' % ( config_string('reference_prefix'), config_string('candidate_prefix'), config_string('candidate_prefix'), config_string('candidate_prefix') ) )
 
 def log(msg):
   when = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -87,11 +88,11 @@ def log(msg):
 
 def bowtie_evaluate():
   # sam to fasta
-  candidate_fasta = bio.SamToFasta( open( '../../data/test/%s_bowtie.sam' % config('candidate_prefix'), 'r' ), log, allow_indels=ALLOW_SAM_INDELS )
+  candidate_fasta = bio.SamToFasta( open( '../../data/test/%s_bowtie.sam' % config_string('candidate_prefix'), 'r' ), log, allow_indels=ALLOW_SAM_INDELS )
   log( 'size is %i' % candidate_fasta.fasta.size )
 
   # write fasta
-  o = open( '../../data/test/%s_bowtie.fasta' % config('candidate_prefix'), 'w' )
+  o = open( '../../data/test/%s_bowtie.fasta' % config_string('candidate_prefix'), 'w' )
   o.write( '>reassembled-bowtie-consensus\n')
   pos = 1
   while pos < candidate_fasta.fasta.size:
@@ -111,7 +112,7 @@ def bowtie_evaluate():
   #  pos += 70
 
   # compare candidate fasta to what we just built
-  candidate_diff = bio.FastaDiff( bio.FastaReader( open( '../../data/test/%s.fasta' % config('candidate_prefix'), 'r' ) ), candidate_fasta.fasta, log )
+  candidate_diff = bio.FastaDiff( bio.FastaReader( open( '../../data/test/%s.fasta' % config_string('candidate_prefix'), 'r' ) ), candidate_fasta.fasta, log )
   log( "%i insertions" % len(candidate_fasta.fasta.inserted) )
   log( "%i deletions" % len(candidate_fasta.fasta.deleted) )
   log( "%i differences to candidate" % candidate_diff.error_total )
@@ -126,7 +127,7 @@ def bowtie_evaluate():
   #log( reference_diff.errors )
 
   # see what vcfs were found
-  vcf_diff = bio.VCFFastaDiff( bio.VCF(reader=open('../../data/test/%s.vcf' % config('candidate_prefix'), 'r')), candidate_fasta.fasta, log )
+  vcf_diff = bio.VCFFastaDiff( bio.VCF(reader=open('../../data/test/%s.vcf' % config_string('candidate_prefix'), 'r')), candidate_fasta.fasta, log )
   #log( candidate_fasta.fasta.deleted )
   log( 'snps: %s' % vcf_diff.snp_stats )
   log( 'inserts: %s' % vcf_diff.ins_stats )
@@ -142,7 +143,7 @@ if __name__ == '__main__':
     exit(0)
 
   cfg.readfp(open(sys.argv[1]))
-  logfile = open( '../../data/test/%s-%s.log' % ( config('candidate_prefix'), datetime.datetime.now().strftime("%Y%m%d-%H%M%S") ), 'w' )
+  logfile = open( '../../data/test/%s-%s.log' % ( config_string('candidate_prefix'), datetime.datetime.now().strftime("%Y%m%d-%H%M%S") ), 'w' )
   if config_bool( 'generate_mutant' ):
     generate_mutant()  
   if config_bool( 'generate_reads' ):

@@ -177,16 +177,16 @@ class ProbabilisticFasta(object):
     return result 
 
 class MultiFastaMutate(object):
-  def __init__( self, multi_reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random', allow_end_mutate=False ):
+  def __init__( self, multi_reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, min_variation_start=0, probabilistic=True, insert_source='random', allow_end_mutate=False ):
     for reader in multi_reader.items():
-      FastaMutate( reader, log, vcf_file, snp_prob, insert_prob, delete_prob, min_insert_len, max_insert_len, min_delete_len, max_delete_len, min_variation_dist, probabilistic, insert_source, allow_end_mutate )
+      FastaMutate( reader, log, vcf_file, snp_prob, insert_prob, delete_prob, min_insert_len, max_insert_len, min_delete_len, max_delete_len, min_variation_dist, min_variation_start, probabilistic, insert_source, allow_end_mutate )
 
 class FastaMutate(object):
   '''
     change a reference fasta
   '''
 
-  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AACCCTTGGG' ):
+  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, min_variation_start=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AACCCTTGGG' ):
     '''
       @reader: FastaReader
       @vcf_file: write mutations to vcf
@@ -200,6 +200,7 @@ class FastaMutate(object):
     self.min_delete_len = min_delete_len
     self.max_delete_len = max_delete_len
     self.min_variation_dist = min_variation_dist
+    self.min_variation_start = min_variation_start
     self.deletion_remain = 0
     self.mutations = 0
     self.vcf_file = vcf_file
@@ -300,17 +301,17 @@ class FastaMutate(object):
         self.continue_deletion( c )
       elif self.probabilistic:
         # snp
-        if random.uniform(0, 1) < self.snp_prob and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ):
+        if random.uniform(0, 1) < self.snp_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ):
           new_c = self.add_snp( c )
           result += new_c
           self.last_variation_pos = self.pos
         # insert
-        elif random.uniform(0, 1) < self.insert_prob and self.pos > self.max_insert_len and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): # TODO reads can get -ve reference
+        elif random.uniform(0, 1) < self.insert_prob and self.pos >= self.min_variation_start and self.pos > self.max_insert_len and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): # TODO reads can get -ve reference
           new_c = self.add_insertion( c )
           result += new_c + c # insertion gets placed before current base
           self.last_variation_pos = self.pos - 1 # -1 because insertion is placed before current
         # delete
-        elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): 
+        elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): 
           self.add_deletion( c )
           self.last_variation_pos = self.pos + self.deletion_remain
         # no mutation

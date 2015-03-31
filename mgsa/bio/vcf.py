@@ -350,7 +350,7 @@ class VCFDiff(object):
         self.buckets[bucket]['fp'] += 1
         if self.generate_positions:
           self.positions['fp'].append( candidate_snp['pos'] )
-        log( 'fp: %i' % ( candidate_snp['pos'] ) ) # debug
+        log( 'fp: snp %i' % ( candidate_snp['pos'] ) ) # debug
 
     # indels - true positives
     for true_indel in vcf_correct.manager.indel_list:
@@ -369,7 +369,7 @@ class VCFDiff(object):
       if vcf_correct.manager.find_indel_match( candidate_indel ) is None:
         self.stats['fp'] += 1
         self.buckets[bucket]['fp'] += 1
-        log( 'fp: %s' % candidate_indel )
+        log( 'fp: indel %s' % candidate_indel )
       else:
         pass # tp already found
 

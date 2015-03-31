@@ -218,6 +218,12 @@ class FastqPosGenerator(object):
       return -count * length
     return 0
  
+  def read( self, start, finish ):
+    if start < 0:
+      start = 0
+    self._update_sequence( finish ) # ensure enough sequence available
+    return self.sequence[ start: finish ]
+    
   def write( self, target_fh=sys.stdout, pos=0, read_length=100, variation=None, error=None ):
     '''
       write all reads that span pos
