@@ -144,7 +144,10 @@ for line in open( config_file, 'r' ):
     fasta = bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta
     feature = bio.MapFeature( fasta ) # what the aligner has built
     depths = [ str( feature.depth( x ) ) for x in xrange(0, fasta.length) ]
-    target.write( ','.join( depths ) )
+    target.write( '%s\n' % ','.join( depths ) )
+    # also write vcf sites
+    vcf = bio.VCF( reader=open( vcf_file, 'r' ) )
+    target.write( ','.join( [ str(x) for x in vcf.breakpoints( all_affected=True ) ] ) )
 
   if cfg['command'] is None: # else: # if no command, compare correct vcf to candidate vcf
     vcf_diff = bio.VCFDiff( vcf_correct=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr), vcf_candidate=candidate_vcf, log=bio.log_stderr )

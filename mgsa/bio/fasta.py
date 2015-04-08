@@ -207,7 +207,7 @@ class FastaMutate(object):
     self.probabilistic = probabilistic
     self.probabilities = probabilities
     self.insert_source = insert_source
-    self.insert_source_data = []
+    self.insert_source_data = ''
     if vcf_file is not None:
       self.vcf = vcf.VCF( writer=vcf.VCFWriter(vcf_file) )
     else:
@@ -230,7 +230,7 @@ class FastaMutate(object):
           self.end_deletion()
         break
       if self.insert_source == 'repeat':
-        self.insert_source_data.append( fragment )
+        self.insert_source_data += str(fragment)
       # apply mutations
       if self.allow_end_mutate or self.reader.has_next_item(): # don't mutate last fragment
         fragment = self.mutate( fragment )
@@ -254,10 +254,10 @@ class FastaMutate(object):
     '''
     insert_len = random.randint(self.min_insert_len, self.max_insert_len) # decide insertion len
     # generate actual insertion
-    if self.insert_source == 'repeat' and len(self.insert_source_data) > 1:
-      fragment = random.randint(0, len(self.insert_source_data) - 1)
-      position = random.randint(0, len(self.insert_source_data[fragment]) - insert_len)
-      new_c = self.insert_source_data[fragment][position:position + insert_len]
+    if self.insert_source == 'repeat' and len(self.insert_source_data) >= insert_len:
+      self.log( 'choosing fragment up to %i' % len(self.insert_source_data) )
+      fragment_start = random.randint(0, len(self.insert_source_data) - insert_len)
+      new_c = self.insert_source_data[fragment_start:fragment_start + insert_len]
       #self.log( "repeat %s from %i:%i" % ( new_c, fragment, position ) )
     elif self.insert_source == 'random':
       new_c = ''

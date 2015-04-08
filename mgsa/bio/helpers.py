@@ -1,3 +1,5 @@
+import math
+import random
 
 import bio
 import fasta
@@ -113,3 +115,44 @@ def fasta_filter( fh, out, commands ):
             in_filter = False
       pos += line_len 
   out.write('\n')
+
+def poisson( lmbda ):
+  '''
+    return a poisson distribution
+  '''
+  l = math.exp( -lmbda )
+  k = 0
+  p = 1
+  while p > l:
+    k += 1
+    p = p * random.random()
+  
+  return k - 1
+
+def choose( n, k ):
+  denom = math.factorial( k )
+  num = 1
+  for multiplier in xrange( n, n - k, -1 ):
+    num *= multiplier
+  return num / denom
+
+def binomial_prob( k=0, m=1000, n=1000 ):
+  '''
+    what is the probability that, when there are m items to go in n slots, a slot will end up with k items
+  '''
+  p = 1. / n
+  prob = p ** k * ( 1 - p ) ** ( m - k ) * choose( m, k )
+  return prob
+
+def binomial( m=1000, n=1000 ):
+  '''
+    how many items in a slot given m trials and n slots?
+  '''
+  r = random.random() # 0..1
+  # prob of 0
+  cumulative = 0.
+  for k in xrange(0, m):
+    cumulative += binomial_prob( k, m, n)
+    if r <= cumulative:
+      return k
+  return m

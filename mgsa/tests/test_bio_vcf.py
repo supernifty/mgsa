@@ -54,6 +54,17 @@ class TestVCF( unittest.TestCase ):
     self.assertEqual( 'G', snp['alt'] )
     self.assertEqual( 2, snp['pos'] )
 
+  def test_breakpoints(self):
+    vcf = bio.VCF()
+    vcf.indel( 5, 'AA', 'ATA' ) # insertion
+    self.assertEqual( [5, 6], vcf.breakpoints( all_affected=False ) )
+    self.assertEqual( [5, 6],  vcf.breakpoints( all_affected=True ) )
+
+    vcf = bio.VCF()
+    vcf.indel( 5, 'ATA', 'AA' ) # deletion
+    self.assertEqual( [5, 7], vcf.breakpoints( all_affected=False ) )
+    self.assertEqual( [5, 6, 7],  vcf.breakpoints( all_affected=True ) )
+
 class TestMultiChromosomeVCF( unittest.TestCase ):
   def test_read( self ):
     target = StringIO.StringIO()

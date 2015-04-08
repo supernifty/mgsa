@@ -4,6 +4,7 @@ import sys
 
 import bio
 import fasta
+import helpers
 
 class FastqGenerator(object):
   '''
@@ -30,7 +31,6 @@ class FastqGenerator(object):
     base_candidate_position = 0
     time_to_next = read_every
     time_to_inversion = inversion_every
-    max_pos = 0
     lines = 0
     #if vcf is not None:
     #  bio.log_stderr( "snp: %s; indel: %s" % ( vcf.snp_list, vcf.indel_list ) )
@@ -47,10 +47,19 @@ class FastqGenerator(object):
 
       process = len(dna) - cfg['read_length'] + 1
       if process > 0:
-        for i in xrange(0, process):
-          time_to_next -= 1
-          if probabilistic and random.random() < read_probability or \
-             not probabilistic and time_to_next <= 0:
+        for i in xrange(0, process): # every potential base
+          # determine if reads to place at this location
+          reads_to_place = 0
+          if cfg['coverage_dist'] == 'uniform':
+            time_to_next -= 1
+            if probabilistic and random.random() < read_probability or \
+               not probabilistic and time_to_next <= 0: # write a read
+              reads_to_place = 1
+              time_to_next += read_every
+          elif cfg['coverage_dist'] == 'poisson':
+            reads_to_place = helpers.binomial( m = int( 1000 * read_probability ), n = 1000 ) # approximation assuming genome of length 1000
+
+          if reads_to_place > 0:
             time_to_inversion -= 1
             candidate_position = base_candidate_position + i # reference == candidate
             if vcf is None: # no variations
@@ -62,17 +71,14 @@ class FastqGenerator(object):
               reference_position, offset, length = vcf.candidate_position_to_reference_position( candidate_position )
               variations = vcf.variations( reference_position, reference_position + cfg['read_length'], offset=offset )
 
-            dna_with_errors = error_generator.apply_errors( dna[i:i+cfg['read_length']] ) # add errors to read
-    
             inversion = probabilistic and random.random() < inversion_prob or not probabilistic and time_to_inversion <= 0
             if inversion:
               time_to_inversion += inversion_every
+
+            for k in xrange(0, reads_to_place): # write 1 or more reads
+              dna_with_errors = error_generator.apply_errors( dna[i:i+cfg['read_length']] ) # add errors to read
+              self._write( reference_position, dna_with_errors[:cfg['read_length']], '~' * cfg['read_length'], variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
     
-            #self._write( reference_position, dna_with_errors, '~' * len(dna_with_errors), variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
-            self._write( reference_position, dna_with_errors[:cfg['read_length']], '~' * cfg['read_length'], variation_map=variation_map, target_fh=target_fh, variations=variations, offset=offset, debug='', inversion=inversion, length=length)
-    
-            max_pos = max(max_pos, reference_position + cfg['read_length'])
-            time_to_next += read_every
         base_candidate_position += process
         dna = dna[process:]
 

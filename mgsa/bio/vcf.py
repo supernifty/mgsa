@@ -113,6 +113,20 @@ class VCF(object):
     for indel in self.manager.indel_list:
       vcf_writer.indel( indel.pos, indel.before, indel.after, chromosome=self.chromosome )
 
+  def breakpoints( self, all_affected=False ):
+    '''
+      return a list of affected positions
+    '''
+    result = [ snp['pos'] for snp in self.snp_list ]
+    for indel in self.manager.indel_list:
+      result.append( indel.pos )
+      if len(indel.after) < len(indel.before): # deletion
+        if all_affected:
+          for x in xrange(1, len(indel.before) - 1):
+            result.append( indel.pos + x )
+      result.append( indel.pos + len(indel.before) - 1 ) # breakpoint at end
+    return sorted(result)
+      
   def net_insertions_to_reference_position(self, position):
     '''
       returns the net change in position given a reference position

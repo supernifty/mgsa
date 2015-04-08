@@ -2,6 +2,8 @@
 import unittest
 import StringIO
 
+import numpy as np
+
 import bio
 
 class TestHelpers( unittest.TestCase ):
@@ -65,6 +67,33 @@ class TestHelpers( unittest.TestCase ):
     lines = target.getvalue().split()
     self.assertEqual( ['TT'], lines )
 
+  def test_choose( self ):
+    self.assertEqual( 1,  bio.choose( 10, 0 ) )
+    self.assertEqual( 45, bio.choose( 10, 2 ) )
+    self.assertEqual( 45, bio.choose( 10, 8 ) )
+    self.assertEqual( 1, bio.choose( 10, 10 ) )
+
+  def test_binomial_prob( self ):
+    self.assertAlmostEqual( 0.6057704364907279, bio.binomial_prob( k=0, m=100, n=200 ) )
+    self.assertAlmostEqual( 0.30440725451795375, bio.binomial_prob( k=1, m=100, n=200 ) )
+    self.assertAlmostEqual( 0.3660323412732292, bio.binomial_prob( k=0, m=100, n=100 ) )
+    self.assertAlmostEqual( 0.36972963764972644, bio.binomial_prob( k=1, m=100, n=100 ) )
+    self.assertAlmostEqual( 0.367695424771, bio.binomial_prob( k=0, m=1000, n=1000 ) )
+    self.assertAlmostEqual( 0.368063488259, bio.binomial_prob( k=1, m=1000, n=1000 ) )
+    self.assertAlmostEqual( 0.36786104643297046, bio.binomial_prob( k=0, m=10000, n=10000 ) )
+    self.assertAlmostEqual( 0.3678978362165921, bio.binomial_prob( k=1, m=10000, n=10000 ) )
+    self.assertAlmostEqual( 0.3678776017682465, bio.binomial_prob( k=0, m=100000, n=100000 ) )
+    self.assertAlmostEqual( 0.36788128058105235, bio.binomial_prob( k=1, m=100000, n=100000 ) )
+    self.assertAlmostEqual( 0.18394064029052615, bio.binomial_prob( k=2, m=100000, n=100000 ) )
+
+  def test_poisson( self ):
+    x = []
+    for y in xrange(0, 10000):
+      x.append( bio.poisson( 10 ) )
+    self.assertEqual( 10, round( np.mean(x), 0 ) )
+    self.assertEqual( 10, round( np.var(x), 0 ) )
+
+  
   def log(self, msg):
     print msg
 
