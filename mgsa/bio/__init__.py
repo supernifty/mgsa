@@ -3,6 +3,7 @@ from bias import *
 from bio import *
 from chart import *
 from distance import *
+from evidence import *
 from fasta import *
 from fastq import *
 from features import *

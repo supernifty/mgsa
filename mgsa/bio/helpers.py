@@ -156,3 +156,7 @@ def binomial( m=1000, n=1000 ):
     if r <= cumulative:
       return k
   return m
+
+def logistic( x ):
+  return 1. / ( 1 + math.exp( -x ) )
+

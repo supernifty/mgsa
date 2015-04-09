@@ -1154,7 +1154,10 @@ def plot_entropy( src, short_name ):
   ax.scatter(entropy_list, accuracy_list, s=2, color='b' )#, s=2)
   fig.savefig('%s/entropy-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
-def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='Variation' ):
+def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='Variation', features=() ):
+  '''
+    plots either depth or evidence
+  '''
   lines = open( src ).readlines()
   lists = []
   for line in lines:
@@ -1164,24 +1167,30 @@ def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='
 
   # lists[0] = depth, lists[1] = breakpoints
   depths = lists[0]
-  breakpoints = lists[1]
+  breakpoints = lists[1 + len(features)]
   fig = plt.figure()
   ax = fig.add_subplot(111)
   if range_stop < 0:
     range_stop = len(depths)
-  plt.ylim(ymax=max(depths)+0.5, ymin=-0.5)
   first = True
   for breakpoint in breakpoints:
     if range_start <= breakpoint < range_stop:
       if first:
         first = False
-        ax.axvline(x=breakpoint, color='r', alpha=0.5, label=variation_label)
+        ax.axvline(x=breakpoint, color='r', alpha=0.1, label=variation_label)
       else:
-        ax.axvline(x=breakpoint, color='r', alpha=0.5 )
+        ax.axvline(x=breakpoint, color='r', alpha=0.1 )
 
-  ax.plot(range(range_start, range_stop), depths[range_start:range_stop], marker='o', label='Coverage' )#, s=2)
+  if len(features) == 0: # do the depth
+    plt.ylim(ymax=max(depths)+0.5, ymin=-0.5)
+    ax.plot(range(range_start, range_stop), depths[range_start:range_stop], label='Coverage' ) #, s=2)
 
-  leg = ax.legend(loc='lower left', prop={'size':12})
+  # additional features
+  else:
+    for idx in xrange(0, len(features)):
+      ax.plot(range(range_start, range_stop), lists[1 + idx][range_start:range_stop], label=features[idx] ) #, s=2)
+
+  leg = ax.legend( loc='lower left', prop={'size':12})
   leg.get_frame().set_alpha(0.8)
 
   fig.savefig('%s/depth-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
@@ -1544,18 +1553,30 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-duplication-150401-bowtie.out', 'circoviridae-duplication-100-bowtie-zoom', 1900, 2100 )
 #plot_depth( 'out/read-depth-duplication-150401-coverage.out', 'circoviridae-duplication-100-coverage' )#, 980, 1030 )
 #plot_depth( 'out/read-depth-duplication-150401-coverage.out', 'circoviridae-duplication-100-coverage-zoom', 900, 1100 )
+
 #plot_depth( 'out/read-depth-deletion-150407-coverage.out', 'circoviridae-deletion-100-coverage-zoom', 900, 1200 )
 #plot_depth( 'out/read-depth-50-deletion-150407-coverage.out', 'circoviridae-deletion-50-coverage-zoom', 900, 1200 )
 #plot_depth( 'out/read-depth-30-deletion-150407-coverage.out', 'circoviridae-deletion-30-coverage-zoom', 900, 1200 )
-#plot_depth( 'out/read-depth-deletion-150407-100x.out', 'circoviridae-deletion-100x-zoom', 900, 1200, variation_label='Deletion' )
-plot_depth( 'out/read-depth-deletion-150407-100x-poisson.out', 'circoviridae-deletion-100x-poisson-zoom', 900, 1200, variation_label='Deletion' )
-plot_depth( 'out/read-depth-deletion-150407-100x-poisson.out', 'circoviridae-deletion-100x-poisson', variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150407-100x-poisson.out', 'circoviridae-deletion-100x-poisson-zoom', 900, 1200, variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150407-100x-poisson.out', 'circoviridae-deletion-100x-poisson', variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150407-15x-poisson.out', 'circoviridae-deletion-15x-poisson-zoom', 900, 1200, variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150407-15x-poisson.out', 'circoviridae-deletion-15x-poisson', variation_label='Deletion' )
+
+#plot_depth( 'out/read-depth-30-deletion-150407-coverage.out', 'circoviridae-deletion-30-coverage-megazoom', 970, 1010 )
+#plot_depth( 'out/read-depth-deletion-150407-coverage.out', 'circoviridae-deletion-100-coverage-megazoom', 960, 1010 )
+#plot_depth( 'out/read-depth-deletion-150407-coverage.out', 'circoviridae-deletion-100-coverage-megazoom-suffix', 1091, 1160 )
+
+# breakpoints
+plot_depth( 'out/read-depth-deletion-150408-100x-breakpoints.out', 'circoviridae-deletion-100-coverage-evidence', features=('Start', 'End') )#, 980, 1030 )
+plot_depth( 'out/read-depth-deletion-150408-100x-breakpoints.out', 'circoviridae-deletion-100-coverage-evidence-zoom', 900, 1200, features=('Start', 'End') )#, 980, 1030 )
 
 # novel
 #plot_depth( 'out/read-depth-novel-150401-coverage.out', 'circoviridae-novel-100-coverage' )
 #plot_depth( 'out/read-depth-novel-150401-coverage.out', 'circoviridae-novel-100-coverage-zoom', 900, 1100 )
 
 #### in report
+plot_depth( 'out/read-depth-deletion-150407-100x.out', 'circoviridae-deletion-100x-zoom', 900, 1200, variation_label='Deletion' )
+
 #plot_heatmap( 'out/circoviridae-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'circoviridae-insertion-heatmap', 'Insertion length' )
 #plot_heatmap( 'out/ecoli-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'ecoli-insertion-heatmap', 'Insertion length' )
 #plot_heatmap( 'out/circoviridae-deletion-heatmap-150309a.out', 'read_length', 'max_deletion_len', 'vcf_f1', 'circoviridae-deletion-heatmap', 'Deletion length' )

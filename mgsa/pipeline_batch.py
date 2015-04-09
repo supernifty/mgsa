@@ -140,11 +140,17 @@ for line in open( config_file, 'r' ):
     # don't compare correct vcf to candidate vcf, we just wanted to generate a vcf
     target.write( '%s' % ( line.strip() ) )
 
-  if cfg['command'] == 'depth':
+  if cfg['command'] is not None and cfg['command'].startswith( 'features' ):
     fasta = bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta
     feature = bio.MapFeature( fasta ) # what the aligner has built
-    depths = [ str( feature.depth( x ) ) for x in xrange(0, fasta.length) ]
-    target.write( '%s\n' % ','.join( depths ) )
+    if cfg['command'].find( '-depth' ) != -1:
+      depths = [ str( feature.depth( x ) ) for x in xrange(0, fasta.length) ]
+      target.write( '%s\n' % ','.join( depths ) )
+    if cfg['command'].find( '-breakpoints' ) != -1:
+      breakpoints = [ '%.2f' % bio.BREAKPOINT_PREFIX_READ_DEPTH_SHAPE.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
+      target.write( '%s\n' % ','.join( breakpoints ) )
+      breakpoints = [ '%.2f' % bio.BREAKPOINT_SUFFIX_READ_DEPTH_SHAPE.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
+      target.write( '%s\n' % ','.join( breakpoints ) )
     # also write vcf sites
     vcf = bio.VCF( reader=open( vcf_file, 'r' ) )
     target.write( ','.join( [ str(x) for x in vcf.breakpoints( all_affected=True ) ] ) )

@@ -93,6 +93,9 @@ class TestHelpers( unittest.TestCase ):
     self.assertEqual( 10, round( np.mean(x), 0 ) )
     self.assertEqual( 10, round( np.var(x), 0 ) )
 
+  def test_logistic( self ):
+    self.assertEqual( 0.5, bio.logistic( 0. ) )
+
   
   def log(self, msg):
     print msg
