@@ -165,6 +165,8 @@ class ProbabilisticFasta(object):
     '''
       return the corresponding string for the segment specified.
       returned segment can be longer or shorter than end-start - segment applies to the reference.
+      inclusive of start, exclusive of end
+      
     '''
     if end == -1 or end > self.length:
       end = self.length
@@ -419,6 +421,19 @@ class Fasta(object):
     for i in xrange(start, end):
       result += self.base_at(i)
     return result
+
+  def read_to( self, pos ):
+    '''
+      read up to pos; return false if unable
+    '''
+    if pos >= len(self.fasta):
+      for item in self.reader.items():
+        self.fasta += item
+        if pos < len(self.fasta): # success
+          return True
+      return False # failed
+    else:
+      return True
 
 class FastaReaderFromVCF(object):
   def __init__(self, fasta, vcf):

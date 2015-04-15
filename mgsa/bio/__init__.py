@@ -2,6 +2,7 @@
 from bias import *
 from bio import *
 from chart import *
+from classify import *
 from distance import *
 from evidence import *
 from fasta import *

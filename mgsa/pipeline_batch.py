@@ -127,6 +127,7 @@ for line in open( config_file, 'r' ):
 
   # build candidate vcf
   candidate_vcf = bio.VCF( writer=bio.VCFWriter( open( recovered_vcf_file, 'w' ) ) ) # empty vcf
+
   if sam_file.endswith('.bam'):
     sam_fh = bio.BamReaderExternal( config.BAM_TO_SAM, sam_file )
   else:
@@ -151,11 +152,19 @@ for line in open( config_file, 'r' ):
       target.write( '%s\n' % ','.join( breakpoints ) )
       breakpoints = [ '%.2f' % bio.BREAKPOINT_SUFFIX_READ_DEPTH_SHAPE.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
       target.write( '%s\n' % ','.join( breakpoints ) )
+    if cfg['command'].find( '-deletions' ) != -1:
+      detector = bio.LongDeletionDetector( 50, vcf_writer=candidate_vcf, threshold=0.6, reference_fasta=bio.Fasta( bio.FastaReader( open( fasta_file, 'r' ) ) ) ) # TODO size hardcoded
+      deletions = [ '%.2f' % detector.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
+      target.write( '%s\n' % ','.join( deletions ) )
     # also write vcf sites
     vcf = bio.VCF( reader=open( vcf_file, 'r' ) )
     target.write( ','.join( [ str(x) for x in vcf.breakpoints( all_affected=True ) ] ) )
 
-  if cfg['command'] is None: # else: # if no command, compare correct vcf to candidate vcf
+  if cfg['command'] is None or cfg['command'].startswith( 'vcfdiff' ): # else: # if no command, compare correct vcf to candidate vcf
+    if cfg['command'].find( '-deletions' ) != -1:
+      fasta = bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta
+      detector = bio.LongDeletionDetector( 50, vcf_writer=candidate_vcf, threshold=0.5, reference_fasta=bio.Fasta( bio.FastaReader( open( fasta_file, 'r' ) ) ), log=bio.log_stderr ) # TODO size hardcoded
+      [ detector.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ] # writes to vcf_writer
     vcf_diff = bio.VCFDiff( vcf_correct=bio.VCF(reader=open( vcf_file, 'r' ), log=bio.log_stderr), vcf_candidate=candidate_vcf, log=bio.log_stderr )
     #print vcf_diff.stats
     vcf_precision = 0

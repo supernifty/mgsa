@@ -351,5 +351,15 @@ class TestErrorGenerator( unittest.TestCase ):
     self.assertEqual( 'G', m[3] )
     self.assertEqual( m[4], m[5] )
  
+class TestFasta( unittest.TestCase ):
+  def test_read_to( self ):
+    mg = StringIO.StringIO( '>s1\npqrstu\nvwxyz' )
+    r = bio.FastaReader( mg )
+    f = bio.Fasta( r )
+    self.assertTrue( f.read_to( 6 ) )
+    self.assertTrue( f.read_to( 4 ) )
+    self.assertTrue( f.read_to( 10 ) )
+    self.assertFalse( f.read_to( 11 ) )
+   
 if __name__ == '__main__':
   unittest.main()

@@ -381,9 +381,9 @@ class VCFDiff(object):
     for candidate_indel in vcf_candidate.manager.indel_list:
       bucket = int( math.floor( candidate_indel.pos / bucket_size ) )
       if vcf_correct.manager.find_indel_match( candidate_indel ) is None:
+        log( 'fp: indel %s bucket %i' % ( candidate_indel, bucket ) )
         self.stats['fp'] += 1
         self.buckets[bucket]['fp'] += 1
-        log( 'fp: indel %s' % candidate_indel )
       else:
         pass # tp already found
 

@@ -1154,7 +1154,7 @@ def plot_entropy( src, short_name ):
   ax.scatter(entropy_list, accuracy_list, s=2, color='b' )#, s=2)
   fig.savefig('%s/entropy-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
-def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='Variation', features=() ):
+def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='Variation', features=(), show_features=False ):
   '''
     plots either depth or evidence
   '''
@@ -1181,7 +1181,7 @@ def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='
       else:
         ax.axvline(x=breakpoint, color='r', alpha=0.1 )
 
-  if len(features) == 0: # do the depth
+  if not show_features: # do the depth
     plt.ylim(ymax=max(depths)+0.5, ymin=-0.5)
     ax.plot(range(range_start, range_stop), depths[range_start:range_stop], label='Coverage' ) #, s=2)
 
@@ -1559,7 +1559,6 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-30-deletion-150407-coverage.out', 'circoviridae-deletion-30-coverage-zoom', 900, 1200 )
 #plot_depth( 'out/read-depth-deletion-150407-100x-poisson.out', 'circoviridae-deletion-100x-poisson-zoom', 900, 1200, variation_label='Deletion' )
 #plot_depth( 'out/read-depth-deletion-150407-100x-poisson.out', 'circoviridae-deletion-100x-poisson', variation_label='Deletion' )
-#plot_depth( 'out/read-depth-deletion-150407-15x-poisson.out', 'circoviridae-deletion-15x-poisson-zoom', 900, 1200, variation_label='Deletion' )
 #plot_depth( 'out/read-depth-deletion-150407-15x-poisson.out', 'circoviridae-deletion-15x-poisson', variation_label='Deletion' )
 
 #plot_depth( 'out/read-depth-30-deletion-150407-coverage.out', 'circoviridae-deletion-30-coverage-megazoom', 970, 1010 )
@@ -1567,15 +1566,38 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-deletion-150407-coverage.out', 'circoviridae-deletion-100-coverage-megazoom-suffix', 1091, 1160 )
 
 # breakpoints
-plot_depth( 'out/read-depth-deletion-150408-100x-breakpoints.out', 'circoviridae-deletion-100-coverage-evidence', features=('Start', 'End') )#, 980, 1030 )
-plot_depth( 'out/read-depth-deletion-150408-100x-breakpoints.out', 'circoviridae-deletion-100-coverage-evidence-zoom', 900, 1200, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150408-100x-breakpoints.out', 'circoviridae-deletion-100-coverage-evidence', features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150408-100x-breakpoints.out', 'circoviridae-deletion-100-coverage-evidence-zoom', 900, 1200, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-breakpoints-rl50.out', 'circoviridae-deletion-100-coverage-evidence-zoom-rl50', 950, 1150, features=('Start', 'End'), show_features=False ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector.out', 'circoviridae-deletion-100-coverage-evidence-deletions', variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector.out', 'circoviridae-deletion-100-coverage-evidence-zoom-deletions', 950, 1150, variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-poisson.out', 'circoviridae-deletion-100-coverage-evidence-deletions-poisson', variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-poisson.out', 'circoviridae-deletion-100-coverage-evidence-zoom-deletions-poisson', 950, 1150, variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-10x-deletion-detector-poisson.out', 'circoviridae-deletion-10-coverage-evidence-deletions-poisson', variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-10x-deletion-detector-poisson.out', 'circoviridae-deletion-10-coverage-evidence-zoom-deletions-poisson', 950, 1150, variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-40del.out', 'circoviridae-deletion-100-coverage-evidence-deletions-40del', variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-40del.out', 'circoviridae-deletion-100-coverage-evidence-zoom-deletions-40del', 950, 1150, variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-40del.out', 'circoviridae-deletion-100-coverage-depth-zoom-deletions-40del', 950, 1150, variation_label='Deletion', features=('Evidence',), show_features=False ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-20del.out', 'circoviridae-deletion-100-coverage-depth-zoom-deletions-20del', 950, 1100, variation_label='Deletion', features=('Evidence',), show_features=False ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-30del.out', 'circoviridae-deletion-100-coverage-depth-zoom-deletions-30del', 950, 1100, variation_label='Deletion', features=('Evidence',), show_features=False ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-10del.out', 'circoviridae-deletion-100-coverage-depth-zoom-deletions-10del', 950, 1100, variation_label='Deletion', features=('Evidence',), show_features=False ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-100x-deletion-detector-45del.out', 'circoviridae-deletion-100-coverage-depth-zoom-deletions-45del', 950, 1150, variation_label='Deletion', features=('Evidence',), show_features=False ) #, features=('Start', 'End') )#, 980, 1030 )
+
+#plot_depth( 'out/read-depth-deletion-150409-10x-deletion-detector-poisson-50del.out', 'circoviridae-deletion-100-coverage-evidence-zoom-deletions-poisson-50del', 900, 1150, variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-10x-deletion-detector-poisson-50del.out', 'circoviridae-deletion-100-coverage-evidence-deletions-poisson-50del', variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-10x-deletion-detector-50del.out', 'circoviridae-deletion-100-coverage-evidence-zoom-deletions-50del', 900, 1150, variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
+#plot_depth( 'out/read-depth-deletion-150409-10x-deletion-detector-50del.out', 'circoviridae-deletion-100-coverage-evidence-deletions-50del', variation_label='Deletion', features=('Evidence',), show_features=True ) #, features=('Start', 'End') )#, 980, 1030 )
 
 # novel
 #plot_depth( 'out/read-depth-novel-150401-coverage.out', 'circoviridae-novel-100-coverage' )
 #plot_depth( 'out/read-depth-novel-150401-coverage.out', 'circoviridae-novel-100-coverage-zoom', 900, 1100 )
 
 #### in report
-plot_depth( 'out/read-depth-deletion-150407-100x.out', 'circoviridae-deletion-100x-zoom', 900, 1200, variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150407-100x.out', 'circoviridae-deletion-100x-zoom', 900, 1200, variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150407-15x-poisson.out', 'circoviridae-deletion-15x-poisson-zoom', 900, 1200, variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del.out', 'circoviridae-deletion-15x-poisson', variation_label='Deletion', features=('Evidence',), show_features=True )#, 900, 1200, variation_label='Deletion' )
+plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del-err05.out', 'circoviridae-deletion-15x-poisson-err05', variation_label='Deletion', features=('Evidence',), show_features=True )#, 900, 1200, variation_label='Deletion' )
+plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del-err05.out', 'circoviridae-deletion-15x-poisson-err05-coverage', variation_label='Deletion', features=('Evidence',), show_features=False )#, 900, 1200, variation_label='Deletion' )
 
 #plot_heatmap( 'out/circoviridae-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'circoviridae-insertion-heatmap', 'Insertion length' )
 #plot_heatmap( 'out/ecoli-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'ecoli-insertion-heatmap', 'Insertion length' )
