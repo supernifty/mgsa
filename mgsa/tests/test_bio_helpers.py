@@ -67,6 +67,10 @@ class TestHelpers( unittest.TestCase ):
     lines = target.getvalue().split()
     self.assertEqual( ['TT'], lines )
 
+  def test_fasta_find( self ):
+    fasta = StringIO.StringIO( '>comment\nAATG\nCCTG\n>another\nGGTT\n' )
+    self.assertEqual( [2, 6], bio.fasta_find( fasta, 'TG' ) )
+
   def test_choose( self ):
     self.assertEqual( 1,  bio.choose( 10, 0 ) )
     self.assertEqual( 45, bio.choose( 10, 2 ) )
@@ -95,6 +99,16 @@ class TestHelpers( unittest.TestCase ):
 
   def test_logistic( self ):
     self.assertEqual( 0.5, bio.logistic( 0. ) )
+
+  def test_trim_edges( self ):
+    self.assertEqual( [ 1, 2, 3 ], bio.trim_edges( [ 0, 0, 1, 2, 3, 0, 0 ] ) )
+
+  def test_run_length( self ):
+    self.assertEqual( (3, 4), bio.longest_run( [ 1, 1, 2, 2, 1, 1, 1 ], 1 ) )
+    self.assertEqual( (2, 2), bio.longest_run( [ 1, 1, 2, 2, 1, 1, 1 ], 2 ) )
+
+  def test_all_runs( self ):
+    self.assertEqual( { 2: 2, 3: 1 }, bio.all_runs( [ 1, 1, 2, 2, 1, 1, 1, 2, 1, 1 ], 1 ) )
 
   
   def log(self, msg):

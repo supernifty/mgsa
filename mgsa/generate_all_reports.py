@@ -107,6 +107,31 @@ def get_multicolumn_value( columns, fh ):
       columns.append( find_column( line, column ) )
     return result
 
+from matplotlib.ticker import FuncFormatter
+def to_millions(y, position):
+  s = '%.1fM' % ( y / 1000000 )
+  return s
+
+def to_percent(y, position):
+    # Ignore the passed in position. This has the effect of scaling the default
+    # tick locations.
+    #s = str(10 * y)
+    s = '%.0f' % (1000 * y)
+    return s
+
+    # The percent symbol needs escaping in latex
+    #if rcParams['text.usetex'] == True:
+    #    return s + r'$\%$'
+    #else:
+    #    return s + '%'
+
+def autolabel(ax, rects):
+    # attach some text labels
+    for rect in rects:
+        height = rect.get_height()
+        #ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height*1000), ha='center', va='bottom')
+        ax.text(rect.get_x()+rect.get_width()/2., height + 0., '%.1f'%(height*1000), ha='center', va='bottom')
+
 ##########################################################################
 # run job
 def mutation_hiv( out_file ):
@@ -1096,27 +1121,6 @@ def plot_vcf_parent_vs_child( parent_fn, child_fn, out_fn, parent_label='parent'
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
 
-from matplotlib.ticker import FuncFormatter
-def to_percent(y, position):
-    # Ignore the passed in position. This has the effect of scaling the default
-    # tick locations.
-    #s = str(10 * y)
-    s = '%.0f' % (1000 * y)
-    return s
-
-    # The percent symbol needs escaping in latex
-    #if rcParams['text.usetex'] == True:
-    #    return s + r'$\%$'
-    #else:
-    #    return s + '%'
-
-def autolabel(ax, rects):
-    # attach some text labels
-    for rect in rects:
-        height = rect.get_height()
-        #ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height*1000), ha='center', va='bottom')
-        ax.text(rect.get_x()+rect.get_width()/2., height + 0., '%.1f'%(height*1000), ha='center', va='bottom')
-
 def plot_all_mappability( infile, title, outfile ):
   plot_mappability( infile, title, outfile )
   plot_mappability_hist( infile, title, outfile )
@@ -1295,6 +1299,95 @@ def plot_bias_hist( src, title, fn ):
   ax.set_ylim(ymax=100./1000)
   autolabel( ax, patches ) 
   fig.savefig('%s/bias-hist-%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
+
+def plot_multi_zero_depth( src, fn, labels, colors, max_depth=None ):
+  lines = open( src ).readlines()
+  lists = []
+  runs = []
+  actual_max_depth = 0
+  for line in lines:
+    if line.startswith( '#' ) or line.strip() == '':
+      continue
+    lists.append( [ float(x) for x in line.split(',') ] )
+    trimmed = bio.trim_edges( lists[-1] )
+    runs.append( bio.all_runs( trimmed, 0 ) )
+
+  fig = plt.figure()
+  first = True
+  for idx, run in enumerate( runs ):
+    #print run
+    ax = fig.add_subplot(111)
+    x = []
+    y = []
+    total = 0
+    for k, v in run.iteritems():
+      x.append( k )
+      y.append( v )
+      total += v
+    if first:
+      ax.scatter(x, y, label='%s (%i)' % ( labels[idx], total ), color=colors[idx], marker='+')
+    else:
+      pass #ax.scatter(x, y, label='%s (%i)' % ( labels[idx], total ), color=colors[idx])
+    first = False
+
+  leg = ax.legend(loc='upper right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
+
+
+def plot_multi_depth_hist( src, fn, labels, colors, max_depth=None ):
+  lines = open( src ).readlines()
+  lists = []
+  means = []
+  actual_max_depth = 0
+  for line in lines:
+    if line.startswith( '#' ) or line.strip() == '':
+      continue
+    lists.append( [ float(x) for x in line.split(',') ] )
+    means.append( sum( lists[-1] ) / len( lists[-1] ) )
+    actual_max_depth = max( actual_max_depth, max( lists[-1] ) )
+    trimmed = bio.trim_edges( lists[-1] )
+    longest = bio.longest_run( trimmed, 0 )
+    print 'longest zero run: %i at %i-%i of %i. distribution: %s' % ( longest[0], longest[1], longest[1] + longest[0], len(lists[-1]), bio.all_runs( trimmed ) )
+
+  if max_depth is None:
+    max_depth = actual_max_depth
+
+  x = range( 0, int(max_depth) + 1 ) 
+  max_height = 0
+  fig = plt.figure()
+  for idx, depth in enumerate( lists ):
+    y = bio.bucket( depth, x)
+    max_height = max( max_height, max(y))
+    ax = fig.add_subplot(111)
+    ax.plot(x, y, label=labels[idx], color=colors[idx])
+    ax.fill_between( x, y, 0, color=colors[idx], alpha=0.1)
+    ax.axvline(x=means[idx], color=colors[idx], alpha=1)
+
+  if max_height > 1e6:
+    ax.get_yaxis().set_major_formatter(FuncFormatter(to_millions))
+  #ax1.set_xlabel('my label ' + '$10^{{{0:d}}}$'.format(scale_pow))
+
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
+
+def plot_depth_hist( src, fn ):
+  lines = open( src ).readlines()
+  lists = []
+  for line in lines:
+    if line.startswith( '#' ):
+      continue
+    lists.append( [ float(x) for x in line.split(',') ] )
+
+  # lists[0] = depth, lists[1] = breakpoints
+  depths = lists[0]
+  x = range( 0, int(max(depths)) + 1 ) 
+  y = bio.bucket( depths, x)
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='Baseline', color='b', marker='s')
+  fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
 ##### migrated from ipython
 def ecoli_mutations_snps_unmapped():
@@ -1592,12 +1685,21 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-novel-150401-coverage.out', 'circoviridae-novel-100-coverage' )
 #plot_depth( 'out/read-depth-novel-150401-coverage.out', 'circoviridae-novel-100-coverage-zoom', 900, 1100 )
 
+#plot_depth_hist( 'out/read-depth-deletion-150414-10x-poisson-50del-err05.out', 'circoviridae-deletion-15x-poisson-err05-depth-hist' )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_depth_hist( 'out/read-depth-deletion-150416-depth-vs-errors.out', 'circoviridae-depth-vs-errors', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta') )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors.out', 'ecoli-depth-vs-errors', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-hom5.out', 'ecoli-depth-vs-errors-hom5', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-snp.out', 'ecoli-depth-vs-errors-snp', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
+
+plot_multi_zero_depth( 'out/ecoli-150416-depth-vs-errors-snp.out', 'ecoli-depth-vs-errors-snp-zeros', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_zero_depth( 'out/read-depth-deletion-150416-depth-vs-errors.out', 'circoviridae-depth-vs-errors-zeros', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta') )#, 900, 1200, variation_label='Deletion' )
+
 #### in report
 #plot_depth( 'out/read-depth-deletion-150407-100x.out', 'circoviridae-deletion-100x-zoom', 900, 1200, variation_label='Deletion' )
 #plot_depth( 'out/read-depth-deletion-150407-15x-poisson.out', 'circoviridae-deletion-15x-poisson-zoom', 900, 1200, variation_label='Deletion' )
 #plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del.out', 'circoviridae-deletion-15x-poisson', variation_label='Deletion', features=('Evidence',), show_features=True )#, 900, 1200, variation_label='Deletion' )
-plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del-err05.out', 'circoviridae-deletion-15x-poisson-err05', variation_label='Deletion', features=('Evidence',), show_features=True )#, 900, 1200, variation_label='Deletion' )
-plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del-err05.out', 'circoviridae-deletion-15x-poisson-err05-coverage', variation_label='Deletion', features=('Evidence',), show_features=False )#, 900, 1200, variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del-err05.out', 'circoviridae-deletion-15x-poisson-err05', variation_label='Deletion', features=('Evidence',), show_features=True )#, 900, 1200, variation_label='Deletion' )
+#plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del-err05.out', 'circoviridae-deletion-15x-poisson-err05-coverage', variation_label='Deletion', features=('Evidence',), show_features=False )#, 900, 1200, variation_label='Deletion' )
 
 #plot_heatmap( 'out/circoviridae-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'circoviridae-insertion-heatmap', 'Insertion length' )
 #plot_heatmap( 'out/ecoli-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'ecoli-insertion-heatmap', 'Insertion length' )

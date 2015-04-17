@@ -1,3 +1,5 @@
+import collections
+import itertools
 import math
 import random
 
@@ -74,7 +76,7 @@ def fasta_edit( fh, out, commands, width=50 ):
   
 def fasta_filter( fh, out, commands ):
   '''
-    command is comma separated list of commands of the form [i|d].pos.[bases|count]
+    command is comma separated list of locations of the form [i|d].pos.[bases|count]
     e.g. CHR1:123456-654321
     ignore CHR2 for now
   '''
@@ -115,6 +117,27 @@ def fasta_filter( fh, out, commands ):
             in_filter = False
       pos += line_len 
   out.write('\n')
+
+def fasta_find( fh, query ):
+  '''
+    find query in fasta fh
+    @return list of locations matching query
+  '''
+  fr = fasta.FastaReader( fh, include_headers=False )
+  # for the moment, not memory efficient
+  window = ''
+  for line in fr.items():
+    window += line
+  results = []
+  start = 0
+  while True:
+    cand = window.find( query, start )
+    if cand >= 0:
+      results.append( cand )
+      start = cand + 1
+    else:
+      break
+  return results
 
 def poisson( lmbda ):
   '''
@@ -160,3 +183,45 @@ def binomial( m=1000, n=1000 ):
 def logistic( x ):
   return 1. / ( 1 + math.exp( -x ) )
 
+def trim_edges( l ):
+  start, end = find_edges( l )
+  return l[start:end + 1]
+
+def find_edges( l ):
+  start = 0
+  while l[start] == l[0]:
+    start += 1
+  end = -1
+  while l[end] == l[-1]:
+    end -= 1
+  return start, end
+  
+def longest_run( l, x=0 ):
+  '''
+    longest run of x in list l
+    e.g. ( [ 1, 0, 0, 1 ], 0 ) --> 2
+  '''
+  result = 0
+  winning_pos = 0
+  pos = 0
+  for val, cand in itertools.groupby( l ):
+    count = len(list(cand))
+    if x == val:
+      if count > result:
+        result = count
+        winning_pos = pos
+    pos += count
+  return result, winning_pos
+
+def all_runs( l, x=0 ):
+  '''
+    find all runs of x in list l, 
+    @return a dict of the form { 'length': 'count', ... }
+  '''
+  result = collections.defaultdict(int)
+  for val, cand in itertools.groupby( l ):
+    count = len(list(cand))
+    if x == val:
+      result[count] += 1
+  return result
+  

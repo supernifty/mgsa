@@ -250,13 +250,14 @@ def quick_view( fh, bias_report=False ):
       print "  %s" % item
 
 if __name__ == '__main__':
+  # TODO really should use argparse
   if len(sys.argv) < 2:
-    print "%s (quick_view|fasta_stats|fasta_width width|fasta_edit command width|fasta_filter command|vcf_consensus vcf <fasta)" % sys.argv[0]
+    print "%s (quick_view|fasta_stats|fasta_width width|fasta_edit command width|fasta_filter command|fasta_find query|vcf_consensus vcf <fasta)" % sys.argv[0]
   elif sys.argv[1] == 'quick_view': # pipeline batch output
     quick_view( sys.stdin )
   elif sys.argv[1] == 'fasta_stats':
     print bio.fasta_stats( sys.stdin ).stats
-  elif sys.argv[1] == 'fasta_width':
+  elif sys.argv[1] == 'fasta_width': # resize to a provided width
     bio.fasta_set_width( sys.stdin, sys.stdout, int(sys.argv[2]) )
   elif sys.argv[1] == 'fasta_edit':
     width = 50
@@ -268,10 +269,14 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
       width = int(sys.argv[3])
     bio.fasta_filter( sys.stdin, sys.stdout, commands=sys.argv[2] )
+  elif sys.argv[1] == 'fasta_find':
+    sys.stdout.write( '%s\n' % bio.fasta_find( sys.stdin, query=sys.argv[2] ) )
   elif sys.argv[1] == 'vcf_consensus':
     fr = bio.FastaReaderFromVCF( bio.FastaReader( sys.stdin ), bio.VCF( open( sys.argv[2], 'r' ) ) )
     for line in fr.items():
       sys.stdout.write( '%s\n' % line )
+  elif sys.argv[1] == 'poisson': # k, m, n: probability of k items in a slot, when there are m items and n slots 
+    sys.stdout.write( '%f\n' % bio.binomial_prob( int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]) ) )
   else:
     print "unrecognized command"
   #import doctest

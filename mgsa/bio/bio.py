@@ -39,7 +39,7 @@ class Config(object):
     * coverage: mean depth of coverage
     * coverage_dist: uniform, poisson
     * error_prob: prob of error at any position
-    * error_type: e.g. snv, homopolymer 3
+    * error_type: e.g. snv, homopolymer_3
     * command: fasta, mutation, reads, vcf: only generate the vcf, don't evaluate
     * inversion_prob
     * paired_end_length
