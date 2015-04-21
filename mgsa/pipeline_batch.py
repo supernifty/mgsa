@@ -128,14 +128,15 @@ for line in open( config_file, 'r' ):
   # build candidate vcf
   candidate_vcf = bio.VCF( writer=bio.VCFWriter( open( recovered_vcf_file, 'w' ) ) ) # empty vcf
 
-  if sam_file.endswith('.bam'):
-    sam_fh = bio.BamReaderExternal( config.BAM_TO_SAM, sam_file )
-  else:
-    sam_fh = open( sam_file, 'r' )
-  if cfg['chromosomes'] == 'true':
-    bio.SamToMultiChromosomeVCF( sam=sam_fh, multi_fasta_reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
-  else:
-    bio.SamToVCF.instance( sam=sam_fh, reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+  if cfg['command'] is None or cfg['command'].find( '-novcf' ) == -1:
+    if sam_file.endswith('.bam'):
+      sam_fh = bio.BamReaderExternal( config.BAM_TO_SAM, sam_file )
+    else:
+      sam_fh = open( sam_file, 'r' )
+    if cfg['chromosomes'] == 'true':
+      bio.SamToMultiChromosomeVCF( sam=sam_fh, multi_fasta_reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+    else:
+      bio.SamToVCF.instance( sam=sam_fh, reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
 
   if cfg['command'] == 'vcf':
     # don't compare correct vcf to candidate vcf, we just wanted to generate a vcf
@@ -157,8 +158,9 @@ for line in open( config_file, 'r' ):
       deletions = [ '%.2f' % detector.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
       target.write( '%s\n' % ','.join( deletions ) )
     # also write vcf sites
-    vcf = bio.VCF( reader=open( vcf_file, 'r' ) )
-    target.write( ','.join( [ str(x) for x in vcf.breakpoints( all_affected=True ) ] ) )
+    if cfg['command'].find( '-novcf' ) == -1:
+      vcf = bio.VCF( reader=open( vcf_file, 'r' ) )
+      target.write( ','.join( [ str(x) for x in vcf.breakpoints( all_affected=True ) ] ) )
 
   if cfg['command'] is None or cfg['command'].startswith( 'vcfdiff' ): # else: # if no command, compare correct vcf to candidate vcf
     if cfg['command'].find( '-deletions' ) != -1:

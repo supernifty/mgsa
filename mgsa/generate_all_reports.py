@@ -1300,7 +1300,7 @@ def plot_bias_hist( src, title, fn ):
   autolabel( ax, patches ) 
   fig.savefig('%s/bias-hist-%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
-def plot_multi_zero_depth( src, fn, labels, colors, max_depth=None ):
+def plot_multi_zero_depth( src, fn, labels, colors, show_index=None, max_depth=None, min_length=0 ):
   lines = open( src ).readlines()
   lists = []
   runs = []
@@ -1308,30 +1308,56 @@ def plot_multi_zero_depth( src, fn, labels, colors, max_depth=None ):
   for line in lines:
     if line.startswith( '#' ) or line.strip() == '':
       continue
-    lists.append( [ float(x) for x in line.split(',') ] )
-    trimmed = bio.trim_edges( lists[-1] )
-    runs.append( bio.all_runs( trimmed, 0 ) )
+    lists.append( [ float(x) for x in line.split(',') ] ) # depths
+    trimmed = bio.trim_edges( lists[-1] ) # without edges
+    all_runs = bio.all_runs( trimmed, 0 )
+    runs.append( all_runs ) # dictionary of run length and count of runs
+    longest = bio.longest_run( trimmed, 0 )
+    total_runs = sum( [ all_runs[k] for k in  all_runs ] )
+    threshold_runs = sum( [ all_runs[k] for k in all_runs if k <= min_length ] )
+    print "longest run: %i @ %i. total runs: %i below threshold %i" % ( longest[0], longest[1], total_runs, threshold_runs )
+    if len(lists) == 1:
+      base_total = total_runs
+      base_threshold = threshold_runs
+    else:
+      threshold_inc = threshold_runs - base_threshold
+      total_inc = total_runs - base_total
+      print "fp above %i %.4f below %i %.4f" % ( total_inc - threshold_inc, 1. * ( total_inc - threshold_inc ) / total_inc, threshold_inc, 1 - 1. * ( total_inc - threshold_inc ) / total_inc )
 
   fig = plt.figure()
-  first = True
+  hists = []
+  hist_labels = []
   for idx, run in enumerate( runs ):
-    #print run
-    ax = fig.add_subplot(111)
-    x = []
-    y = []
-    total = 0
-    for k, v in run.iteritems():
-      x.append( k )
-      y.append( v )
-      total += v
-    if first:
-      ax.scatter(x, y, label='%s (%i)' % ( labels[idx], total ), color=colors[idx], marker='+')
-    else:
-      pass #ax.scatter(x, y, label='%s (%i)' % ( labels[idx], total ), color=colors[idx])
-    first = False
+    if show_index is None or idx in show_index:
+      ax = fig.add_subplot(111)
+      x = []
+      y = []
+      z = [] # expanded out i.e. { 50: 3 } -> [ 50, 50, 50 ]
+      total = 0
+      for k, v in run.iteritems():
+        if k > min_length:
+          x.append( k )
+          y.append( v )
+          z.extend( [k] * v )
+          total += v
+      #ax.scatter(x, y, label=label, color=colors[idx], alpha=0.7, edgecolors='none')
+      #bins = [0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500]
+      #bins = range( 0, 1000, 10 )
+      #n, bins, patches = ax.hist(z, bins=50, label=label, histtype='step', alpha=0.5 )#, normed=1, histtype='stepfilled')
+      if len(z) > 0:
+        hists.append( z )
+        label='%s (%i)' % ( labels[idx], total )
+        print '%s: %s' % ( label, sorted( run.keys() ) )
+        hist_labels.append( label )
+
+  n, bins, patches = ax.hist(hists, label=hist_labels, bins=30 )#, normed=1, histtype='stepfilled')
+  #ax.set_xscale('log')
+  #ax.set_yscale('log')
+  ax.set_xlabel( 'Deletion length' )
+  ax.set_ylabel( 'Count' )
 
   leg = ax.legend(loc='upper right', prop={'size':12})
-  leg.get_frame().set_alpha(0.8)
+  #leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
 
@@ -1688,10 +1714,11 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth_hist( 'out/read-depth-deletion-150414-10x-poisson-50del-err05.out', 'circoviridae-deletion-15x-poisson-err05-depth-hist' )#, 900, 1200, variation_label='Deletion' )
 #plot_multi_depth_hist( 'out/read-depth-deletion-150416-depth-vs-errors.out', 'circoviridae-depth-vs-errors', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta') )#, 900, 1200, variation_label='Deletion' )
 #plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors.out', 'ecoli-depth-vs-errors', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-bowtie.out', 'ecoli-depth-vs-errors-bowtie', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
 #plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-hom5.out', 'ecoli-depth-vs-errors-hom5', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
+plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-hom5-bowtie.out', 'ecoli-depth-vs-errors-hom5-bowtie', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
 #plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-snp.out', 'ecoli-depth-vs-errors-snp', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
 
-plot_multi_zero_depth( 'out/ecoli-150416-depth-vs-errors-snp.out', 'ecoli-depth-vs-errors-snp-zeros', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
 #plot_multi_zero_depth( 'out/read-depth-deletion-150416-depth-vs-errors.out', 'circoviridae-depth-vs-errors-zeros', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta') )#, 900, 1200, variation_label='Deletion' )
 
 #### in report
@@ -1725,6 +1752,10 @@ plot_multi_zero_depth( 'out/ecoli-150416-depth-vs-errors-snp.out', 'ecoli-depth-
 #plot_insertion_vs_variation_distance( 'out/ecoli-insert-homopolymer-150311a.out', 'custom', 'Homopolymer Insertion Length', 'title', 'ecoli-insert-homopolymer-150311', legend="lower left" )
 
 #plot_reference_bias_ecoli_example() # reference-bias-profile.pdf
+
+#plot_multi_zero_depth( 'out/ecoli-150416-depth-vs-errors-snp.out', 'ecoli-depth-vs-errors-snp-zeros', ('No errors', '1% error', '2% error', '4% error', '8% error', '16% error'), colors=('black', 'blue', 'green', 'red', 'cyan', 'magenta'), show_index=set( (0, 3, 4) ), max_depth=19, min_length=50 )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_zero_depth( 'out/ecoli-150419-depth-vs-errors-hom5.out', 'ecoli-depth-vs-errors-hom5-zeros', ('No errors', '1% error', '2% error', '4% error', '8% error', '16% error'), colors=('black', 'blue', 'green', 'red', 'cyan', 'magenta'), show_index=set( (0, 2, 3) ), max_depth=19, min_length=50 )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_zero_depth( 'out/ecoli-150419-depth-vs-errors-hom5-bowtie.out', 'ecoli-depth-vs-errors-hom5-zeros-bowtie', ('No errors', '1% error', '2% error', '4% error', '8% error', '16% error'), colors=('black', 'blue', 'green', 'red', 'cyan', 'magenta'), show_index=set( (0, 2, 3) ), max_depth=19, min_length=50 )#, 900, 1200, variation_label='Deletion' )
 
 #### in report - migrated from ipython
 #error_unmapped_hiv()
