@@ -7,11 +7,11 @@ def bucket( values, buckets ):
     @buckets: list of bucket separators with each being the minimum value that can go in that bucket
   '''
   result = [ 0 ] * len(buckets)
-  for value in values:
-    for i in xrange(len(buckets)):
-      if i == len(buckets) - 1 or value >= buckets[i] and value < buckets[i+1]:
-        result[i] += 1
-        break
+  current_bucket = 0
+  for value in sorted( values ):
+    while current_bucket < len(buckets) - 1 and value >= buckets[current_bucket + 1]:
+      current_bucket += 1
+    result[current_bucket] += 1
   return result
 
 def sign_bucket( values ):

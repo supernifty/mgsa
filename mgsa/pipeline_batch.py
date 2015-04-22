@@ -143,7 +143,11 @@ for line in open( config_file, 'r' ):
     target.write( '%s' % ( line.strip() ) )
 
   if cfg['command'] is not None and cfg['command'].startswith( 'features' ):
-    fasta = bio.SamToFasta( sam=open( sam_file, 'r' ), log=bio.log_stderr ).fasta
+    if sam_file.endswith('.bam'):
+      sam_fh = bio.BamReaderExternal( config.BAM_TO_SAM, sam_file )
+    else:
+      sam_fh = open( sam_file, 'r' )
+    fasta = bio.SamToFasta( sam=sam_fh, log=bio.log_stderr ).fasta
     feature = bio.MapFeature( fasta ) # what the aligner has built
     if cfg['command'].find( '-depth' ) != -1:
       depths = [ str( feature.depth( x ) ) for x in xrange(0, fasta.length) ]

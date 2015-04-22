@@ -1401,18 +1401,21 @@ def plot_multi_depth_hist( src, fn, labels, colors, max_depth=None ):
 def plot_depth_hist( src, fn ):
   lines = open( src ).readlines()
   lists = []
+  means = []
   for line in lines:
-    if line.startswith( '#' ):
+    if line.startswith( '#' ) or line.strip() == '':
       continue
     lists.append( [ float(x) for x in line.split(',') ] )
+    means.append( sum( lists[-1] ) / len( lists[-1] ) )
 
   # lists[0] = depth, lists[1] = breakpoints
   depths = lists[0]
   x = range( 0, int(max(depths)) + 1 ) 
-  y = bio.bucket( depths, x)
+  y = bio.bucket( depths, x )
   fig = plt.figure()
   ax = fig.add_subplot(111)
-  ax.plot(x, y, label='Baseline', color='b', marker='s')
+  ax.plot(x, y, label='Baseline', color='b' )#, marker='s')
+  ax.axvline(x=means[0], color='b', alpha=1)
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
 ##### migrated from ipython
@@ -1666,6 +1669,8 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-deletion-150331-bowtie.out', 'circoviridae-10-bowtie' )#, 900, 1200 )
 #plot_depth( 'out/read-depth-deletion-150331-bowtie.out', 'circoviridae-10-zoom-bowtie', 980, 1030 )
 
+plot_depth_hist( 'out/malaria-depth-150422.out', 'malaria-depth-hist-150422' )#, 900, 1200, variation_label='Deletion' )
+
 # duplication depth
 #plot_depth( 'out/read-depth-duplication-150401.out', 'circoviridae-duplication-100-bwa' )#, 980, 1030 )
 #plot_depth( 'out/read-depth-duplication-150401-bowtie.out', 'circoviridae-duplication-100-bowtie' )#, 980, 1030 )
@@ -1716,7 +1721,7 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors.out', 'ecoli-depth-vs-errors', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
 #plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-bowtie.out', 'ecoli-depth-vs-errors-bowtie', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
 #plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-hom5.out', 'ecoli-depth-vs-errors-hom5', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
-plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-hom5-bowtie.out', 'ecoli-depth-vs-errors-hom5-bowtie', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
+#plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-hom5-bowtie.out', 'ecoli-depth-vs-errors-hom5-bowtie', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
 #plot_multi_depth_hist( 'out/ecoli-150416-depth-vs-errors-snp.out', 'ecoli-depth-vs-errors-snp', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta'), max_depth=19 )#, 900, 1200, variation_label='Deletion' )
 
 #plot_multi_zero_depth( 'out/read-depth-deletion-150416-depth-vs-errors.out', 'circoviridae-depth-vs-errors-zeros', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta') )#, 900, 1200, variation_label='Deletion' )
