@@ -147,24 +147,34 @@ for line in open( config_file, 'r' ):
       sam_fh = bio.BamReaderExternal( config.BAM_TO_SAM, sam_file )
     else:
       sam_fh = open( sam_file, 'r' )
-    fasta = bio.SamToFasta( sam=sam_fh, log=bio.log_stderr ).fasta
-    feature = bio.MapFeature( fasta ) # what the aligner has built
-    if cfg['command'].find( '-depth' ) != -1:
-      depths = [ str( feature.depth( x ) ) for x in xrange(0, fasta.length) ]
-      target.write( '%s\n' % ','.join( depths ) )
-    if cfg['command'].find( '-breakpoints' ) != -1:
-      breakpoints = [ '%.2f' % bio.BREAKPOINT_PREFIX_READ_DEPTH_SHAPE.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
-      target.write( '%s\n' % ','.join( breakpoints ) )
-      breakpoints = [ '%.2f' % bio.BREAKPOINT_SUFFIX_READ_DEPTH_SHAPE.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
-      target.write( '%s\n' % ','.join( breakpoints ) )
-    if cfg['command'].find( '-deletions' ) != -1:
-      detector = bio.LongDeletionDetector( 50, vcf_writer=candidate_vcf, threshold=0.6, reference_fasta=bio.Fasta( bio.FastaReader( open( fasta_file, 'r' ) ) ) ) # TODO size hardcoded
-      deletions = [ '%.2f' % detector.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
-      target.write( '%s\n' % ','.join( deletions ) )
-    # also write vcf sites
-    if cfg['command'].find( '-novcf' ) == -1:
-      vcf = bio.VCF( reader=open( vcf_file, 'r' ) )
-      target.write( ','.join( [ str(x) for x in vcf.breakpoints( all_affected=True ) ] ) )
+    if cfg['chromosomes'] == 'true':
+      fastas = bio.SamToMultiChromosomeFasta( sam=sam_fh, log=bio.log_stderr ).fasta
+      all_depths = []
+      for chromosome, fasta in fastas.iteritems():
+        fasta = bio.SamToFasta( sam=sam_fh, log=bio.log_stderr ).fasta
+        feature = bio.MapFeature( fasta ) # what the aligner has built
+        if cfg['command'].find( '-depth' ) != -1:
+          all_depths.extend( [ str( feature.depth( x ) ) for x in xrange(0, fasta.length) ] )
+      target.write( '%s\n' % ','.join( all_depths ) )
+    else: # single fasta
+      fasta = bio.SamToFasta( sam=sam_fh, log=bio.log_stderr ).fasta
+      feature = bio.MapFeature( fasta ) # what the aligner has built
+      if cfg['command'].find( '-depth' ) != -1:
+        depths = [ str( feature.depth( x ) ) for x in xrange(0, fasta.length) ]
+        target.write( '%s\n' % ','.join( depths ) )
+      if cfg['command'].find( '-breakpoints' ) != -1:
+        breakpoints = [ '%.2f' % bio.BREAKPOINT_PREFIX_READ_DEPTH_SHAPE.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
+        target.write( '%s\n' % ','.join( breakpoints ) )
+        breakpoints = [ '%.2f' % bio.BREAKPOINT_SUFFIX_READ_DEPTH_SHAPE.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
+        target.write( '%s\n' % ','.join( breakpoints ) )
+      if cfg['command'].find( '-deletions' ) != -1:
+        detector = bio.LongDeletionDetector( 50, vcf_writer=candidate_vcf, threshold=0.6, reference_fasta=bio.Fasta( bio.FastaReader( open( fasta_file, 'r' ) ) ) ) # TODO size hardcoded
+        deletions = [ '%.2f' % detector.evidence( fasta, x, mean_depth=cfg['coverage'] ) for x in xrange(0, fasta.length) ]
+        target.write( '%s\n' % ','.join( deletions ) )
+      # also write vcf sites
+      if cfg['command'].find( '-novcf' ) == -1:
+        vcf = bio.VCF( reader=open( vcf_file, 'r' ) )
+        target.write( ','.join( [ str(x) for x in vcf.breakpoints( all_affected=True ) ] ) )
 
   if cfg['command'] is None or cfg['command'].startswith( 'vcfdiff' ): # else: # if no command, compare correct vcf to candidate vcf
     if cfg['command'].find( '-deletions' ) != -1:

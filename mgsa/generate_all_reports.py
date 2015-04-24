@@ -1350,7 +1350,8 @@ def plot_multi_zero_depth( src, fn, labels, colors, show_index=None, max_depth=N
         print '%s: %s' % ( label, sorted( run.keys() ) )
         hist_labels.append( label )
 
-  n, bins, patches = ax.hist(hists, label=hist_labels, bins=30 )#, normed=1, histtype='stepfilled')
+  if len(hists) > 0:
+    n, bins, patches = ax.hist(hists, label=hist_labels, bins=30 )#, normed=1, histtype='stepfilled')
   #ax.set_xscale('log')
   #ax.set_yscale('log')
   ax.set_xlabel( 'Deletion length' )
@@ -1394,9 +1395,48 @@ def plot_multi_depth_hist( src, fn, labels, colors, max_depth=None ):
     ax.get_yaxis().set_major_formatter(FuncFormatter(to_millions))
   #ax1.set_xlabel('my label ' + '$10^{{{0:d}}}$'.format(scale_pow))
 
+  ax.set_ylabel('Frequency')
+  ax.set_xlabel('Depth of Coverage')
+
   leg = ax.legend(loc='lower right', prop={'size':12})
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
+
+def plot_depth_hist_from_bedtools( src, fn, max_depth=None ):
+  depths_dict = collections.defaultdict(int)
+  true_max_depth = 0
+  max_count = 0
+  total_count = 0
+  total_depths = 0
+  for line in open( src ):
+    if not line.startswith( 'genome' ):
+      fields = line.split()
+      depth = int(fields[1])
+      count = int(fields[2])
+      total_count += count
+      total_depths += count * depth
+      depths_dict[depth] += count
+      true_max_depth = max( true_max_depth, depth )
+      max_count = max( max_count, count )
+
+  if max_depth is None:
+    max_depth = true_max_depth
+
+  mean = 1. * total_depths / total_count
+  x = range( 0, max_depth + 1 )
+  y = [ depths_dict[depth] for depth in x ]
+  print "first 10 coverages:", y[:10]
+  print "total genome:", total_count
+  print "total coverage:", total_depths
+  # y = bio.bucket( depths, x )
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, y, label='Baseline', color='b' )#, marker='s')
+  ax.axvline(x=mean, color='b', alpha=1)
+  ax.set_ylabel('Frequency')
+  ax.set_xlabel('Depth of Coverage')
+  fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
+
 
 def plot_depth_hist( src, fn ):
   lines = open( src ).readlines()
@@ -1412,10 +1452,15 @@ def plot_depth_hist( src, fn ):
   depths = lists[0]
   x = range( 0, int(max(depths)) + 1 ) 
   y = bio.bucket( depths, x )
+  print "first 10 coverages:", y[:10]
+  print "total genome:", len(depths)
+  print "total coverage:", sum(depths)
   fig = plt.figure()
   ax = fig.add_subplot(111)
   ax.plot(x, y, label='Baseline', color='b' )#, marker='s')
   ax.axvline(x=means[0], color='b', alpha=1)
+  ax.set_ylabel('Frequency')
+  ax.set_xlabel('Depth of Coverage')
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
 ##### migrated from ipython
@@ -1669,7 +1714,12 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-deletion-150331-bowtie.out', 'circoviridae-10-bowtie' )#, 900, 1200 )
 #plot_depth( 'out/read-depth-deletion-150331-bowtie.out', 'circoviridae-10-zoom-bowtie', 980, 1030 )
 
-plot_depth_hist( 'out/malaria-depth-150422.out', 'malaria-depth-hist-150422' )#, 900, 1200, variation_label='Deletion' )
+#plot_depth_hist( 'out/malaria-depth-150422.out', 'malaria-depth-hist-150422' )#, 900, 1200, variation_label='Deletion' )
+plot_depth_hist_from_bedtools( 'out/Plasmodium_falciparum_1q_orig_dedup.hist', 'malaria-depth-hist-150422-dedup', max_depth=500 )#, 900, 1200, variation_label='Deletion' )
+plot_depth_hist( 'out/malaria-depth-dedup-150422.out', 'malaria-depth-hist-150422-dedup-fixed')#, max_depth=500 )#, 900, 1200, variation_label='Deletion' )
+
+#plot_multi_zero_depth( 'out/malaria-depth-150422.out', 'malaria-depth-150422.out', ('Real Readset',), colors=('blue',), show_index=set( (0,) ), max_depth=19, min_length=50 )
+#plot_multi_zero_depth( 'out/malaria-depth-dedup-150422.out', 'malaria-depth-dedup-150422.out', ('Real Readset',), colors=('blue',), show_index=set( (0,) ), max_depth=19, min_length=50 )
 
 # duplication depth
 #plot_depth( 'out/read-depth-duplication-150401.out', 'circoviridae-duplication-100-bwa' )#, 980, 1030 )
