@@ -14,6 +14,9 @@ import matplotlib.pyplot as plt
 import pylab
 import sys
 
+import scipy.stats
+import numpy as np
+
 import bio
 import helpers
 
@@ -110,6 +113,10 @@ def get_multicolumn_value( columns, fh ):
 from matplotlib.ticker import FuncFormatter
 def to_millions(y, position):
   s = '%.1fM' % ( y / 1000000 )
+  return s
+
+def to_thousands(y, position):
+  s = '%.1fk' % ( y / 1000 )
   return s
 
 def to_percent(y, position):
@@ -1158,43 +1165,141 @@ def plot_entropy( src, short_name ):
   ax.scatter(entropy_list, accuracy_list, s=2, color='b' )#, s=2)
   fig.savefig('%s/entropy-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
-def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='Variation', features=(), show_features=False ):
+def plot_depth_predictor( src, short_name, my_depths=0, my_breakpoints_lines=1, legend='upper left', my_max_depth=None, window=0, x_label='Depth' ):
+  '''
+    just does 1 depth set and 1 breakpoint
+  '''
+  lines = open( src ).readlines()
+  depths = []
+  breakpoints = set()
+  idx = 0
+  for line in lines:
+    if line.startswith( '#' ) or line.strip() == '':
+      continue
+    if idx == my_depths:
+      depths.extend( [ int(round(float(x))) for x in line.split(',') ] )
+      print "added", idx
+    if idx == my_breakpoints_lines:
+      breakpoints.update( [ int(round(float(x))) for x in line.split(',') ] )
+      print "added breakpoint ", idx, len(breakpoints)
+    idx += 1
+
+  max_depth = max(depths)
+  print "building hist with", max_depth, "depths"
+  if my_max_depth is not None:
+    max_depth = my_max_depth
+  x = range(0, max_depth + 1 )
+  hist_p = [0] * ( max_depth + 1 )
+  hist_n = [0] * ( max_depth + 1 )
+  hist_c = [0] * ( max_depth + 1 )
+  for position in xrange(0, len(depths)):
+    if position > 100 and position < len(depths) - 100:
+      #window_depth = sum( depths[ position - window: position + window + 1 ] )
+      #ave_depth = window_depth / ( 2 * window + 1 )
+      window_depth = min( depths[ position - window: position + window + 1 ] )
+      ave_depth = window_depth
+      if ave_depth < max_depth:
+        if position in breakpoints:
+          hist_p[ave_depth] += 1
+        #elif position + 1 in breakpoints or position - 1 in breakpoints or position + 2 in breakpoints or position - 2 in breakpoints or position + 3 in breakpoints or position - 3 in breakpoints or position + 4 in breakpoints or position - 4 in breakpoints or position + 5 in breakpoints or position - 5 in breakpoints:
+        #  hist_c[depth] += 1
+        else:
+          hist_n[ave_depth] += 1
+
+  print "hist_p", sum(hist_p), "hist_n", sum(hist_n)
+  # normalize
+  hist_n = [ 1. * v / sum(hist_n) for v in hist_n ]
+  hist_p = [ 1. * v / ( sum(hist_p) + sum(hist_c) ) for v in hist_p ]
+#  hist_c = [ 1. * v / ( sum(hist_p) + sum(hist_c) ) for v in hist_c ]
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+
+  ax.bar(x, hist_n, width=1, color='b', label='No breakpoint', edgecolor='b', alpha=0.5)
+  ax.bar(x, hist_p, width=1, color='r', label='Breakpoint', edgecolor='r', alpha=0.5)
+#  ax.bar(x, hist_c, width=1, color='orange', label='Near breakpoint', edgecolor='orange', alpha=0.5, bottom=hist_p)
+
+  ax.set_ylabel('Normalized Frequency')
+  ax.set_xlabel(x_label)
+
+  leg = ax.legend( loc=legend, prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+
+  fig.savefig('%s/predict-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
+
+
+
+def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='Variation', features=(), show_features=False, show_breakpoints=True, labels=('Coverage',), my_depths=(0,), my_breakpoints=None, my_breakpoints_lines=None, my_max=0, legend='upper left', colors=('b', 'g', 'magenta', 'red', 'black'), my_horizontal=None ):
   '''
     plots either depth or evidence
+    @my_breakpoints: list of lists
   '''
   lines = open( src ).readlines()
   lists = []
+  breakpoint_lines = []
+  idx = 0
   for line in lines:
-    if line.startswith( '#' ):
+    if line.startswith( '#' ) or line.strip() == '':
       continue
-    lists.append( [ float(x) for x in line.split(',') ] )
+    if idx in my_depths:
+      lists.append( [ float(x) for x in line.split(',') ] )
+      print "added", idx
+    if idx in my_breakpoints_lines:
+      breakpoint_lines.append( [ float(x) for x in line.split(',') ] )
+      print "added breakpoint ", idx
+    idx += 1
 
   # lists[0] = depth, lists[1] = breakpoints
-  depths = lists[0]
-  breakpoints = lists[1 + len(features)]
+  last_depth = lists[-1]
   fig = plt.figure()
   ax = fig.add_subplot(111)
   if range_stop < 0:
-    range_stop = len(depths)
+    range_stop = len(last_depth)
   first = True
-  for breakpoint in breakpoints:
-    if range_start <= breakpoint < range_stop:
-      if first:
-        first = False
-        ax.axvline(x=breakpoint, color='r', alpha=0.1, label=variation_label)
-      else:
-        ax.axvline(x=breakpoint, color='r', alpha=0.1 )
+  breakpoints = None
+  if show_breakpoints:
+    if my_breakpoints:
+      breakpoints = my_breakpoints
+    elif my_breakpoints_lines is not None:
+      breakpoints = breakpoint_lines[0] # only supports one breakpoint list
+    else:
+      breakpoints = lists[1 + len(features)]
+  if breakpoints is not None:
+    for breakpoint in breakpoints:
+      if range_start <= breakpoint < range_stop:
+        if first:
+          first = False
+          ax.axvline(x=breakpoint, color='r', alpha=0.1, label=variation_label)
+        else:
+          ax.axvline(x=breakpoint, color='r', alpha=0.1 )
 
   if not show_features: # do the depth
-    plt.ylim(ymax=max(depths)+0.5, ymin=-0.5)
-    ax.plot(range(range_start, range_stop), depths[range_start:range_stop], label='Coverage' ) #, s=2)
+    max_depths = my_max
+    for idx, depths in enumerate(lists):
+      max_depths = max(depths[range_start:range_stop] + [ max_depths ] )
+      x = range(range_start, min(range_stop, len(depths)))
+      y = depths[range_start:min(range_stop, len(depths))]
+      print "plotting", idx, "x", len(x), "y", len(y)
+      ax.plot(x, y, label=labels[idx], color=colors[idx] ) #, s=2)
+      ax.fill_between( x, y, 0, color=colors[idx], alpha=0.1)
+    plt.ylim(ymax=max_depths+0.5, ymin=-0.5)
 
   # additional features
   else:
     for idx in xrange(0, len(features)):
       ax.plot(range(range_start, range_stop), lists[1 + idx][range_start:range_stop], label=features[idx] ) #, s=2)
 
-  leg = ax.legend( loc='lower left', prop={'size':12})
+  if my_horizontal is not None:
+    xlims = ax.get_xlim()
+    x = range(range_start, int(xlims[1]))
+    ax.axhline( y=my_horizontal[0], color='r', alpha=0.3, label='Detector')
+    ax.axhline( y=my_horizontal[1], color='r', alpha=0.3)
+    ax.fill_between( x, my_horizontal[0], my_horizontal[1], color='r', alpha=0.3, label='Detector')
+
+  ax.set_ylabel('Coverage')
+  ax.set_xlabel('Position')
+
+  leg = ax.legend( loc=legend, prop={'size':12})
   leg.get_frame().set_alpha(0.8)
 
   fig.savefig('%s/depth-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
@@ -1402,39 +1507,81 @@ def plot_multi_depth_hist( src, fn, labels, colors, max_depth=None ):
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
-def plot_depth_hist_from_bedtools( src, fn, max_depth=None ):
-  depths_dict = collections.defaultdict(int)
+def plot_depth_hist_from_bedtools( srcs, fn, labels=None, max_depth=None, with_poisson=False, with_nbinom=False, nbinom_var=3 ):
+  colors = ('b', 'g', 'r' )
+  nbinom_colors = ('green', 'cyan')
+  depths_dict = []
+  means = []
   true_max_depth = 0
   max_count = 0
-  total_count = 0
-  total_depths = 0
-  for line in open( src ):
-    if not line.startswith( 'genome' ):
-      fields = line.split()
-      depth = int(fields[1])
-      count = int(fields[2])
-      total_count += count
-      total_depths += count * depth
-      depths_dict[depth] += count
-      true_max_depth = max( true_max_depth, depth )
-      max_count = max( max_count, count )
+  pmfs = []
+  for idx, src in enumerate(srcs):
+    total_depths = 0
+    total_count = 0
+    depths_dict.append(collections.defaultdict(int))
+    for line in open( src ):
+      if line.startswith( 'genome' ):
+        fields = line.split()
+        depth = int(fields[1])
+        count = int(fields[2])
+        total_count += count
+        total_depths += count * depth
+        depths_dict[idx][depth] += count
+        true_max_depth = max( true_max_depth, depth )
+        max_count = max( max_count, count )
+    mean = 1. * total_depths / total_count
+    means.append( mean )
+    pmfs.append( total_count )
 
   if max_depth is None:
     max_depth = true_max_depth
 
-  mean = 1. * total_depths / total_count
   x = range( 0, max_depth + 1 )
-  y = [ depths_dict[depth] for depth in x ]
-  print "first 10 coverages:", y[:10]
-  print "total genome:", total_count
-  print "total coverage:", total_depths
   # y = bio.bucket( depths, x )
   fig = plt.figure()
   ax = fig.add_subplot(111)
-  ax.plot(x, y, label='Baseline', color='b' )#, marker='s')
-  ax.axvline(x=mean, color='b', alpha=1)
+  for i in xrange(len(depths_dict)):
+    y = [ depths_dict[i][depth] for depth in x ]
+    ax.plot(x, y, label=labels[i], color=colors[i] )#, marker='s')
+    ax.fill_between( x, y, 0, color=colors[i], alpha=0.1)
+    if with_poisson or with_nbinom:
+      ax.axvline(x=means[i], color='black', alpha=0.3)
+    else:
+      ax.axvline(x=means[i], color=colors[i], alpha=1)
+    if i == 0:
+      with open( 'out.txt', 'w' ) as fh:
+        for yi in y:
+          fh.write( '%i\n' % int(yi) )
+
+  if with_poisson:
+    dist = scipy.stats.poisson(means[0])
+    y = pmfs[0] * dist.pmf(x)
+    ax.plot( x, y, label='Poisson', color='r' )
+    ax.fill_between( x, y, 0, color='r', alpha=0.1)
+        
+  if with_nbinom:
+    for idx, v in enumerate(nbinom_var):
+      var = means[0] * v # np.std( [ depths_dict[0][depth] for depth in x ] )
+      #var = depths_sd * depths_sd
+      #n = 200 #0.4 #( var * var - means[0] ) / ( means[0] * means[0] )
+      #p = 0.4 #n / ( means[0] + n )
+      n = ( means[0] * means[0] ) / ( var - means[0] )
+      p = n / ( means[0] + n )
+      dist = scipy.stats.nbinom(n, p) #means[0], 3)
+      y = pmfs[0] * dist.pmf(x)
+      ax.plot( x, y, label='Negative binomial %ix' % v, color=nbinom_colors[idx] )
+      ax.fill_between( x, y, 0, color=nbinom_colors[idx], alpha=0.1)
+        
+  if max_count > 1e5:
+    ax.get_yaxis().set_major_formatter(FuncFormatter(to_millions))
+  elif max_count > 1e4:
+    ax.get_yaxis().set_major_formatter(FuncFormatter(to_thousands))
+  print "max_count", max_count
+
   ax.set_ylabel('Frequency')
   ax.set_xlabel('Depth of Coverage')
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, fn ), format='pdf', dpi=1000)
 
 
@@ -1701,6 +1848,22 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 
 
 #### experimental
+# novel insertion rd 10
+#plot_depth( 'out/read-depth-novel-150430-coverage.out', 'cicroviridae-depth-unique-insertion-200-150430', 941, 1059, show_breakpoints=True, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
+#plot_depth( 'out/read-depth-novel-150430-coverage-poisson.out', 'cicroviridae-depth-unique-insertion-200-150430-poisson', 941, 1059, show_breakpoints=False, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
+#plot_depth( 'out/read-depth-novel-150430-coverage-poisson.out', 'cicroviridae-depth-unique-insertion-200-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(2,), my_breakpoints_lines=(3,), legend='lower right' )
+#
+# novel insertion rd 100
+#plot_depth( 'out/read-depth-novel-150503-coverage-short.out', 'cicroviridae-depth-unique-insertion-rd100-150503-short', 941, 1059, show_breakpoints=True, labels=('10bp', '20bp', '30bp', '100bp'), my_depths=(0, 2, 4, 8), legend='lower right', my_breakpoints_lines=(1,) )
+#plot_depth( 'out/read-depth-novel-150430-coverage-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430', 941, 1059, show_breakpoints=True, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
+#plot_depth( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430-poisson', 941, 1059, show_breakpoints=False, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
+#plot_depth( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(2,), my_breakpoints_lines=(3,), legend='lower left', my_horizontal=(50, 70,) )
+# don't do this plot_depth( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(0,), my_breakpoints_lines=(1,), legend='lower right', my_horizontal=(50, 70,) )
+#plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+#plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=200, window=0)
+#plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'circoviridae-depth-unique-insertion-rd100-150430-poisson', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=200, window=8)
+
 #plot_entropy( 'out/entropy_test_150319.out', 'circoviridae-x2' )
 #plot_entropy( 'out/entropy_circ_150319.out', 'circoviridae' )
 
@@ -1714,9 +1877,50 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-deletion-150331-bowtie.out', 'circoviridae-10-bowtie' )#, 900, 1200 )
 #plot_depth( 'out/read-depth-deletion-150331-bowtie.out', 'circoviridae-10-zoom-bowtie', 980, 1030 )
 
+#### poisson coverage deletions bwa ####
+# no deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats.out', 'e-coli-depth-vs-repeats-150424-empty', show_breakpoints=False, range_start=299000, range_stop=301000, skip=0 )
+# unique deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats.out', 'e-coli-depth-vs-repeats-150424-unique', show_breakpoints=False, range_start=299000, range_stop=301000, skip=1, my_breakpoints=( range(299999, 300200), range(3300198, 3300190) ), variation_label='Deletion' )
+# no deletion across repeat
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats.out', 'e-coli-depth-vs-repeats-150424-empty-repeat', show_breakpoints=False, range_start=257000, range_stop=259000, skip=0 )
+# deletion across repeat
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats.out', 'e-coli-depth-vs-repeats-150424-deleted-repeat', show_breakpoints=False, range_start=257000, range_stop=259000, skip=3, my_breakpoints=( range(257999, 258200) ), variation_label='Deletion' )
+# corresponding repeat with no deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats.out', 'e-coli-depth-vs-repeats-150424-empty-repeat-other-loc', show_breakpoints=False, range_start=19000, range_stop=21000, skip=0 )
+# corresponding repeat with deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats.out', 'e-coli-depth-vs-repeats-150424-deleted-repeat-other-loc', show_breakpoints=False, range_start=19000, range_stop=21000, skip=3, my_breakpoints=( range(19887, 20088) ), variation_label='Pseudo Deletion' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
+
+#plot_depth_hist_from_bedtools( ('out/Plasmodium_falciparum_1q_orig_dedup.hist',), 'malaria-depth-hist-150422-dedup', max_depth=500, labels=('Observed',), with_poisson=True )#, 900, 1200, variation_label='Deletion' )
+#### uniform coverage deletions bwa ####
+# no deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-empty-uniform', show_breakpoints=False, range_start=299000, range_stop=301000, skip=0 )
+# unique deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-unique-uniform', show_breakpoints=False, range_start=299000, range_stop=301000, skip=1, my_breakpoints=( range(299999, 300200), range(3300198, 3300190) ), variation_label='Deletion' )
+# no deletion across repeat
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-empty-repeat-uniform', show_breakpoints=False, range_start=257000, range_stop=259000, skip=0 )
+# deletion across repeat
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-deleted-repeat-uniform', show_breakpoints=False, range_start=257000, range_stop=259000, skip=3, my_breakpoints=( range(257999, 258200) ), variation_label='Deletion' )
+# corresponding repeat with no deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-empty-repeat-other-loc-uniform', show_breakpoints=False, range_start=19000, range_stop=21000, skip=0, my_max=50 )
+# corresponding repeat with deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-deleted-repeat-other-loc-uniform', show_breakpoints=False, range_start=19000, range_stop=21000, skip=3, my_breakpoints=( range(19887, 20088) ), variation_label='Pseudo Deletion', my_max=50 ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
+#### uniform coverage deletions bowtie ####
+# no deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-empty-uniform-bowtie', show_breakpoints=False, range_start=299000, range_stop=301000, skip=0 )
+# unique deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-unique-uniform-bowtie', show_breakpoints=False, range_start=299000, range_stop=301000, skip=1, my_breakpoints=( range(299999, 300200), range(3300198, 3300190) ), variation_label='Deletion' )
+# no deletion across repeat
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-empty-repeat-uniform-bowtie', show_breakpoints=False, range_start=257000, range_stop=259000, skip=0 )
+# deletion across repeat
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-deleted-repeat-uniform-bowtie', show_breakpoints=False, range_start=257000, range_stop=259000, skip=3, my_breakpoints=( range(257999, 258200) ), variation_label='Deletion' ) # bps via sed -n 11p
+# corresponding repeat with no deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-empty-repeat-other-loc-uniform-bowtie', show_breakpoints=False, range_start=19000, range_stop=21000, skip=0 )
+# corresponding repeat with deletion
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-deleted-repeat-other-loc-uniform-bowtie', show_breakpoints=False, range_start=19000, range_stop=21000, skip=3, my_breakpoints=( range(19887, 20088) ), variation_label='Pseudo Deletion' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
 #plot_depth_hist( 'out/malaria-depth-150422.out', 'malaria-depth-hist-150422' )#, 900, 1200, variation_label='Deletion' )
-plot_depth_hist_from_bedtools( 'out/Plasmodium_falciparum_1q_orig_dedup.hist', 'malaria-depth-hist-150422-dedup', max_depth=500 )#, 900, 1200, variation_label='Deletion' )
-plot_depth_hist( 'out/malaria-depth-dedup-150422.out', 'malaria-depth-hist-150422-dedup-fixed')#, max_depth=500 )#, 900, 1200, variation_label='Deletion' )
+#plot_depth_hist_from_bedtools( ['out/Plasmodium_falciparum_1q_orig.hist', 'out/Plasmodium_falciparum_1q_orig_dedup.hist'], 'malaria-orig-depth-hist-150422-bedtools', labels=['Original', 'Deduped'], max_depth=400 )#, 900, 1200, variation_label='Deletion' )
+#plot_depth_hist( 'out/malaria-depth-dedup-150422.out', 'malaria-depth-hist-150422-dedup-fixed')#, max_depth=500 )#, 900, 1200, variation_label='Deletion' )
 
 #plot_multi_zero_depth( 'out/malaria-depth-150422.out', 'malaria-depth-150422.out', ('Real Readset',), colors=('blue',), show_index=set( (0,) ), max_depth=19, min_length=50 )
 #plot_multi_zero_depth( 'out/malaria-depth-dedup-150422.out', 'malaria-depth-dedup-150422.out', ('Real Readset',), colors=('blue',), show_index=set( (0,) ), max_depth=19, min_length=50 )
@@ -1777,6 +1981,20 @@ plot_depth_hist( 'out/malaria-depth-dedup-150422.out', 'malaria-depth-hist-15042
 #plot_multi_zero_depth( 'out/read-depth-deletion-150416-depth-vs-errors.out', 'circoviridae-depth-vs-errors-zeros', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta') )#, 900, 1200, variation_label='Deletion' )
 
 #### in report
+# combined unique with empty
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-deleted-unique-other-loc-uniform-combined', show_breakpoints=False, range_start=299000, range_stop=301000, my_depths=(0,1), my_breakpoints=( range(299999, 300200) ), variation_label='Deletion location', my_max=25, labels=('Without deletion', 'With deletion'), legend='upper right' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
+# combined deletion with empty
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-deleted-repeat-other-loc-uniform-combined', show_breakpoints=False, range_start=257000, range_stop=259000, my_depths=(0,3), my_breakpoints=( range(257999, 258200) ), variation_label='Deletion location', my_max=25, labels=('Without deletion', 'With deletion'), legend='upper right' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
+# combined pseudo with empty
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-pseudo-deleted-repeat-other-loc-uniform-combined', show_breakpoints=False, range_start=19000, range_stop=21000, my_depths=(0,3), my_breakpoints=( range(19887, 20088) ), variation_label='Pseudo deletion location', my_max=70, labels=('Without deletion', 'With deletion'), legend='upper right' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
+
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-deleted-unique-other-loc-uniform-bowtie-combined', show_breakpoints=False, range_start=299000, range_stop=301000, my_depths=(0,1), my_breakpoints=( range(299999, 300200) ), variation_label='Deletion location', my_max=25, labels=('Without deletion', 'With deletion'), legend='upper right' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-deleted-repeat-other-loc-uniform-bowtie-combined', show_breakpoints=False, range_start=257000, range_stop=259000, my_depths=(0,3), my_breakpoints=( range(257999, 258200) ), variation_label='Deletion location', my_max=25, labels=('Without deletion', 'With deletion'), legend='upper right' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
+#plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform-bowtie.out', 'e-coli-depth-vs-repeats-150424-deleted-pseudo-other-loc-uniform-bowtie-combined', show_breakpoints=False, range_start=19000, range_stop=21000, my_depths=(0,3), my_breakpoints=( range(19887, 20088) ), variation_label='Pseudo deletion location', my_max=25, labels=('Without deletion', 'With deletion'), legend='upper right' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
+
+#plot_depth_hist_from_bedtools( ('out/Plasmodium_falciparum_1q_orig_dedup.hist',), 'malaria-depth-hist-150422-dedup-poisson', max_depth=500, labels=('Observed',), with_poisson=True, with_nbinom=True, nbinom_var=(3, 6) )#, 900, 1200, variation_label='Deletion' )
+#plot_depth_hist_from_bedtools( ('out/ERR588535-bwa-basic.hist',), 'e-coli-mg1655-ERR588535-bwa-basic', max_depth=500, labels=('Observed',), with_poisson=True, with_nbinom=True, nbinom_var=(3, 6) )#, 900, 1200, variation_label='Deletion' )
+
 #plot_depth( 'out/read-depth-deletion-150407-100x.out', 'circoviridae-deletion-100x-zoom', 900, 1200, variation_label='Deletion' )
 #plot_depth( 'out/read-depth-deletion-150407-15x-poisson.out', 'circoviridae-deletion-15x-poisson-zoom', 900, 1200, variation_label='Deletion' )
 #plot_depth( 'out/read-depth-deletion-150414-10x-poisson-50del.out', 'circoviridae-deletion-15x-poisson', variation_label='Deletion', features=('Evidence',), show_features=True )#, 900, 1200, variation_label='Deletion' )

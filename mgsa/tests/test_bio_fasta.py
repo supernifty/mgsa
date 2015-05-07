@@ -233,6 +233,43 @@ class TestFastaMutate( unittest.TestCase ):
     self.assertEqual( 'c', items[1][1] )
     self.assertEqual( 'c', items[1][3] )
 
+  def test_insert_tandem(self):
+    reader = self._make_reader( ( 'gc', 'at' ) )
+    mutator = bio.FastaMutate( reader, log=self.quiet_log, snp_prob=0, insert_prob=1, delete_prob=0, allow_end_mutate=True, insert_source='tandem' )
+    items = []
+    for item in mutator.items():
+      items.append(item)
+    self.assertTrue( 2, len(items) )
+    self.assertTrue( 2, len(items[0]) )
+    self.assertTrue( 2, len(items[1]) )
+    # 1st two don't have insertions
+    self.assertEqual( 'gc', items[0] )
+    # 2nd two do have tandem insertions of length 1
+    #print items
+    self.assertEqual( 4, len(items[1]) )
+    self.assertEqual( 'c', items[1][0] )
+    self.assertEqual( 'a', items[1][1] )
+    self.assertEqual( 'a', items[1][2] )
+    self.assertEqual( 't', items[1][3] )
+
+  def test_insert_tandem_longer(self):
+    reader = self._make_reader( ( 'gg', 'at' ) )
+    mutator = bio.FastaMutate( reader, log=self.quiet_log, snp_prob=0, insert_prob=1, delete_prob=0, allow_end_mutate=True, insert_source='tandem', min_insert_len=2, max_insert_len=2 )
+    items = []
+    for item in mutator.items():
+      items.append(item)
+    self.assertTrue( 2, len(items) )
+    self.assertTrue( 2, len(items[0]) )
+    self.assertTrue( 2, len(items[1]) )
+    # 1st two don't have insertions
+    self.assertEqual( 'gg', items[0] )
+    # insertion before the last t, ga -> gaga
+    self.assertEqual( 4, len(items[1]) )
+    self.assertEqual( 'a', items[1][0] )
+    self.assertEqual( 'g', items[1][1] )
+    self.assertEqual( 'a', items[1][2] )
+    self.assertEqual( 't', items[1][3] )
+
   def quiet_log(self, msg):
     pass
 

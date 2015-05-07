@@ -179,16 +179,16 @@ class ProbabilisticFasta(object):
     return result 
 
 class MultiFastaMutate(object):
-  def __init__( self, multi_reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, min_variation_start=0, probabilistic=True, insert_source='random', allow_end_mutate=False ):
+  def __init__( self, multi_reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, min_variation_start=0, probabilistic=True, insert_source='random', allow_end_mutate=False, tandem_count=1 ):
     for reader in multi_reader.items():
-      FastaMutate( reader, log, vcf_file, snp_prob, insert_prob, delete_prob, min_insert_len, max_insert_len, min_delete_len, max_delete_len, min_variation_dist, min_variation_start, probabilistic, insert_source, allow_end_mutate )
+      FastaMutate( reader, log, vcf_file, snp_prob, insert_prob, delete_prob, min_insert_len, max_insert_len, min_delete_len, max_delete_len, min_variation_dist, min_variation_start, probabilistic, insert_source, allow_end_mutate, tandem_count=1 )
 
 class FastaMutate(object):
   '''
     change a reference fasta
   '''
 
-  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, min_variation_start=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AACCCTTGGG' ):
+  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, min_variation_start=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AACCCTTGGG', tandem_count=1 ):
     '''
       @reader: FastaReader
       @vcf_file: write mutations to vcf
@@ -209,6 +209,7 @@ class FastaMutate(object):
     self.probabilistic = probabilistic
     self.probabilities = probabilities
     self.insert_source = insert_source
+    self.tandem_count = tandem_count
     self.insert_source_data = ''
     if vcf_file is not None:
       self.vcf = vcf.VCF( writer=vcf.VCFWriter(vcf_file) )
@@ -233,6 +234,11 @@ class FastaMutate(object):
         break
       if self.insert_source == 'repeat':
         self.insert_source_data += str(fragment)
+      elif self.insert_source == 'tandem':
+        self.insert_source_data += str(fragment)
+        if len(self.insert_source_data) > len(str(fragment)) + self.max_insert_len: # keep this fragment + length
+          self.insert_source_data = self.insert_source_data[-len(str(fragment)) - self.max_insert_len:]
+        #self.log( 'insert_source_data: %s' % self.insert_source_data )
       # apply mutations
       if self.allow_end_mutate or self.reader.has_next_item(): # don't mutate last fragment
         fragment = self.mutate( fragment )
@@ -250,17 +256,23 @@ class FastaMutate(object):
       self.vcf.snp( self.pos, c, new_c )
     return new_c
 
-  def add_insertion(self, c):
+  def add_insertion(self, c, fragment_pos, fragment_len ):
     '''
       generates a new insertion and returns it
+      insertion gets placed before current base
     '''
     insert_len = random.randint(self.min_insert_len, self.max_insert_len) # decide insertion len
     # generate actual insertion
     if self.insert_source == 'repeat' and len(self.insert_source_data) >= insert_len:
-      self.log( 'choosing fragment up to %i' % len(self.insert_source_data) )
+      #self.log( 'choosing repeated fragment up to %i' % len(self.insert_source_data) )
       fragment_start = random.randint(0, len(self.insert_source_data) - insert_len)
       new_c = self.insert_source_data[fragment_start:fragment_start + insert_len]
       #self.log( "repeat %s from %i:%i" % ( new_c, fragment, position ) )
+    elif self.insert_source == 'tandem' and len(self.insert_source_data) >= insert_len + fragment_len:
+      #self.log( 'choosing tandem fragment up to %i from %s' % ( len(self.insert_source_data), self.insert_source_data ) )
+      # want the insert_len chars directly before fragment_pos, where data is len fragment_len + insert_len
+      dist_from_end = fragment_len - fragment_pos
+      new_c = self.insert_source_data[ -insert_len -dist_from_end: -dist_from_end ]
     elif self.insert_source == 'random':
       new_c = ''
       while insert_len > 0:
@@ -298,7 +310,8 @@ class FastaMutate(object):
 
   def mutate(self, fragment):
     result = ''
-    for c in fragment: # iterate over each base in fragment
+    for fragment_pos, c in enumerate(fragment): # iterate over each base in fragment
+      #self.log( 'evaluating %s' % c )
       if self.deletion_remain > 0:
         self.continue_deletion( c )
       elif self.probabilistic:
@@ -309,12 +322,14 @@ class FastaMutate(object):
           self.last_variation_pos = self.pos
         # insert
         elif random.uniform(0, 1) < self.insert_prob and self.pos >= self.min_variation_start and self.pos > self.max_insert_len and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): # TODO reads can get -ve reference
-          new_c = self.add_insertion( c )
+          new_c = self.add_insertion( c, fragment_pos, len(fragment) )
+          self.log( 'added insertion at %i' % self.pos )
           result += new_c + c # insertion gets placed before current base
           self.last_variation_pos = self.pos - 1 # -1 because insertion is placed before current
         # delete
         elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): 
           self.add_deletion( c )
+          self.log( 'added deletion at %i' % self.pos )
           self.last_variation_pos = self.pos + self.deletion_remain
         # no mutation
         else: 
