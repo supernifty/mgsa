@@ -1227,7 +1227,26 @@ def plot_depth_predictor( src, short_name, my_depths=0, my_breakpoints_lines=1, 
 
   fig.savefig('%s/predict-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
+  # roc from hists
+  return bio.generate_roc( hist_n, hist_p )
 
+def plot_rocs( rocs, labels, legend='lower right', short_name='test', xmax=1., colors=('b', 'r'), markers=('s', 'o') ):
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+
+  ax.set_ylabel('TPR')
+  ax.set_xlabel('FPR')
+
+  for idx, roc in enumerate(rocs):
+    ax.plot( roc['fpr'], roc['tpr'], color=colors[idx], label=labels[idx], marker=markers[idx], markersize=4 )
+    ax.fill_between( roc['fpr'], roc['tpr'], 0, color=colors[idx], alpha=0.1)
+
+  plt.xlim(xmax=xmax)
+  leg = ax.legend( loc=legend, prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+
+  fig.savefig('%s/roc-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
+  
 
 def plot_depth( src, short_name, range_start=0, range_stop=-1, variation_label='Variation', features=(), show_features=False, show_breakpoints=True, labels=('Coverage',), my_depths=(0,), my_breakpoints=None, my_breakpoints_lines=None, my_max=0, legend='upper left', colors=('b', 'g', 'magenta', 'red', 'black'), my_horizontal=None ):
   '''
@@ -1859,8 +1878,9 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430-poisson', 941, 1059, show_breakpoints=False, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
 #plot_depth( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(2,), my_breakpoints_lines=(3,), legend='lower left', my_horizontal=(50, 70,) )
 # don't do this plot_depth( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(0,), my_breakpoints_lines=(1,), legend='lower right', my_horizontal=(50, 70,) )
-#plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
-plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+plot_rocs( ( bwa_roc, bowtie_roc ), labels=('BWA', 'Bowtie'), short_name='bwa-vs-bowtie', xmax=0.5 )
 #plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=200, window=0)
 #plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'circoviridae-depth-unique-insertion-rd100-150430-poisson', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=200, window=8)
 

@@ -25,3 +25,22 @@ def sign_bucket( values ):
   if result['positive'] + result['negative'] > 0:
     result['positive_proportion'] = result['positive'] / ( result['positive'] + result['negative'] )
   return result
+
+def generate_roc( hist_n, hist_p ):
+  '''
+    generate points of fpr, tpr by considering each point in the negative and positive histograms
+  '''
+  fprs = []
+  tprs = []
+  for threshold in xrange(0, max(len(hist_n), len(hist_p))):
+    # we are classifying everything less than threshold as positive
+    tp = sum( hist_p[:threshold] ) # correct +ves
+    fn = sum( hist_p[threshold:] ) # missed +ves
+    tpr = 1. * tp / ( tp + fn )
+    fp = sum( hist_n[:threshold] )
+    tn = sum( hist_n[threshold:] )
+    fpr = 1. * fp / ( fp + tn )
+    tprs.append( tpr )
+    fprs.append( fpr )
+
+  return { 'fpr': fprs, 'tpr': tprs }

@@ -16,3 +16,17 @@ class TestStatistics(unittest.TestCase):
     self.assertEqual( 0.2, b['negative'] )
     self.assertEqual( 0.2, b['zero'] )
     self.assertAlmostEqual( 0.75, b['positive_proportion'] )
+
+  def test_roc(self):
+    hist_n = [ 3, 2, 1 ]
+    hist_p = [ 1, 2, 3 ]
+    # positives are at lower values
+    rocs = bio.generate_roc( hist_n, hist_p )
+
+    self.assertAlmostEqual( 0, rocs['fpr'][0] )
+    self.assertAlmostEqual( 0.5, rocs['fpr'][1] )
+    self.assertAlmostEqual( 5./6, rocs['fpr'][2] )
+
+    self.assertAlmostEqual( 0, rocs['tpr'][0] )
+    self.assertAlmostEqual( 1./6, rocs['tpr'][1] )
+    self.assertAlmostEqual( 0.5, rocs['tpr'][2] )
