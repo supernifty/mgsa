@@ -440,7 +440,7 @@ class SamDiff(object):
  
   def parse_line( self, pos, bit_pos, line ):
     fields = line.split()
-    if len(fields) < 4:
+    if len(fields) < 4 or line.startswith('@'):
       pass #self.log( 'WARN: %i: unexpected format: %s' % ( pos, line.strip() ) )
     else:
       flag = int(fields[1])
