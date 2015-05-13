@@ -40,6 +40,7 @@ class Config(object):
     * coverage_dist: uniform, poisson
     * error_prob: prob of error at any position
     * error_type: e.g. snv, homopolymer_3
+    * fastq_source: generated or filename; use command reads for generated, else skip to generate sam from provided fastq
     * command: fasta, mutation, reads, vcf: only generate the vcf, don't evaluate
     * inversion_prob
     * paired_end_length
@@ -58,7 +59,7 @@ class Config(object):
   floats = ( 'insert_prob', 'delete_prob', 'snp_prob', 'error_prob', 'inversion_prob', 'mult_snp_prob' )
   ints = ( 'min_insertion_len', 'max_insertion_len', 'min_deletion_len', 'max_deletion_len', 'min_variation_distance', 'min_variation_start', 'read_length', 'coverage', 'mult', 'bias_report_buckets')
   # insertion_source: novel (from another genome), repeated (from this genome), random (generated)
-  default_config = { 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'min_insertion_len': 1, 'max_insertion_len': 1, 'min_deletion_len': 1, 'max_deletion_len': 1, 'min_variation_distance': 1, 'min_variation_start': 0, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 100, 'fasta': 'circoviridae', 'coverage': 10, 'coverage_dist': 'uniform', 'error_prob': 0, 'error_type': 'snv', 'command': '', 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '-', 'bias_report_buckets': 10, 'insertion_source': 'random', 'tandem_count': 1, 'call_strategy': 'majority', 'sam_source': 'generated', 'fasta_reference': 'generated', 'vcf_source': 'generated', 'vcf_exclude': 'none', 'chromosomes': 'false', 'vcf_out': 'generated' }
+  default_config = { 'fastq_source': 'generated', 'insert_prob': 0, 'delete_prob': 0, 'snp_prob': 0, 'min_insertion_len': 1, 'max_insertion_len': 1, 'min_deletion_len': 1, 'max_deletion_len': 1, 'min_variation_distance': 1, 'min_variation_start': 0, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 100, 'fasta': 'circoviridae', 'coverage': 10, 'coverage_dist': 'uniform', 'error_prob': 0, 'error_type': 'snv', 'command': '', 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '-', 'bias_report_buckets': 10, 'insertion_source': 'random', 'tandem_count': 1, 'call_strategy': 'majority', 'sam_source': 'generated', 'fasta_reference': 'generated', 'vcf_source': 'generated', 'vcf_exclude': 'none', 'chromosomes': 'false', 'vcf_out': 'generated' }
 
   def __init__( self ):
     pass

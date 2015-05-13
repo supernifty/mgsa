@@ -73,16 +73,24 @@ for line in open( config_file, 'r' ):
   else:
     vcf_file = "../../data/%s" % cfg['vcf_source']
 
+  mutant_fasta = '../../data/%s_%s_x%s.fasta' % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
   # generates a donor sequence that contains mutations from the reference sequence and writes the mutations to vcf_file
   if cfg['command'] == 'mutations':  
-    run( "python generate_mutation.py %s %s %s > ../../data/%s_%s_x%s.fasta" % ( fasta_file, vcf_file, cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
-    continue
+    run( "python generate_mutation.py %s %s %s > %s" % ( fasta_file, vcf_file, cfg_file, mutant_fasta ) )
+    continue # done with this line!
 
   # generates reads from the donor sequence
   variation_map_file = '../../data/%s_%s_x%s.vmap' % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
+
+  # the fastq file can be specified
+  if cfg['fastq_source'] != 'generated': # default config
+    fastq_file = cfg['fastq_source']
+  else:
+    fastq_file = '../../data/%s_%s_x%s.fastq' % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
+
   if cfg['command'] == 'reads':  
-    run( "python generate_reads.py %s ../../data/%s_%s_x%s.vcf %s < ../../data/%s_%s_x%s.fasta > ../../data/%s_%s_x%s.fastq" % ( cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], variation_map_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
-    continue
+    run( "python generate_reads.py %s ../../data/%s_%s_x%s.vcf %s < %s > %s" % ( cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], variation_map_file, mutant_fasta, fastq_file ) )
+    continue # done with this line!
 
   # if sam not provided, run an aligner and evaluate read alignment
   # default read alignment results
@@ -90,21 +98,27 @@ for line in open( config_file, 'r' ):
   incorrect = 0
   recall = 0
 
-  if cfg['sam_source'] == 'generated':
+  if cfg['sam_source'] == 'generated': # default config
+    # do alignment fastq -> sam
     sam_file =  "../../data/%s_%s_x%s_%s.sam" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'] )
-    run( "python mapper_selector.py %s %s ../../data/%s_%s_x%s.fastq %s" % ( cfg['mapper'], fasta_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], sam_file ) )
 
-    # evaluates the alignment accuracy
-    eval_file = "../../data/%s_%s_x%s_%s_%s_evaluation.txt" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
-    run( "python evaluate_reads.py %s %s < %s > %s" % ( cfg_file, variation_map_file, sam_file, eval_file ) )
-    # parse results
-    for eval_line in open( eval_file, 'r' ):
-      if eval_line.startswith( '%mapped_unmapped' ):
-        unmapped = float( eval_line.strip().split()[1] )
-      if eval_line.startswith( '%mapped_incorrectly' ):
-        incorrect = float( eval_line.strip().split()[1] )
-      if eval_line.startswith( '%mapped_recall' ):
-        recall = float( eval_line.strip().split()[1] ) / 100.
+    if cfg['fastq_source'] == 'generated': # map mutant reads against reference
+      run( "python mapper_selector.py %s %s ../../data/%s %s" % ( cfg['mapper'], fasta_file, fastq_file, sam_file ) )
+    else: # map provided reads against mutant
+      run( "python mapper_selector.py %s %s ../../data/%s %s" % ( cfg['mapper'], mutant_fasta, fastq_file, sam_file ) )
+
+    # evaluates the alignment accuracy (if possible)
+    if cfg['fastq_source'] == 'generated':
+      eval_file = "../../data/%s_%s_x%s_%s_%s_evaluation.txt" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
+      run( "python evaluate_reads.py %s %s < %s > %s" % ( cfg_file, variation_map_file, sam_file, eval_file ) )
+      # parse results
+      for eval_line in open( eval_file, 'r' ):
+        if eval_line.startswith( '%mapped_unmapped' ):
+          unmapped = float( eval_line.strip().split()[1] )
+        if eval_line.startswith( '%mapped_incorrectly' ):
+          incorrect = float( eval_line.strip().split()[1] )
+        if eval_line.startswith( '%mapped_recall' ):
+          recall = float( eval_line.strip().split()[1] ) / 100.
 
   else:
     sam_file =  "../../data/%s" % cfg['sam_source'] # existing sam file
@@ -136,7 +150,10 @@ for line in open( config_file, 'r' ):
     if cfg['chromosomes'] == 'true':
       bio.SamToMultiChromosomeVCF( sam=sam_fh, multi_fasta_reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
     else:
-      bio.SamToVCF.instance( sam=sam_fh, reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+      if cfg['fastq_source'] == 'generated':
+        bio.SamToVCF.instance( sam=sam_fh, reference=open( fasta_file, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
+      else: # fastq is mapped to mutant
+        bio.SamToVCF.instance( sam=sam_fh, reference=open( mutant_fasta, 'r' ), target_vcf=candidate_vcf, log=bio.log_stderr, call_strategy=cfg['call_strategy'] ) # write to vcf
 
   if cfg['command'] == 'vcf':
     # don't compare correct vcf to candidate vcf, we just wanted to generate a vcf

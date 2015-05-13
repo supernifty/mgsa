@@ -177,3 +177,24 @@ class TestVCFFastaDiff( unittest.TestCase ):
     self.assertEqual( 0, diff.snp_stats['tp'] )
     self.assertEqual( 1, diff.snp_stats['other'] )
 
+class TestVCFInverter( unittest.TestCase ):
+  
+  def test_snp_invert( self ):
+    src = StringIO.StringIO( '.\t3\t.\tA\tG\t3.0\tPASS\tDP=10\tGT\t1' )
+    out = StringIO.StringIO()
+    inv = bio.VCFInverter(src, out)
+    self.assertEqual( '.\t3\t.\tG\tA\t3.0\tPASS\tDP=10\tGT\t1\n', out.getvalue() )
+  
+  def test_snp_insert( self ):
+    src = StringIO.StringIO( '.\t3\t.\tAA\tAGA\t3.0\tPASS\tDP=10\tGT\t1\n.\t5\t.\tA\tG\t3.0\tPASS\tDP=10\tGT\t1' )
+    out = StringIO.StringIO()
+    inv = bio.VCFInverter(src, out)
+    self.assertEqual( '.\t3\t.\tAGA\tAA\t3.0\tPASS\tDP=10\tGT\t1\n.\t6\t.\tG\tA\t3.0\tPASS\tDP=10\tGT\t1\n', out.getvalue() )
+   
+  def test_snp_delete( self ):
+    src = StringIO.StringIO( '.\t3\t.\tAGA\tAA\t3.0\tPASS\tDP=10\tGT\t1\n.\t6\t.\tA\tG\t3.0\tPASS\tDP=10\tGT\t1' )
+    out = StringIO.StringIO()
+    inv = bio.VCFInverter(src, out)
+    self.assertEqual( '.\t3\t.\tAA\tAGA\t3.0\tPASS\tDP=10\tGT\t1\n.\t5\t.\tG\tA\t3.0\tPASS\tDP=10\tGT\t1\n', out.getvalue() )
+    
+    

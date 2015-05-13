@@ -623,6 +623,7 @@ class RepeatedMultiFastaGenerator( object ):
 class RepeatedFastaGenerator( object ):
   def __init__( self, reader, out_fh, multiplier, cfg, log=bio.log_quiet ):
     '''
+      this just makes repeats of an entire fasta with a specified snp mutation prob
       @reader: FastaReader
       @cfg: config dictionary
     '''

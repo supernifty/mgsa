@@ -1074,30 +1074,39 @@ def plot_vcf_parent_vs_child_chromosomes( parent_fn, child_fn, true_fn, out_fn, 
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
 
   
-def plot_vcf( fn, out_fn ):
-  vcf = bio.VCF( reader=open( '../../data/%s' % fn ) )
-  x = []
-  y = []
-  for snp in vcf.snp_list:
-    x.append( snp['pos'] )
-    confidence = snp['conf']
-    if confidence >= 1.:
-      qual = MAX_QUALITY
-    else:
-      qual = -10 * math.log( 1. - confidence, 10 )
-    y.append( qual )
-
+def plot_vcf( fn_list, out_fn, labels ):
   fig = plt.figure()
   ax = fig.add_subplot(111)
-  ax.scatter(x, y, color='g', edgecolor = "none")#, log=True)
+  colors = ('r', 'g', 'b')
+
+  xmax = 1
+  for idx, fn in enumerate(fn_list):
+    vcf = bio.VCF( reader=open( '../../data/%s' % fn ) )
+    x = []
+    y = []
+    for snp in vcf.snp_list:
+      x.append( snp['pos'] )
+      confidence = snp['conf']
+      if confidence >= 1.:
+        qual = MAX_QUALITY
+      else:
+        qual = -10 * math.log( 1. - confidence, 10 )
+      y.append( qual )
+      xmax = max(xmax, snp['pos'] )
+  
+    ax.scatter(x, y, edgecolor="none", color=colors[idx], label='%s (%i)' % ( labels[idx], len(vcf.snp_list) ) ) #, log=True)
+
   ax.set_ylabel('Quality')
   ax.set_xlabel('Position')
-  ax.set_xlim( xmin=0 )
-  #leg = ax.legend(loc='upper left', prop={'size':10})
-  #leg.get_frame().set_alpha(0.8)
+  ax.set_xlim( xmin=0, xmax=xmax )
+  ax.set_ylim( ymin=0 )
+
+  leg = ax.legend(loc='upper left', prop={'size':10})
+  leg.get_frame().set_alpha(0.8)
+
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
 
-def plot_vcf_parent_vs_child( parent_fn, child_fn, out_fn, parent_label='parent', child_label='child', highlight_differences=False ):
+def plot_vcf_parent_vs_child( parent_fn, child_fn, out_fn, parent_label='parent', child_label='child', highlight_differences=False, legend='upper right' ):
   parent = bio.VCF( reader=open( '../../data/%s' % parent_fn ) )
   child = bio.VCF( reader=open( '../../data/%s' % child_fn ) )
   diff = bio.VCFDiff( vcf_correct=parent, vcf_candidate=child, generate_positions = True )
@@ -1124,7 +1133,7 @@ def plot_vcf_parent_vs_child( parent_fn, child_fn, out_fn, parent_label='parent'
   ax.set_ylabel('Quality')
   ax.set_xlabel('Position')
   ax.set_xlim( xmin=0 )
-  leg = ax.legend(loc='upper right', prop={'size':8})
+  leg = ax.legend(loc=legend, prop={'size':8})
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/%s.pdf' % ( REPORT_DIRECTORY, out_fn ), format='pdf', dpi=1000)
 
@@ -1165,7 +1174,7 @@ def plot_entropy( src, short_name ):
   ax.scatter(entropy_list, accuracy_list, s=2, color='b' )#, s=2)
   fig.savefig('%s/entropy-%s.pdf' % (REPORT_DIRECTORY, short_name), format='pdf', dpi=1000)
 
-def plot_depth_predictor( src, short_name, my_depths=0, my_breakpoints_lines=1, legend='upper left', my_max_depth=None, window=0, x_label='Depth' ):
+def plot_depth_predictor( src, short_name, my_depths=0, my_breakpoints_lines=1, legend='upper left', my_max_depth=None, window=0, x_label='Depth', normalize=True ):
   '''
     just does 1 depth set and 1 breakpoint
   '''
@@ -1208,8 +1217,9 @@ def plot_depth_predictor( src, short_name, my_depths=0, my_breakpoints_lines=1, 
 
   print "hist_p", sum(hist_p), "hist_n", sum(hist_n)
   # normalize
-  hist_n = [ 1. * v / sum(hist_n) for v in hist_n ]
-  hist_p = [ 1. * v / ( sum(hist_p) + sum(hist_c) ) for v in hist_p ]
+  if normalize:
+    hist_n = [ 1. * v / sum(hist_n) for v in hist_n ]
+    hist_p = [ 1. * v / ( sum(hist_p) + sum(hist_c) ) for v in hist_p ]
 #  hist_c = [ 1. * v / ( sum(hist_p) + sum(hist_c) ) for v in hist_c ]
 
   fig = plt.figure()
@@ -1234,8 +1244,8 @@ def plot_rocs( rocs, labels, legend='lower right', short_name='test', xmax=1., c
   fig = plt.figure()
   ax = fig.add_subplot(111)
 
-  ax.set_ylabel('TPR')
-  ax.set_xlabel('FPR')
+  ax.set_ylabel('True Positive Rate')
+  ax.set_xlabel('False Positive Rate')
 
   for idx, roc in enumerate(rocs):
     ax.plot( roc['fpr'], roc['tpr'], color=colors[idx], label=labels[idx], marker=markers[idx], markersize=4 )
@@ -1867,6 +1877,10 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 
 
 #### experimental
+#plot_vcf_parent_vs_child( 'e-coli-bw2952.vcf', 'e-coli-mg1655.vcf', 'e-coli-bw2952-mg1655', 'K12', 'MG1655', highlight_differences=True, legend='lower left' )
+#plot_vcf_parent_vs_child( 'e-coli-iai39.vcf', 'e-coli-mg1655.vcf', 'e-coli-iai39-mg1655', 'IAI39', 'MG1655', highlight_differences=True, legend='lower left' )
+plot_vcf( ('e-coli-iai39.vcf','e-coli-bw2952.vcf', 'e-coli-mg1655.vcf'), 'ecoli-mapping-vcf-comparison', labels=('IAI39', 'K12', 'MG1655') )
+
 # novel insertion rd 10
 #plot_depth( 'out/read-depth-novel-150430-coverage.out', 'cicroviridae-depth-unique-insertion-200-150430', 941, 1059, show_breakpoints=True, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
 #plot_depth( 'out/read-depth-novel-150430-coverage-poisson.out', 'cicroviridae-depth-unique-insertion-200-150430-poisson', 941, 1059, show_breakpoints=False, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
@@ -1878,9 +1892,15 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430-poisson', 941, 1059, show_breakpoints=False, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
 #plot_depth( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(2,), my_breakpoints_lines=(3,), legend='lower left', my_horizontal=(50, 70,) )
 # don't do this plot_depth( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(0,), my_breakpoints_lines=(1,), legend='lower right', my_horizontal=(50, 70,) )
-bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
-bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
-plot_rocs( ( bwa_roc, bowtie_roc ), labels=('BWA', 'Bowtie'), short_name='bwa-vs-bowtie', xmax=0.5 )
+#
+#bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+#bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+#plot_rocs( ( bwa_roc, bowtie_roc ), labels=('BWA', 'Bowtie'), short_name='bwa-vs-bowtie', xmax=0.5 )
+###
+#bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-norm', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)', normalize=False)
+#bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie-norm', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)', normalize=False)
+#plot_rocs( ( bwa_roc, bowtie_roc ), labels=('BWA', 'Bowtie'), short_name='bwa-vs-bowtie-norm', xmax=0.5 )
+#
 #plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=200, window=0)
 #plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'circoviridae-depth-unique-insertion-rd100-150430-poisson', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=200, window=8)
 
@@ -2085,8 +2105,8 @@ plot_rocs( ( bwa_roc, bowtie_roc ), labels=('BWA', 'Bowtie'), short_name='bwa-vs
 #old plot_vcf_parent_vs_child()
 #
 #plot_vcf_parent_vs_child( 'Plasmodium_falciparum_3d_p_CHR02_recovered.vcf', 'Plasmodium_falciparum_3d7_1q_CHR02_recovered.vcf', 'malaria-3d7-p-vs-3d7-1q-vcf' )
-#plot_vcf( 'hiv_efree.vcf', 'hiv_vcf_error_free' )
-#plot_vcf( 'hiv_raw_bwa_150303a.vcf', 'hiv_vcf_raw_bwa_150303' )
+#plot_vcf( ('hiv_efree.vcf',), 'hiv_vcf_error_free', labels=('Error Free',) ) # broken
+#plot_vcf( ('hiv_raw_bwa_150303a.vcf',), 'hiv_vcf_raw_bwa_150303', labels=('Raw',) ) # broken
 #plot_vcf_parent_vs_child( 'hiv_raw_bwa_150303a.vcf', 'hiv_efree.vcf', 'hiv_efree_vs_raw', 'Raw Reads', 'Error Free Reads', highlight_differences=True )
 #plot_vcf_parent_vs_child( 'hiv_efreeread_pg_150303.vcf', 'hiv_efree.vcf', 'hiv_efree_pg_vs_efree_provied', 'Generated Error Free', 'Provided Error Free', highlight_differences=True )
 #plot_vcf_parent_vs_child( 'hiv_raw_bwa_150303a.vcf', 'hiv_raw_stripped_bwa_150303.vcf', 'hiv_raw_nostrip_vs_strip', 'not stripped', 'stripped', highlight_differences=True )

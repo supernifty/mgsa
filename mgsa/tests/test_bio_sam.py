@@ -164,6 +164,23 @@ class TestFastaMutate( unittest.TestCase ):
     self.assertTrue( result[0][3] in ('C', 'T', 'G') )
     self.assertEqual( 4, len(mutator.vcf.snp_map) )
 
+class TestSamDiff( unittest.TestCase ):
+  def test_simple(self):
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    diff = bio.SamDiff( [ sam1, sam2] )
+    # diff.totals
+    self.assertEqual( 1, len(diff.totals.keys()))
+    self.assertEqual( 1, diff.totals[3] )
+
+  def test_split(self):
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  4       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    diff = bio.SamDiff( [ sam1, sam2] )
+    # diff.totals
+    self.assertEqual( 1, len(diff.totals.keys()))
+    self.assertEqual( 1, diff.totals[1] )
+
 class TestSamAccuracyEvaluator( unittest.TestCase ):
   def test_simple(self):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )

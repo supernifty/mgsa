@@ -40,6 +40,8 @@ def generate_roc( hist_n, hist_p ):
     fp = sum( hist_n[:threshold] )
     tn = sum( hist_n[threshold:] )
     fpr = 1. * fp / ( fp + tn )
+    if threshold == 80:
+      print "@80: tp", tp, "fn", fn, "tpr", tpr, "fp", fp, "tn", tn, "fpr", fpr, "totalpos", sum(hist_p), "totalneg", sum(hist_n)
     tprs.append( tpr )
     fprs.append( fpr )
 

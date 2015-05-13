@@ -1,4 +1,5 @@
 
+import collections
 import datetime
 import random
 import re
@@ -418,6 +419,39 @@ class SamAccuracyEvaluator(object):
               self.incorrect_diff[ diff ] = 0
             self.incorrect_diff[ diff ] += 1
  
+class SamDiff(object):
+  def __init__( self, sam_fhs, log=bio.log_stderr ):
+    self.log = log
+    self.stats = collections.defaultdict(int)
+
+    for idx, reader in enumerate(sam_fhs):
+      log( 'processing %i...' % idx )
+      bit_pos = 2 ** idx
+      for pos, line in enumerate(reader):
+        self.parse_line( pos, bit_pos, line.strip() )
+        if ( pos + 1 ) % 100000 == 0:
+          log( 'processed %i...' % pos )
+      log( 'processing %i: read %i lines' % ( idx, pos ) )
+
+    log( 'analyzing...' )
+    self.totals = collections.defaultdict(int)
+    for key, value in self.stats.items(): # readname, distribution
+      self.totals[value] += 1
+ 
+  def parse_line( self, pos, bit_pos, line ):
+    fields = line.split()
+    if len(fields) < 4:
+      pass #self.log( 'WARN: %i: unexpected format: %s' % ( pos, line.strip() ) )
+    else:
+      flag = int(fields[1])
+      if flag & 0x04 != 0: # unmapped
+        pass 
+      else:
+        if flag & 0x02 != 0: # mapped
+          self.stats[fields[0]] |= bit_pos
+        else: # unknown mapping (assume mapped)
+          self.stats[fields[0]] |= bit_pos
+
 class SamWriter(object):
   def __init__( self, fh ):
     self._fh = fh

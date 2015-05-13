@@ -1,4 +1,5 @@
 
+import collections
 import datetime
 import math
 import random
@@ -251,6 +252,27 @@ class VCF(object):
 
   def __str__( self ):
     return 'snps: %s indels: %s' % ( self.snp_list, self.manager )
+
+class VCFInverter(object):
+  def __init__( self, reader, writer ):
+    '''
+      @reader: fh
+      @writer: fh
+    '''
+    alt_pos_net = collections.defaultdict(int)
+    for line in reader:
+      if line.startswith('#'):
+        writer.write( line )
+      else:
+        fields = line.split()
+        ref_pos = int( fields[1] )
+        ref = fields[3]
+        alt = fields[4]
+        diff = len(alt) - len(ref)
+        fields[1] = str( ref_pos + alt_pos_net[fields[0]] ) # alt position
+        fields[3], fields[4] = fields[4], fields[3] # reverse ref/alt
+        writer.write( '%s\n' % ( '\t'.join( fields ) ) )
+        alt_pos_net[fields[0]] += diff
 
 class VCFWriter(object):
   '''
