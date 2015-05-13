@@ -425,13 +425,13 @@ class SamDiff(object):
     self.stats = collections.defaultdict(int)
 
     for idx, reader in enumerate(sam_fhs):
-      log( 'processing %i...' % idx )
+      log( 'processing file %i...' % idx )
       bit_pos = 2 ** idx
       for pos, line in enumerate(reader):
         self.parse_line( pos, bit_pos, line.strip() )
         if ( pos + 1 ) % 100000 == 0:
-          log( 'processed %i...' % pos )
-      log( 'processing %i: read %i lines' % ( idx, pos ) )
+          log( 'processed %i lines...' % (pos+1) )
+      log( 'processed file %i: read %i lines' % ( idx, pos+1 ) )
 
     log( 'analyzing...' )
     self.totals = collections.defaultdict(int)
@@ -445,7 +445,7 @@ class SamDiff(object):
     else:
       flag = int(fields[1])
       if flag & 0x04 != 0: # unmapped
-        pass 
+        self.stats[fields[0]] |= 0 # don't change; set to 0 if not already present
       else:
         if flag & 0x02 != 0: # mapped
           self.stats[fields[0]] |= bit_pos

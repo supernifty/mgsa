@@ -181,6 +181,15 @@ class TestSamDiff( unittest.TestCase ):
     self.assertEqual( 1, len(diff.totals.keys()))
     self.assertEqual( 1, diff.totals[1] )
 
+  def test_unmapped(self):
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  4       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  4       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    diff = bio.SamDiff( [ sam1, sam2], log=bio.log_quiet )
+    # diff.totals
+    self.assertEqual( 1, len(diff.totals.keys()))
+    self.assertEqual( 1, diff.totals[0] )
+
+
 class TestSamAccuracyEvaluator( unittest.TestCase ):
   def test_simple(self):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
