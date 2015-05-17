@@ -1,6 +1,7 @@
 
 import collections
 import datetime
+import numpy
 import random
 import re
 import struct
@@ -423,14 +424,20 @@ class SamDiff(object):
   def __init__( self, sam_fhs, log=bio.log_stderr ):
     self.log = log
     self.stats = collections.defaultdict(int)
+    self.mapq_stats = []
 
     for idx, reader in enumerate(sam_fhs):
       log( 'processing file %i...' % idx )
       bit_pos = 2 ** idx
+      self.mapq = []
       for pos, line in enumerate(reader):
         self.parse_line( pos, bit_pos, line.strip() )
         if ( pos + 1 ) % 100000 == 0:
           log( 'processed %i lines...' % (pos+1) )
+      if len(self.mapq) > 0:
+        self.mapq_stats.append( { 'count': len(self.mapq), 'max': max(self.mapq), 'min': min(self.mapq), 'mean': numpy.mean( self.mapq ), 'sd': numpy.std( self.mapq ) } )
+      else:
+        self.mapq_stats.append( { 'count': 0, 'max': 0, 'min': 0, 'mean': 0, 'sd': 0 } )
       log( 'processed file %i: read %i lines' % ( idx, pos+1 ) )
 
     log( 'analyzing...' )
@@ -440,13 +447,14 @@ class SamDiff(object):
  
   def parse_line( self, pos, bit_pos, line ):
     fields = line.split()
-    if len(fields) < 4 or line.startswith('@'):
+    if len(fields) < 5 or line.startswith('@'):
       pass #self.log( 'WARN: %i: unexpected format: %s' % ( pos, line.strip() ) )
     else:
       flag = int(fields[1])
       if flag & 0x04 != 0: # unmapped
         self.stats[fields[0]] |= 0 # don't change; set to 0 if not already present
       else:
+        self.mapq.append( int( fields[4] ) )
         if flag & 0x02 != 0: # mapped
           self.stats[fields[0]] |= bit_pos
         else: # unknown mapping (assume mapped)
