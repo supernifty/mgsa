@@ -421,8 +421,9 @@ class SamAccuracyEvaluator(object):
             self.incorrect_diff[ diff ] += 1
  
 class SamDiff(object):
-  def __init__( self, sam_fhs, log=bio.log_stderr ):
+  def __init__( self, sam_fhs, mapq_min=0, log=bio.log_stderr ):
     self.log = log
+    self.mapq_min = mapq_min
     self.stats = collections.defaultdict(int)
     self.mapq_stats = []
 
@@ -451,10 +452,11 @@ class SamDiff(object):
       pass #self.log( 'WARN: %i: unexpected format: %s' % ( pos, line.strip() ) )
     else:
       flag = int(fields[1])
-      if flag & 0x04 != 0: # unmapped
+      mapq = int( fields[4] )
+      if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
         self.stats[fields[0]] |= 0 # don't change; set to 0 if not already present
       else:
-        self.mapq.append( int( fields[4] ) )
+        self.mapq.append( mapq )
         if flag & 0x02 != 0: # mapped
           self.stats[fields[0]] |= bit_pos
         else: # unknown mapping (assume mapped)
