@@ -206,6 +206,13 @@ class TestSamAccuracyEvaluator( unittest.TestCase ):
     self.assertEqual( 0, acc.stats['unmapped'] )
     self.assertEqual( 0.0, acc.stats['incorrect_mapq'] )
 
+class TestSamStats( unittest.TestCase ):
+  def test_gc(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_5~0~0  4       generated       6      60      15M       *       0       0       AAGCATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    stats = bio.SamStats( sam )
+    self.assertEqual( [0.1], stats.mapped['gc'] )
+    self.assertEqual( [0.2], stats.unmapped['gc'] )
+ 
 class TestBamReaderExternal( unittest.TestCase ):
   def test_simple(self):
     ext = bio.BamReaderExternal( "echo %s", "'hello'" )

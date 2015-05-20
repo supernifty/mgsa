@@ -2,7 +2,7 @@
 import collections
 import math
 
-WORD_SIZE = 3
+WORD_SIZE = 3 # i.e. triplets
 
 class ReadFeature (object):
   '''features of a read'''
@@ -17,18 +17,25 @@ class ReadFeature (object):
       return 0
 
     counts = collections.defaultdict(int)
-    for i in xrange( len(self.content) - self.word_size ):
-      counts[ self.content[i:i+self.word_size] ] += 1
+    words = len(self.content) - self.word_size
+    for i in xrange( words ):
+      counts[ self.content[i:i+self.word_size] ] += 1 # count how many of each (overlapping) word is in content
 
     result = 0.
+    max_count = max( self.alphabet, words )
     for word in counts:
-      result -= 1. * counts[word] / self.alphabet * math.log( 1. * counts[word] / self.alphabet, self.alphabet ) 
+      p = 1. * counts[word] / max_count
+      result -= p * math.log( p, self.alphabet ) 
+      #print "word", word, "result", result, "counts", counts[word], "alphabet", self.alphabet
 
     return result
 
   def complexity( self ):
     '''based on dust TODO'''
     pass
+
+  def gc( self ):
+    return 1. * ( self.content.count('G') + self.content.count('C') ) / ( self.content.count('G') + self.content.count('C') + self.content.count('A') + self.content.count('T') )  
 
 class MapFeature (object):
   '''features of a mapped location'''

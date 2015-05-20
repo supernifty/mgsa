@@ -11,6 +11,7 @@ import zlib
 
 import bio
 import fasta
+import features
 
 SOFT_CLIP_CONFIDENCE = 0.0
 
@@ -484,6 +485,34 @@ class SamWriter(object):
     # choose a random match
     match = matches[ random.randint( 0, len(matches) - 1 ) ]
     self._fh.write( '%s\t%i\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%s\t%s\t%s\n' % ( name[1:], 0, 'generated', match + 1, 1, '%iM' % len(dna), '*', 0, 0, dna, confidence, '' ) )
+
+class SamStats(object):
+  def __init__( self, sam_fh, mapq_min=0, log=bio.log_stderr ):
+    self.log = log
+    self.mapq_min = mapq_min
+    self.unmapped = { 'gc': [], 'entropy': [] }
+    self.mapped = { 'gc': [], 'entropy': [] }
+
+    for pos, line in enumerate(sam_fh):
+      self.parse_line( pos, line.strip() )
+      if ( pos + 1 ) % 100000 == 0:
+        log( 'processed %i lines...' % (pos+1) )
+    log( 'processed: read %i lines' % ( pos+1 ) )
+
+  def parse_line( self, pos, line ):
+    fields = line.split()
+    if len(fields) < 9 or line.startswith('@'):
+      pass #self.log( 'WARN: %i: unexpected format: %s' % ( pos, line.strip() ) )
+    else:
+      feature = features.ReadFeature( fields[9] )
+      flag = int( fields[1] )
+      mapq = int( fields[4] )
+      if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
+        self.unmapped[ 'gc' ].append( feature.gc() )
+        self.unmapped[ 'entropy' ].append( feature.entropy() )
+      else:
+        self.mapped[ 'gc' ].append( feature.gc() )
+        self.mapped[ 'entropy' ].append( feature.entropy() )
 
 class BamReaderExternal(object):
   '''
