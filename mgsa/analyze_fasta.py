@@ -16,8 +16,8 @@ fs = bio.FastaStats( open( args.fasta, 'r' ) )
 
 # gc
 buckets = numpy.linspace(0, 1, args.buckets + 1)
-gc_hist = bio.bucket( fs.stats['gc'], buckets )
-entropy_hist = bio.bucket( fs.stats['entropy'], buckets )
+gc_hist = bio.bucket( filter( None, fs.stats['gc'] ), buckets )
+entropy_hist = bio.bucket( filter( None, fs.stats['entropy'] ), buckets )
 total_gc = sum(gc_hist)
 total_entropy = sum(entropy_hist)
 

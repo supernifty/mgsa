@@ -540,6 +540,7 @@ class FastaStats(object):
     '''
     self.stats = { 'count': 0, 'gc': [], 'entropy': [] }
     current = ''
+    lines = 0
     for line in fasta:
       line = line.strip()
       if not line.startswith( '>' ):
@@ -552,6 +553,9 @@ class FastaStats(object):
             self.stats['gc'].append( feature.gc() )
             self.stats['entropy'].append( feature.entropy() )
           current = current[add:]
+      lines += 1
+      if lines % 1000 == 0:
+        log( '%i lines processed' % lines )
     #log( self.stats )
 
 class MultiFastaReaderContainer(object):

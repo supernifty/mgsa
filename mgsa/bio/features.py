@@ -35,7 +35,11 @@ class ReadFeature (object):
     pass
 
   def gc( self ):
-    return 1. * ( self.content.count('G') + self.content.count('C') ) / ( self.content.count('G') + self.content.count('C') + self.content.count('A') + self.content.count('T') )  
+    denom = self.content.count('G') + self.content.count('C') + self.content.count('A') + self.content.count('T') 
+    if denom == 0:
+      return None
+    else:
+      return 1. * ( self.content.count('G') + self.content.count('C') ) / denom
 
 class MapFeature (object):
   '''features of a mapped location'''

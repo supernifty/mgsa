@@ -17,8 +17,8 @@ bam = bio.BamReaderExternal( config.BAM_TO_SAM, args.bam )
 # gc
 stats = bio.SamStats( bam )
 buckets = numpy.linspace(0, 1, args.buckets + 1)
-mapped_buckets = bio.bucket( stats.mapped['gc'], buckets )
-unmapped_buckets = bio.bucket( stats.unmapped['gc'], buckets )
+mapped_buckets = bio.bucket( filter( None, stats.mapped['gc'] ), buckets )
+unmapped_buckets = bio.bucket( filter( None, stats.unmapped['gc'] ), buckets )
 total_mapped = sum( mapped_buckets )
 total_unmapped = sum( unmapped_buckets )
 
