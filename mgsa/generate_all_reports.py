@@ -1240,7 +1240,7 @@ def plot_depth_predictor( src, short_name, my_depths=0, my_breakpoints_lines=1, 
   # roc from hists
   return bio.generate_roc( hist_n, hist_p )
 
-def plot_rocs( rocs, labels, legend='lower right', short_name='test', xmax=1., colors=('b', 'r'), markers=('s', 'o') ):
+def plot_rocs( rocs, labels, legend='lower right', short_name='test', xmax=1., colors=('b', 'r', 'g'), markers=('s', 'o', '+') ):
   fig = plt.figure()
   ax = fig.add_subplot(111)
 
@@ -1879,7 +1879,7 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #### experimental
 #plot_vcf_parent_vs_child( 'e-coli-bw2952.vcf', 'e-coli-mg1655.vcf', 'e-coli-bw2952-mg1655', 'K12', 'MG1655', highlight_differences=True, legend='lower left' )
 #plot_vcf_parent_vs_child( 'e-coli-iai39.vcf', 'e-coli-mg1655.vcf', 'e-coli-iai39-mg1655', 'IAI39', 'MG1655', highlight_differences=True, legend='lower left' )
-plot_vcf( ('e-coli-iai39.vcf','e-coli-bw2952.vcf', 'e-coli-mg1655.vcf'), 'ecoli-mapping-vcf-comparison', labels=('IAI39', 'K12', 'MG1655') )
+#plot_vcf( ('e-coli-iai39.vcf','e-coli-bw2952.vcf', 'e-coli-mg1655.vcf'), 'ecoli-mapping-vcf-comparison', labels=('IAI39', 'K12', 'MG1655') )
 
 # novel insertion rd 10
 #plot_depth( 'out/read-depth-novel-150430-coverage.out', 'cicroviridae-depth-unique-insertion-200-150430', 941, 1059, show_breakpoints=True, labels=('50bp', '100bp', '500bp', '1000bp'), my_depths=(0, 2, 4, 6), legend='lower right', my_breakpoints_lines=(1,) )
@@ -1893,9 +1893,14 @@ plot_vcf( ('e-coli-iai39.vcf','e-coli-bw2952.vcf', 'e-coli-mg1655.vcf'), 'ecoli-
 #plot_depth( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(2,), my_breakpoints_lines=(3,), legend='lower left', my_horizontal=(50, 70,) )
 # don't do this plot_depth( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(0,), my_breakpoints_lines=(1,), legend='lower right', my_horizontal=(50, 70,) )
 #
-#bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
-#bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
-#plot_rocs( ( bwa_roc, bowtie_roc ), labels=('BWA', 'Bowtie'), short_name='bwa-vs-bowtie', xmax=0.5 )
+bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+
+lr_fpr = [ 0.078876679, 0.050061050, 0.039316239, 0.033455433, 0.029304029, 0.022466422, 0.021245421, 0.018559219, 0.016849817, 0.015628816, 0.015140415, 0.013675214, 0.012454212, 0.011233211, 0.010744811, 0.009279609, 0.008302808, 0.006593407, 0.005372405, ]
+lr_tpr = [ 0.9801105, 0.9779006, 0.9767956, 0.9745856, 0.9701657, 0.9679558, 0.9624309, 0.9502762, 0.9469613, 0.9425414, 0.9303867, 0.9138122, 0.9027624, 0.8773481, 0.8541436, 0.8176796, 0.7690608, 0.6950276, 0.5624309, ]
+lr_roc = { 'fpr': lr_fpr, 'tpr': lr_tpr }
+plot_rocs( ( bwa_roc, bowtie_roc, lr_roc ), labels=('BWA', 'Bowtie', 'Regression'), short_name='bwa-vs-bowtie-vs-regression', xmax=0.5 )
+
 ###
 #bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-norm', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)', normalize=False)
 #bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie-norm', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)', normalize=False)

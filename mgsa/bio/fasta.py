@@ -7,6 +7,7 @@ import StringIO
 import sys
 
 import bio
+import features
 import vcf
 
 DELETE_BASE = '-'
@@ -533,13 +534,25 @@ class FastaReader(object):
 
 class FastaStats(object):
   '''calculate some overall stats for a fasta file'''
-  def __init__( self, fasta, log=bio.log_stderr ):
-    self.stats = { 'count': 0 }
+  def __init__( self, fasta, read_length=100, log=bio.log_stderr ):
+    '''
+      @fasta: file handle
+    '''
+    self.stats = { 'count': 0, 'gc': [], 'entropy': [] }
+    current = ''
     for line in fasta:
       line = line.strip()
       if not line.startswith( '>' ):
-        self.stats['count'] += len(line)
-    log( self.stats )
+        self.stats['count'] += len(line) # total fasta length
+        current += line
+        if len(current) >= read_length:
+          add = len(current) - read_length
+          for idx in xrange(0, add):
+            feature = features.ReadFeature( current[idx:idx+read_length] )
+            self.stats['gc'].append( feature.gc() )
+            self.stats['entropy'].append( feature.entropy() )
+          current = current[add:]
+    #log( self.stats )
 
 class MultiFastaReaderContainer(object):
   def __init__(self, genome):
