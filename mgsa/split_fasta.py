@@ -1,5 +1,6 @@
 
 import argparse
+import re
 import sys
 
 current = 0
@@ -14,7 +15,9 @@ for line in sys.stdin:
     if fh is not None:
       fh.close()
     current += 1
-    fn = '%s-%02i.fasta' % (args.prefix, current)
+    #fn = '%s-%02i.fasta' % (args.prefix, current)
+    name = re.sub( '\W+', '', line[1:].split()[0] )
+    fn = '%s-%s.fasta' % (args.prefix, name)
     fh = open( fn, 'w' )
     sys.stderr.write( 'Writing to %s...\n' % fn )
   fh.write( line )
