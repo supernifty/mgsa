@@ -10,6 +10,7 @@ from fastq import *
 from features import *
 from helpers import *
 from mapper import *
+from mauve import *
 from report import *
 from sam import *
 from statistics import *
