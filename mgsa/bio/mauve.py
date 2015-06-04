@@ -35,15 +35,18 @@ class MauveMap( object ):
         #print "adding coverage for", src_range, target_range
         target_pos = 0
         src_pos = 0
-        for pos, base in enumerate( current_sequence[0] ): # src
-          src_base = current_sequence[0][pos]
-          target_base = current_sequence[1][pos]
-          if src_base != '-' and target_base != '-': # no mapping
-            self.coverage[ src_pos + src_range[0] ] = target_pos + target_range[0]
-          if src_base != '-':
-            src_pos += 1
-          if target_base != '-':
-            target_pos += 1
+        if len( current_sequence[0] ) == len( current_sequence[1] ):
+          for pos, base in enumerate( current_sequence[0] ): # src
+            src_base = current_sequence[0][pos]
+            target_base = current_sequence[1][pos]
+            if src_base != '-' and target_base != '-': # no mapping
+              self.coverage[ src_pos + src_range[0] ] = target_pos + target_range[0]
+            if src_base != '-':
+              src_pos += 1
+            if target_base != '-':
+              target_pos += 1
+        else:
+          self.log( 'skipping unmatched sequence of length %i at %i' % ( len( current_sequence[0] ), src_range[0] ) )
         current_sequence = [ '', '' ] # src, target
       else: # sequence
         #print current, "sequence", line
