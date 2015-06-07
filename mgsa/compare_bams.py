@@ -8,7 +8,7 @@ import config
 
 parser = argparse.ArgumentParser(description='Compare BAMs')
 parser.add_argument('bams', metavar='bams', nargs='+', help='bam files to analyze')
-parser.add_argument('--mapq', dest='mapq_min', type=int, default=0, help='only consider alignments with at least this mapq value')
+parser.add_argument('--mapq', dest='mapq_min', type=int, default=-1, help='only consider alignments with at least this mapq value')
 
 args = parser.parse_args()
 

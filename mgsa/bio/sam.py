@@ -422,13 +422,13 @@ class SamAccuracyEvaluator(object):
             self.incorrect_diff[ diff ] += 1
  
 class SamDiff(object):
-  def __init__( self, sam_fhs, mapq_min=0, log=bio.log_stderr ):
+  def __init__( self, sam_fhs, mapq_min=-1, log=bio.log_stderr ):
     self.log = log
     self.mapq_min = mapq_min
     self.stats = collections.defaultdict(int)
     self.mapq_stats = []
 
-    for idx, reader in enumerate(sam_fhs):
+    for idx, reader in enumerate(sam_fhs): # process each sam file
       log( 'processing file %i...' % idx )
       bit_pos = 2 ** idx
       self.mapq = []
@@ -437,10 +437,10 @@ class SamDiff(object):
         if ( pos + 1 ) % 100000 == 0:
           log( 'processed %i lines...' % (pos+1) )
       if len(self.mapq) > 0:
-        self.mapq_stats.append( { 'count': len(self.mapq), 'max': max(self.mapq), 'min': min(self.mapq), 'mean': numpy.mean( self.mapq ), 'sd': numpy.std( self.mapq ) } )
+        self.mapq_stats.append( { 'mapped': len(self.mapq), 'max': max(self.mapq), 'min': min(self.mapq), 'mean': numpy.mean( self.mapq ), 'sd': numpy.std( self.mapq ) } )
       else:
-        self.mapq_stats.append( { 'count': 0, 'max': 0, 'min': 0, 'mean': 0, 'sd': 0 } )
-      log( 'processed file %i: read %i lines' % ( idx, pos+1 ) )
+        self.mapq_stats.append( { 'mapped': 0, 'max': 0, 'min': 0, 'mean': 0, 'sd': 0 } )
+      log( 'processed file %i (bit_pos %i): read %i lines: %s' % ( idx, bit_pos, pos+1, self.mapq_stats[-1] ) )
 
     log( 'analyzing...' )
     self.totals = collections.defaultdict(int)
@@ -455,10 +455,10 @@ class SamDiff(object):
       flag = int(fields[1])
       mapq = int( fields[4] )
       if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
-        self.stats[fields[0]] |= 0 # don't change; set to 0 if not already present
+        self.stats[fields[0]] |= 0 # unmapped read - don't change; set to 0 if not already present
       else:
         self.mapq.append( mapq )
-        if flag & 0x02 != 0: # mapped
+        if flag & 0x02 != 0: # mapped read
           self.stats[fields[0]] |= bit_pos
         else: # unknown mapping (assume mapped)
           self.stats[fields[0]] |= bit_pos
