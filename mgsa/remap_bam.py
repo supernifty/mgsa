@@ -21,7 +21,7 @@ args = parser.parse_args()
 # measure coverage
 print "building coverage map..."
 #print args.origin, dest
-mauve_map = bio.MauveMap( open(args.xmfa, 'r') )
+mauve_map = bio.MauveMap( open(args.xmfa, 'r'), src_strand=args.origin, target_strand=args.target )
 print len(mauve_map.coverage), "positions mapped"
 
 print "analyzing bam..."

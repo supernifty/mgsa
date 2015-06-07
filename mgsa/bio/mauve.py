@@ -14,6 +14,8 @@ class MauveMap( object ):
     src_range = [ 0, 0 ] # src, target
     target_range = [ 0, 0 ] # src, target
     current = -1
+    xmax = 0
+    ymax = 0
     for line_num, line in enumerate(fh):
       line = line.strip()
       #print "processing", line
@@ -32,19 +34,24 @@ class MauveMap( object ):
         else:
           current = -1
       elif line == '=':
-        self.log( "adding coverage for %s -> %s" % ( src_range, target_range ) )
         target_pos = 0
         src_pos = 0
         if len( current_sequence[0] ) == len( current_sequence[1] ):
+          self.log( "adding coverage for %s -> %s" % ( src_range, target_range ) )
+          added = 0
           for pos, base in enumerate( current_sequence[0] ): # src
             src_base = current_sequence[0][pos]
             target_base = current_sequence[1][pos]
             if src_base != '-' and target_base != '-': # no mapping
               self.coverage[ src_pos + src_range[0] ] = target_pos + target_range[0]
+              added += 1
+              xmax = max( xmax, src_pos + src_range[0] )
+              ymax = max( ymax, target_pos + target_range[0] )
             if src_base != '-':
               src_pos += 1
             if target_base != '-':
               target_pos += 1
+          self.log( "added %i mappings" % added )
         else:
           self.log( 'skipping unmatched sequence of length %i at %i' % ( len( current_sequence[0] ), src_range[0] ) )
         current_sequence = [ '', '' ] # src, target
@@ -53,7 +60,8 @@ class MauveMap( object ):
         if current >= 0:
           current_sequence[current] += line
       if line_num < 5 or line_num % 10000 == 0:
-        self.log( '%i lines processed; %i mappings' % ( line_num, len(self.coverage) ) )
+        self.log( '%i lines processed; %i mappings; src max: %i; target max: %i' % ( line_num, len(self.coverage), xmax, ymax ) )
+    self.log( '%i lines processed; %i mappings; src max: %i; target max: %i' % ( line_num, len(self.coverage), xmax, ymax ) )
 
   def remap( self, sam_fh, output ):
     '''
