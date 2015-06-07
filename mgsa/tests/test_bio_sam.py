@@ -173,6 +173,15 @@ class TestSamDiff( unittest.TestCase ):
     self.assertEqual( 1, len(diff.totals.keys()))
     self.assertEqual( 1, diff.totals[3] )
 
+  def test_simple_compare_pos(self):
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       8      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    diff = bio.SamDiff( [ sam1, sam2], log=bio.log_quiet, compare_position=True )
+    # diff.totals
+    self.assertEqual( 2, len(diff.position_totals.keys()))
+    self.assertEqual( 1, diff.position_totals[1] )
+    self.assertEqual( 1, diff.position_totals[2] )
+
   def test_split(self):
     sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  4       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )

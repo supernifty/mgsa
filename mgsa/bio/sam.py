@@ -422,10 +422,12 @@ class SamAccuracyEvaluator(object):
             self.incorrect_diff[ diff ] += 1
  
 class SamDiff(object):
-  def __init__( self, sam_fhs, mapq_min=-1, log=bio.log_stderr ):
+  def __init__( self, sam_fhs, mapq_min=-1, compare_position=False, log=bio.log_stderr ):
     self.log = log
     self.mapq_min = mapq_min
-    self.stats = collections.defaultdict(int)
+    self.compare_position = compare_position
+    self.stats = collections.defaultdict(int) # all sam entries with a binary collection showing which sam mapped it
+    self.position_stats = collections.defaultdict(int) # all sam entries and positions, containing a binary collection of mapped sams
     self.mapq_stats = []
 
     for idx, reader in enumerate(sam_fhs): # process each sam file
@@ -446,13 +448,18 @@ class SamDiff(object):
     self.totals = collections.defaultdict(int)
     for key, value in self.stats.items(): # readname, distribution
       self.totals[value] += 1
+    if self.compare_position:
+      log( 'analyzing positions...' )
+      self.position_totals = collections.defaultdict(int)
+      for key, value in self.position_stats.items(): # readname, distribution
+        self.position_totals[value] += 1
  
   def parse_line( self, pos, bit_pos, line ):
     fields = line.split()
     if len(fields) < 5 or line.startswith('@'):
       pass #self.log( 'WARN: %i: unexpected format: %s' % ( pos, line.strip() ) )
     else:
-      flag = int(fields[1])
+      flag = int( fields[1] )
       mapq = int( fields[4] )
       if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
         self.stats[fields[0]] |= 0 # unmapped read - don't change; set to 0 if not already present
@@ -462,7 +469,18 @@ class SamDiff(object):
           self.stats[fields[0]] |= bit_pos
         else: # unknown mapping (assume mapped)
           self.stats[fields[0]] |= bit_pos
-
+      if self.compare_position:
+        position = int( fields[3] )
+        ident = '%s-%i' % ( fields[0], position )
+        if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
+          self.position_stats[ident] |= 0 # unmapped read - don't change; set to 0 if not already present
+        else:
+          self.mapq.append( mapq )
+          if flag & 0x02 != 0: # mapped read
+            self.position_stats[ident] |= bit_pos
+          else: # unknown mapping (assume mapped)
+            self.position_stats[ident] |= bit_pos
+ 
 class SamWriter(object):
   def __init__( self, fh ):
     self._fh = fh
