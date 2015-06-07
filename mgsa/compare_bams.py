@@ -16,7 +16,7 @@ diff = bio.SamDiff( [ bio.BamReaderExternal( config.BAM_TO_SAM, sam_file ) for s
 
 print "mapq stats\n=========="
 for idx, stats in enumerate( diff.mapq_stats ):
-  print '%i: count: %i\tmax: %.2f\tmin: %.2f\tmean: %.2f\tsd: %.2f\t%s' % ( idx, stats['count'], stats['max'], stats['min'], stats['mean'], stats['sd'], args.bams[idx]  )
+  print '%i: count: %i\tmax: %.2f\tmin: %.2f\tmean: %.2f\tsd: %.2f\t%s' % ( idx, stats['mapped'], stats['max'], stats['min'], stats['mean'], stats['sd'], args.bams[idx]  )
 
 print "\nmapping commonality\n==================="
 for key in sorted( diff.totals.keys() ):
