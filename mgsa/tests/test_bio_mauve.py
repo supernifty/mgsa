@@ -50,4 +50,15 @@ class TestMauveMap(unittest.TestCase):
     m.remap( sam1, target )
     self.assertEqual( 1,  m.stats['reads_notcovered'] )
     self.assertEqual( '0', target.getvalue().split( '\n' )[1].split('\t')[3] )
+
+  def test_remap_multiple( self ):
+    src = StringIO.StringIO( '> 1:1-10\n1234567890\n> 2:3-13\n3456789012\n=\n> 1:50-60\n1234567890\n> 2:80-90\n1234567890\n=' )
+    target = StringIO.StringIO()
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       3      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_5~0~0  0       generated       53      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    m = bio.MauveMap( src, src_strand=1, target_strand=2, log=bio.log_quiet )
+    m.remap( sam1, target )
+    self.assertEqual( 2,  m.stats['mapped'] )
+    self.assertEqual( '5', target.getvalue().split( '\n' )[1].split('\t')[3] )
+    self.assertEqual( '83', target.getvalue().split( '\n' )[2].split('\t')[3] )
     
+     

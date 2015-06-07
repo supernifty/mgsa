@@ -451,7 +451,7 @@ class SamDiff(object):
     if self.compare_position:
       log( 'analyzing positions...' )
       self.position_totals = collections.defaultdict(int)
-      for key, value in self.position_stats.items(): # readname, distribution
+      for key, value in self.position_stats.items(): # readname-pos, distribution
         self.position_totals[value] += 1
  
   def parse_line( self, pos, bit_pos, line ):
@@ -475,7 +475,7 @@ class SamDiff(object):
         if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
           self.position_stats[ident] |= 0 # unmapped read - don't change; set to 0 if not already present
         else:
-          self.mapq.append( mapq )
+          self.log( 'ident of %s is %s' % (line, ident) )
           if flag & 0x02 != 0: # mapped read
             self.position_stats[ident] |= bit_pos
           else: # unknown mapping (assume mapped)

@@ -32,7 +32,7 @@ class MauveMap( object ):
         else:
           current = -1
       elif line == '=':
-        #print "adding coverage for", src_range, target_range
+        self.log( "adding coverage for %s -> %s" % ( src_range, target_range ) )
         target_pos = 0
         src_pos = 0
         if len( current_sequence[0] ) == len( current_sequence[1] ):
