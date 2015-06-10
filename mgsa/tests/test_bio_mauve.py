@@ -58,6 +58,11 @@ class TestMauveMap(unittest.TestCase):
     m = bio.MauveMap( src, src_strand=1, target_strand=2, log=bio.log_quiet )
     m.remap( sam1, target )
     self.assertEqual( 2,  m.stats['mapped'] )
+    self.assertEqual( 20,  m.genome_stats['count'] )
+    self.assertEqual( 1,  m.genome_stats['xmin'] )
+    self.assertEqual( 59,  m.genome_stats['xmax'] )
+    self.assertEqual( 3,  m.genome_stats['ymin'] )
+    self.assertEqual( 89,  m.genome_stats['ymax'] )
     self.assertEqual( '5', target.getvalue().split( '\n' )[1].split('\t')[3] )
     self.assertEqual( '83', target.getvalue().split( '\n' )[2].split('\t')[3] )
     

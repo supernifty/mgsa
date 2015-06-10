@@ -32,6 +32,10 @@ else:
 
 mauve_map.remap( sam_fh, open( args.output, 'w' ) )
  
+print "====== Mapping Stats ====="
+for key in mauve_map.genome_stats.keys():
+  print "%20s: %i" % ( key, mauve_map.genome_stats[key] )
+
 print "====== Coverage Stats ====="
 for key in mauve_map.stats.keys():
   print "%20s: %i" % ( key, mauve_map.stats[key] )

@@ -10,6 +10,7 @@ class MauveMap( object ):
     '''
     self.log = log
     self.coverage = {}
+    self.genome_stats = { 'xmin': 1e9, 'xmax': 0, 'ymin': 1e9, 'ymax': 0 }
     current_sequence = [ '', '' ] # src, target
     src_range = [ 0, 0 ] # src, target
     target_range = [ 0, 0 ] # src, target
@@ -45,8 +46,10 @@ class MauveMap( object ):
             if src_base != '-' and target_base != '-': # no mapping
               self.coverage[ src_pos + src_range[0] ] = target_pos + target_range[0]
               added += 1
-              xmax = max( xmax, src_pos + src_range[0] )
-              ymax = max( ymax, target_pos + target_range[0] )
+              self.genome_stats['xmax'] = max( self.genome_stats['xmax'], src_pos + src_range[0] )
+              self.genome_stats['ymax'] = max( self.genome_stats['ymax'], target_pos + target_range[0] )
+              self.genome_stats['xmin'] = min( self.genome_stats['xmin'], src_pos + src_range[0] )
+              self.genome_stats['ymin'] = min( self.genome_stats['ymin'], target_pos + target_range[0] )
             if src_base != '-':
               src_pos += 1
             if target_base != '-':
@@ -60,8 +63,9 @@ class MauveMap( object ):
         if current >= 0:
           current_sequence[current] += line
       if line_num < 5 or line_num % 10000 == 0:
-        self.log( '%i lines processed; %i mappings; src max: %i; target max: %i' % ( line_num, len(self.coverage), xmax, ymax ) )
-    self.log( '%i lines processed; %i mappings; src max: %i; target max: %i' % ( line_num, len(self.coverage), xmax, ymax ) )
+        self.log( '%i lines processed; %i mappings; range: %s' % ( line_num, len(self.coverage), self.genome_stats ) )
+    self.genome_stats['count'] = len(self.coverage)
+    self.log( '%i lines processed; stats: %s' % ( line_num, self.genome_stats ) )
 
   def remap( self, sam_fh, output ):
     '''
