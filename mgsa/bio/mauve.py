@@ -1,4 +1,6 @@
 
+import re
+
 import bio
 
 # parses mauve output files
@@ -137,6 +139,9 @@ class MauveMap( object ):
             fields[6] = '*'
             output.write( '\t'.join( fields ) )
             output.write( '\n' )
+      elif self.new_reference is not None and line.startswith( '@SQ' ) and line.find( 'SN:') != -1:
+        line = re.sub(r"SN:[^\s]*", "SN:%s" % self.new_reference, line )
+        output.write( '%s\n' % line )
       else: # write non-reads verbatim
         output.write( '%s\n' % line )
       if pos < 10 or pos % 100000 == 0:
