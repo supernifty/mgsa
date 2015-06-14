@@ -141,6 +141,7 @@ class MauveMap( object ):
             output.write( '\n' )
       elif self.new_reference is not None and line.startswith( '@SQ' ) and line.find( 'SN:') != -1:
         line = re.sub(r"SN:[^\s]*", "SN:%s" % self.new_reference, line )
+        line = re.sub(r"LN:[^\s]*", "LN:%i" % self.genome_stats['ymax'], line ) # also sub in ymax
         output.write( '%s\n' % line )
       else: # write non-reads verbatim
         output.write( '%s\n' % line )

@@ -81,7 +81,7 @@ class TestMauveMap(unittest.TestCase):
     sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       3      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_5~0~0  0       generated       53      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     m = bio.MauveMap( src, src_strand=1, target_strand=2, new_reference='hello', log=bio.log_quiet )
     m.remap( sam1, target )
-    self.assertEqual( '@SQ     SN:hello    LN:4023', target.getvalue().split( '\n' )[0] )
+    self.assertEqual( '@SQ     SN:hello    LN:89', target.getvalue().split( '\n' )[0] )
     self.assertEqual( 'hello', target.getvalue().split( '\n' )[1].split('\t')[2] )
     self.assertEqual( 'hello', target.getvalue().split( '\n' )[2].split('\t')[2] )
             
