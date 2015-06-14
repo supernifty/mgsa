@@ -15,12 +15,13 @@ class MauveMap( object ):
     src_range = [ 0, 0 ] # src, target
     target_range = [ 0, 0 ] # src, target
     current = -1
+    direction = [ '+', '+' ]
     xmax = 0
     ymax = 0
     for line_num, line in enumerate(fh):
       line = line.strip()
       #print "processing", line
-      if line.startswith( '>' ):
+      if line.startswith( '>' ): # e.g. > 1:213657-501434 - e-coli-mg1655.fasta
         items = line.split( ' ' )
         strand, sequence = items[1].split( ':' )
         strand = int(strand)
@@ -28,28 +29,33 @@ class MauveMap( object ):
           src_range = [ int(x) for x in sequence.split( '-' ) ]
           current = 0
           current_sequence[current] = ''
+          direction[current] = items[2] # + or -
         elif strand == target_strand:
           target_range = [ int(x) for x in sequence.split( '-' ) ]
           current = 1
           current_sequence[current] = ''
+          direction[current] = items[2] # + or -
         else:
           current = -1
       elif line == '=':
-        target_pos = 0
-        src_pos = 0
         if len( current_sequence[0] ) == len( current_sequence[1] ):
           self.log( "adding coverage for %s -> %s" % ( src_range, target_range ) )
+          target_pos = 0 
+          src_pos = 0 
           added = 0
-          for pos, base in enumerate( current_sequence[0] ): # src
-            src_base = current_sequence[0][pos]
-            target_base = current_sequence[1][pos]
+          for forward_pos, base in enumerate( current_sequence[0] ): # src; forward_pos = 0..len
+            reverse_pos = len( current_sequence[0] ) - forward_pos - 1
+            src_base = self._current_base( current_sequence[0], forward_pos, reverse_pos, direction[0] )
+            target_base = self._current_base( current_sequence[1], forward_pos, reverse_pos, direction[1] )
             if src_base != '-' and target_base != '-': # no mapping
-              self.coverage[ src_pos + src_range[0] ] = target_pos + target_range[0]
+              actual_src_pos = self._get_actual_pos( src_pos, src_range, direction[0] )
+              actual_target_pos = self._get_actual_pos( target_pos, target_range, direction[1] )
+              self.coverage[ actual_src_pos ] = actual_target_pos
               added += 1
-              self.genome_stats['xmax'] = max( self.genome_stats['xmax'], src_pos + src_range[0] )
-              self.genome_stats['ymax'] = max( self.genome_stats['ymax'], target_pos + target_range[0] )
-              self.genome_stats['xmin'] = min( self.genome_stats['xmin'], src_pos + src_range[0] )
-              self.genome_stats['ymin'] = min( self.genome_stats['ymin'], target_pos + target_range[0] )
+              self.genome_stats['xmax'] = max( self.genome_stats['xmax'], actual_src_pos )
+              self.genome_stats['ymax'] = max( self.genome_stats['ymax'], actual_target_pos )
+              self.genome_stats['xmin'] = min( self.genome_stats['xmin'], actual_src_pos )
+              self.genome_stats['ymin'] = min( self.genome_stats['ymin'], actual_target_pos )
             if src_base != '-':
               src_pos += 1
             if target_base != '-':
@@ -58,6 +64,7 @@ class MauveMap( object ):
         else:
           self.log( 'skipping unmatched sequence of length %i at %i' % ( len( current_sequence[0] ), src_range[0] ) )
         current_sequence = [ '', '' ] # src, target
+        direction = [ '+', '+' ]
       else: # sequence
         #print current, "sequence", line
         if current >= 0:
@@ -66,6 +73,18 @@ class MauveMap( object ):
         self.log( '%i lines processed; %i mappings; range: %s' % ( line_num, len(self.coverage), self.genome_stats ) )
     self.genome_stats['count'] = len(self.coverage)
     self.log( '%i lines processed; stats: %s' % ( line_num, self.genome_stats ) )
+
+  def _get_actual_pos( self, src_pos, src_range, direction ):
+    if direction == '+': # normal
+      return src_pos + src_range[0]
+    else: # reverse
+      return src_range[1] - src_pos
+
+  def _current_base( self, sequence, forward_pos, reverse_pos, direction ):
+    if direction == '+':
+      return sequence[forward_pos]
+    else:
+      return sequence[reverse_pos]
 
   def remap( self, sam_fh, output ):
     '''
