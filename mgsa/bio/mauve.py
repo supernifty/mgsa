@@ -4,13 +4,14 @@ import bio
 # parses mauve output files
 
 class MauveMap( object ):
-  def __init__( self, fh, src_strand=1, target_strand=2, log=bio.log_stderr ):
+  def __init__( self, fh, src_strand=1, target_strand=2, new_reference=None, log=bio.log_stderr ):
     '''
       @fh: xmfa file like object of Mauve output
     '''
     self.log = log
     self.coverage = {}
     self.genome_stats = { 'xmin': 1e9, 'xmax': 0, 'ymin': 1e9, 'ymax': 0 }
+    self.new_reference = new_reference
     current_sequence = [ '', '' ] # src, target
     src_range = [ 0, 0 ] # src, target
     target_range = [ 0, 0 ] # src, target
@@ -96,6 +97,8 @@ class MauveMap( object ):
       fields = line.split()
       if len(fields) > 9:
         #print fields
+        if self.new_reference is not None:
+          fields[2] = self.new_reference
         flag = int( fields[1] )
         self.stats['total'] += 1
         if flag & 0x04 != 0:

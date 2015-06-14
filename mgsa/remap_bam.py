@@ -15,13 +15,14 @@ parser.add_argument('--xmfa', required=True, help='xmfa file')
 parser.add_argument('--origin', type=int, default=1, help='index of fasta that bam was mapped to')
 parser.add_argument('--target', type=int, default=2, help='index of fasta that bam should be mapped to')
 parser.add_argument('--output', required=True, help='sam output file')
+parser.add_argument('--new_reference', required=False, help='new reference name for sam output')
 
 args = parser.parse_args()
 
 # measure coverage
 print "building coverage map..."
 #print args.origin, dest
-mauve_map = bio.MauveMap( open(args.xmfa, 'r'), src_strand=args.origin, target_strand=args.target )
+mauve_map = bio.MauveMap( open(args.xmfa, 'r'), src_strand=args.origin, target_strand=args.target, new_reference=args.new_reference )
 print len(mauve_map.coverage), "positions mapped"
 
 print "analyzing bam..."
