@@ -45,7 +45,7 @@ if args.mismatch_detail > -1:
   unpaired_count = 0
   for read, value in diff.mismatch_stats.items():
     if 'p' in value and 'a' in value:
-      print '%i,%i' % ( value['p'], value['a'] )
+      print '%i,%i,%s' % ( value['p'], value['a'], read )
       mismatch_count += 1
     else:
       unpaired_count += 1
