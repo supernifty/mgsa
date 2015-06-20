@@ -429,7 +429,7 @@ class SamDiff(object):
     self.compare_position = compare_position
     self.subset_detail = subset_detail
     self.mismatch_detail = None if mismatch_detail is None else 2 ** mismatch_detail 
-    self.mismatch_stats = collections.defaultdict(dict)
+    self.mismatch_stats = {}
     self.stats = collections.defaultdict(int) # all sam entries with a binary collection showing which sam mapped it
     self.position_stats = collections.defaultdict(int) # all sam entries and positions, containing a binary collection of mapped sams
     self.mapq_stats = [] # overall mapq of a sample
@@ -461,6 +461,22 @@ class SamDiff(object):
         self.position_totals[value] += 1
         if self.subset_detail:
           self.mapq_totals[value].extend( self.mapq_subsets[key] )
+        if self.mismatch_detail is not None and self.mismatch_detail == value: # mismatch_detail exactly
+          name, pos = key.split( '-' )
+          self.mismatch_stats[name] = { 'p': int(pos) }
+          #log( 'found %s at %i' % (name, int(pos)) )
+      log( 'analyzing mismatches...' )
+      if self.mismatch_detail is not None: # 2nd pass for mismatch updates
+        for key, value in self.position_stats.items(): # readname-pos, distribution
+          if value != 0 and value & self.mismatch_detail == 0: # mismatch not present
+            name, pos = key.split( '-' )
+            if name in self.mismatch_stats:
+              self.mismatch_stats[name]['a'] = int(pos)
+              #log( 'found alt for %s at %i' % (name, int(pos)) )
+            else:
+              pass
+              #log( 'unmatched read %s' % name )
+        
       # now generate stats
       log( 'analyzing mapq distribution...' )
       self.mapq_subset_stats = {}
@@ -492,18 +508,6 @@ class SamDiff(object):
         if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
           self.position_stats[ident] |= 0 # unmapped read - don't change; set to 0 if not already present
         else:
-          # mismatch tracking
-          if self.mismatch_detail is not None: # tracking mismatches
-            if self.mismatch_detail == bit_pos: # current read is target
-              if ident in self.position_stats and self.position_stats[ident] != 0: # matching read has been seen
-                del self.mismatch_stats[fields[0]] # not a mismatch
-              else: # no matching read seen
-                self.mismatch_stats[fields[0]]['pos'] = position # potential mismatch
-            else: # current read is not target
-              if ident in self.position_stats and self.position_stats[ident] & self.mismatch_detail != 0: # matching target read has already been seen
-                del self.mismatch_stats[fields[0]] # no longer a potential mismatch
-              else: # matching target read has not been seen
-                self.mismatch_stats[fields[0]]['alt'] = position
           # position tracking
           if flag & 0x02 != 0: # mapped read
             self.position_stats[ident] |= bit_pos
@@ -511,8 +515,6 @@ class SamDiff(object):
             self.position_stats[ident] |= bit_pos
           if self.subset_detail:
             self.mapq_subsets[ident].append( mapq )
-       
-      
  
 class SamWriter(object):
   def __init__( self, fh ):

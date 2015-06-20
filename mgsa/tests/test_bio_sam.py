@@ -230,16 +230,16 @@ class TestSamDiff( unittest.TestCase ):
     sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       8      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     diff = bio.SamDiff( [ sam1, sam2], log=bio.log_quiet, compare_position=True, subset_detail=True, mismatch_detail=1 )
     self.assertEqual( 1, len(diff.mismatch_stats) )
-    self.assertEqual( 8, diff.mismatch_stats['mgsa_seq_5~0~0']['pos'] )
-    self.assertEqual( 6, diff.mismatch_stats['mgsa_seq_5~0~0']['alt'] )
+    self.assertEqual( 8, diff.mismatch_stats['mgsa_seq_5~0~0']['p'] )
+    self.assertEqual( 6, diff.mismatch_stats['mgsa_seq_5~0~0']['a'] )
 
   def test_mismatch_tracking_with_mismatch(self):
     sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      40      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       8      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
-    diff = bio.SamDiff( [ sam1, sam2], log=bio.log_quiet, compare_position=True, subset_detail=True, mismatch_detail=0 )
+    diff = bio.SamDiff( [ sam1, sam2], compare_position=True, subset_detail=True, mismatch_detail=0, log=bio.log_quiet )
     self.assertEqual( 1, len(diff.mismatch_stats) )
-    self.assertEqual( 8, diff.mismatch_stats['mgsa_seq_5~0~0']['alt'] )
-    self.assertEqual( 6, diff.mismatch_stats['mgsa_seq_5~0~0']['pos'] )
+    self.assertEqual( 8, diff.mismatch_stats['mgsa_seq_5~0~0']['a'] )
+    self.assertEqual( 6, diff.mismatch_stats['mgsa_seq_5~0~0']['p'] )
 
 class TestSamAccuracyEvaluator( unittest.TestCase ):
   def test_simple(self):
