@@ -33,4 +33,4 @@ if args.subset_detail:
   print "\nmapq vs position differences\n==================="
   for key, value in diff.mapq_subset_stats.items():
     bin_key = ( "{0:0%ib}" % ( len(args.bams) ) ).format( key )
-    print '%s: max: %.2f\tmin: %.2f\tmean: %.2f\tsd: %.2f' % ( bin_key, value['max'], value['min'], value['mean'], value['sd'] )
+    print '%s: max: %.2f\tmin: %.2f\tmean: %.2f\tsd: %.2f\thist: %s' % ( bin_key, value['max'], value['min'], value['mean'], value['sd'], value['hist'] )
