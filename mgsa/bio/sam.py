@@ -12,6 +12,7 @@ import zlib
 import bio
 import fasta
 import features
+import statistics
 
 SOFT_CLIP_CONFIDENCE = 0.0
 
@@ -460,9 +461,12 @@ class SamDiff(object):
           self.mapq_totals[value].extend( self.mapq_subsets[key] )
       # now generate stats
       self.mapq_subset_stats = {}
+      buckets = (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60)
       for key, value in self.mapq_totals.items():
         if len(value) > 0:
-          self.mapq_subset_stats[key] = { 'max': max(value), 'min': min(value), 'mean': numpy.mean(value), 'sd': numpy.std(value) }
+          min_val = min(value)
+          max_val = max(value)
+          self.mapq_subset_stats[key] = { 'max': max_val, 'min': min_val, 'mean': numpy.mean(value), 'sd': numpy.std(value), 'hist': statistics.bucket(value, buckets)  }
  
   def parse_line( self, pos, bit_pos, line ):
     fields = line.split()

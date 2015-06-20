@@ -2,7 +2,6 @@
 def bucket( values, buckets ):
   '''
     puts values into buckets
-    speed this up by sorting values
     @values: list of values
     @buckets: list of bucket separators with each being the minimum value that can go in that bucket
   '''

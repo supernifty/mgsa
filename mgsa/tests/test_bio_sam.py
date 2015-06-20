@@ -200,6 +200,8 @@ class TestSamDiff( unittest.TestCase ):
     diff = bio.SamDiff( [ sam1, sam2], log=bio.log_quiet, compare_position=True, subset_detail=True )
     self.assertEqual( [40, 60], diff.mapq_totals[3] ) # 11
     self.assertEqual( 50.0, diff.mapq_subset_stats[3]['mean'] )
+    self.assertEqual( 1, diff.mapq_subset_stats[3]['hist'][8] )
+    self.assertEqual( 1, diff.mapq_subset_stats[3]['hist'][12] )
 
   def test_split(self):
     sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
