@@ -423,11 +423,13 @@ class SamAccuracyEvaluator(object):
             self.incorrect_diff[ diff ] += 1
  
 class SamDiff(object):
-  def __init__( self, sam_fhs, mapq_min=-1, compare_position=False, subset_detail=False, log=bio.log_stderr ):
+  def __init__( self, sam_fhs, mapq_min=-1, compare_position=False, subset_detail=False, mismatch_detail=None, log=bio.log_stderr ):
     self.log = log
     self.mapq_min = mapq_min
     self.compare_position = compare_position
     self.subset_detail = subset_detail
+    self.mismatch_detail = None if mismatch_detail is None else 2 ** mismatch_detail 
+    self.mismatch_stats = collections.defaultdict(dict)
     self.stats = collections.defaultdict(int) # all sam entries with a binary collection showing which sam mapped it
     self.position_stats = collections.defaultdict(int) # all sam entries and positions, containing a binary collection of mapped sams
     self.mapq_stats = [] # overall mapq of a sample
@@ -460,6 +462,7 @@ class SamDiff(object):
         if self.subset_detail:
           self.mapq_totals[value].extend( self.mapq_subsets[key] )
       # now generate stats
+      log( 'analyzing mapq distribution...' )
       self.mapq_subset_stats = {}
       buckets = (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60)
       for key, value in self.mapq_totals.items():
@@ -486,17 +489,30 @@ class SamDiff(object):
       if self.compare_position:
         position = int( fields[3] )
         ident = '%s-%i' % ( fields[0], position )
-        old_read_status = self.position_stats[ident] # e.g. 00
         if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
           self.position_stats[ident] |= 0 # unmapped read - don't change; set to 0 if not already present
         else:
-          #self.log( 'ident of %s is %s' % (line, ident) )
+          # mismatch tracking
+          if self.mismatch_detail is not None: # tracking mismatches
+            if self.mismatch_detail == bit_pos: # current read is target
+              if ident in self.position_stats and self.position_stats[ident] != 0: # matching read has been seen
+                del self.mismatch_stats[fields[0]] # not a mismatch
+              else: # no matching read seen
+                self.mismatch_stats[fields[0]]['pos'] = position # potential mismatch
+            else: # current read is not target
+              if ident in self.position_stats and self.position_stats[ident] & self.mismatch_detail != 0: # matching target read has already been seen
+                del self.mismatch_stats[fields[0]] # no longer a potential mismatch
+              else: # matching target read has not been seen
+                self.mismatch_stats[fields[0]]['alt'] = position
+          # position tracking
           if flag & 0x02 != 0: # mapped read
             self.position_stats[ident] |= bit_pos
           else: # unknown mapping (assume mapped)
             self.position_stats[ident] |= bit_pos
           if self.subset_detail:
             self.mapq_subsets[ident].append( mapq )
+       
+      
  
 class SamWriter(object):
   def __init__( self, fh ):
