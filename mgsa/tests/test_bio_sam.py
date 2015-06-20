@@ -179,10 +179,27 @@ class TestSamDiff( unittest.TestCase ):
     diff = bio.SamDiff( [ sam1, sam2], log=bio.log_quiet, compare_position=True )
     # diff.totals
     self.assertEqual( 1, len(diff.totals.keys()))
-    self.assertEqual( 1, diff.totals[3] )
+    self.assertEqual( 1, diff.totals[3] ) # 11 -> 1
     self.assertEqual( 2, len(diff.position_totals.keys()))
-    self.assertEqual( 1, diff.position_totals[1] )
-    self.assertEqual( 1, diff.position_totals[2] )
+    self.assertEqual( 1, diff.position_totals[1] ) # 1 -> 1
+    self.assertEqual( 1, diff.position_totals[2] ) # 2 -> 1
+
+  def test_simple_subset_quality(self):
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      40      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       8      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    diff = bio.SamDiff( [ sam1, sam2], log=bio.log_quiet, compare_position=True, subset_detail=True )
+    self.assertEqual( [40], diff.mapq_totals[1] ) # 01
+    self.assertEqual( [60], diff.mapq_totals[2] ) # 10
+    self.assertEqual( [], diff.mapq_totals[3] ) # 10
+    self.assertEqual( 40.0, diff.mapq_subset_stats[1]['mean'] )
+    self.assertEqual( 60.0, diff.mapq_subset_stats[2]['mean'] )
+
+  def test_simple_subset_quality_agree(self):
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       8      40      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    sam2 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       8      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    diff = bio.SamDiff( [ sam1, sam2], log=bio.log_quiet, compare_position=True, subset_detail=True )
+    self.assertEqual( [40, 60], diff.mapq_totals[3] ) # 11
+    self.assertEqual( 50.0, diff.mapq_subset_stats[3]['mean'] )
 
   def test_split(self):
     sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTTTTTTT    ~~~~~~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )

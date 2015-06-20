@@ -422,13 +422,15 @@ class SamAccuracyEvaluator(object):
             self.incorrect_diff[ diff ] += 1
  
 class SamDiff(object):
-  def __init__( self, sam_fhs, mapq_min=-1, compare_position=False, log=bio.log_stderr ):
+  def __init__( self, sam_fhs, mapq_min=-1, compare_position=False, subset_detail=False, log=bio.log_stderr ):
     self.log = log
     self.mapq_min = mapq_min
     self.compare_position = compare_position
+    self.subset_detail = subset_detail
     self.stats = collections.defaultdict(int) # all sam entries with a binary collection showing which sam mapped it
     self.position_stats = collections.defaultdict(int) # all sam entries and positions, containing a binary collection of mapped sams
-    self.mapq_stats = []
+    self.mapq_stats = [] # overall mapq of a sample
+    self.mapq_subsets = collections.defaultdict(list)  # mapq and the count of subsets that it is assigned to i.e. { 15: { '00': 12, '01': 14 ... etc } }
 
     for idx, reader in enumerate(sam_fhs): # process each sam file
       log( 'processing file %i...' % idx )
@@ -451,8 +453,16 @@ class SamDiff(object):
     if self.compare_position:
       log( 'analyzing positions...' )
       self.position_totals = collections.defaultdict(int)
+      self.mapq_totals = collections.defaultdict(list)
       for key, value in self.position_stats.items(): # readname-pos, distribution
         self.position_totals[value] += 1
+        if self.subset_detail:
+          self.mapq_totals[value].extend( self.mapq_subsets[key] )
+      # now generate stats
+      self.mapq_subset_stats = {}
+      for key, value in self.mapq_totals.items():
+        if len(value) > 0:
+          self.mapq_subset_stats[key] = { 'max': max(value), 'min': min(value), 'mean': numpy.mean(value), 'sd': numpy.std(value) }
  
   def parse_line( self, pos, bit_pos, line ):
     fields = line.split()
@@ -472,6 +482,7 @@ class SamDiff(object):
       if self.compare_position:
         position = int( fields[3] )
         ident = '%s-%i' % ( fields[0], position )
+        old_read_status = self.position_stats[ident] # e.g. 00
         if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
           self.position_stats[ident] |= 0 # unmapped read - don't change; set to 0 if not already present
         else:
@@ -480,6 +491,8 @@ class SamDiff(object):
             self.position_stats[ident] |= bit_pos
           else: # unknown mapping (assume mapped)
             self.position_stats[ident] |= bit_pos
+          if self.subset_detail:
+            self.mapq_subsets[ident].append( mapq )
  
 class SamWriter(object):
   def __init__( self, fh ):

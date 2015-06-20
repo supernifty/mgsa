@@ -10,10 +10,11 @@ parser = argparse.ArgumentParser(description='Compare BAMs')
 parser.add_argument('bams', metavar='bams', nargs='+', help='bam files to analyze')
 parser.add_argument('--mapq', dest='mapq_min', type=int, default=-1, help='only consider alignments with at least this mapq value')
 parser.add_argument('--compare_position', dest='compare_position', type=bool, default=False, help='compare position of alignments')
+parser.add_argument('--subset_detail', dest='subset_detail', type=bool, default=False, help='more detail about subsets')
 
 args = parser.parse_args()
 
-diff = bio.SamDiff( [ bio.BamReaderExternal( config.BAM_TO_SAM, sam_file ) for sam_file in args.bams ], mapq_min=args.mapq_min, compare_position=args.compare_position )
+diff = bio.SamDiff( [ bio.BamReaderExternal( config.BAM_TO_SAM, sam_file ) for sam_file in args.bams ], mapq_min=args.mapq_min, compare_position=args.compare_position, subset_detail=args.subset_detail )
 
 print "mapq stats\n=========="
 for idx, stats in enumerate( diff.mapq_stats ):
@@ -27,3 +28,9 @@ if args.compare_position:
   print "\nmapped vs unmapped commonality including position differences\n==================="
   for key in sorted( diff.position_totals.keys() ):
     print ( "{0:0%ib}: {1}" % ( len(args.bams) ) ).format( key, diff.position_totals[key] )
+
+if args.subset_detail:
+  print "\nmapq vs position differences\n==================="
+  for key, value in diff.mapq_subset_stats.items():
+    bin_key = ( "{0:0%ib}" % ( len(args.bams) ) ).format( key )
+    print '%s: max: %.2f\tmin: %.2f\tmean: %.2f\tsd: %.2f' % ( bin_key, value['max'], value['min'], value['mean'], value['sd'] )
