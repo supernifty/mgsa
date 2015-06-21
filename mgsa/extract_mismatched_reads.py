@@ -24,7 +24,7 @@ for line in sys.stdin:
     mappable = int(fields[4]) == 0
     if distance >= args.min_distance and distance <= args.max_distance:
       if mappable and args.mappable or not mappable and not args.mappable:
-        allowed_tags.add( int( fields[2] ) )
+        allowed_tags.add( fields[2] )
 bio.log_stderr( '%i allowed tags' % len(allowed_tags) )
 
 bio.SamFilter( sam_fh=bio.BamReaderExternal( config.BAM_TO_SAM, args.bam ), target_fh=sys.stdout, allowed_tags=allowed_tags, log=bio.log_stderr )
