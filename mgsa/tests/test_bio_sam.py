@@ -278,6 +278,17 @@ class TestBamReaderExternal( unittest.TestCase ):
     self.assertEqual( 'hello\n', lines[0] )
     self.assertEqual( 'goodbye\n', lines[1] )
 
+class TestSamFilter( unittest.TestCase ):
+  def test_simple(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_7~0~0  4       generated       6      60      15M       *       0       0       AAGCATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    target = StringIO.StringIO()
+    allowed = set()
+    allowed.add( 'mgsa_seq_5~0~0' )
+    bio.SamFilter( sam, target, allowed, log=bio.log_quiet )
+    lines = target.getvalue().split( '\n' )
+    self.assertEqual( 3, len(lines) )
+    self.assertEqual( '', lines[2] )
+
 class TestBamReader( unittest.TestCase ):
   def setUp(self):
     pass

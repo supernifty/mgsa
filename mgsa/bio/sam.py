@@ -431,7 +431,7 @@ class SamDiff(object):
     self.mismatch_detail = None if mismatch_detail is None else 2 ** mismatch_detail 
     self.mismatch_stats = {}
     self.stats = collections.defaultdict(int) # all sam entries with a binary collection showing which sam mapped it
-    self.position_stats = collections.defaultdict(int) # all sam entries and positions, containing a binary collection of mapped sams
+    self._position_stats = collections.defaultdict(int) # all sam entries and positions, containing a binary collection of mapped sams
     self.mapq_stats = [] # overall mapq of a sample
     self.mapq_subsets = collections.defaultdict(list)  # mapq and the count of subsets that it is assigned to i.e. { 15: { '00': 12, '01': 14 ... etc } }
 
@@ -457,7 +457,7 @@ class SamDiff(object):
       log( 'analyzing positions...' )
       self.position_totals = collections.defaultdict(int)
       self.mapq_totals = collections.defaultdict(list)
-      for key, value in self.position_stats.items(): # readname-pos, distribution
+      for key, value in self._position_stats.items(): # readname-pos, distribution
         self.position_totals[value] += 1
         if self.subset_detail:
           self.mapq_totals[value].extend( self.mapq_subsets[key] )
@@ -467,7 +467,7 @@ class SamDiff(object):
           #log( 'found %s at %i' % (name, int(pos)) )
       log( 'analyzing mismatches...' )
       if self.mismatch_detail is not None: # 2nd pass for mismatch updates
-        for key, value in self.position_stats.items(): # readname-pos, distribution
+        for key, value in self._position_stats.items(): # readname-pos, distribution
           if value != 0 and value & self.mismatch_detail == 0: # mismatch not present
             name, pos = key.split( '-' )
             if name in self.mismatch_stats:
@@ -476,6 +476,8 @@ class SamDiff(object):
             else:
               pass
               #log( 'unmatched read %s' % name )
+      # free up memory
+      del self._position_stats 
         
       # now generate stats
       log( 'analyzing mapq distribution...' )
@@ -506,13 +508,13 @@ class SamDiff(object):
         position = int( fields[3] )
         ident = '%s-%i' % ( fields[0], position )
         if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
-          self.position_stats[ident] |= 0 # unmapped read - don't change; set to 0 if not already present
+          self._position_stats[ident] |= 0 # unmapped read - don't change; set to 0 if not already present
         else:
           # position tracking
           if flag & 0x02 != 0: # mapped read
-            self.position_stats[ident] |= bit_pos
+            self._position_stats[ident] |= bit_pos
           else: # unknown mapping (assume mapped)
-            self.position_stats[ident] |= bit_pos
+            self._position_stats[ident] |= bit_pos
           if self.subset_detail:
             self.mapq_subsets[ident].append( mapq )
  
@@ -567,6 +569,34 @@ class SamStats(object):
         self.mapped[ 'gc' ].append( feature.gc() )
         self.mapped[ 'entropy' ].append( feature.entropy() )
 
+class SamFilter(object):
+  '''
+    filter sam reads based on tag names
+  '''
+  def __init__( self, sam_fh, target_fh, allowed_tags, exclude=False, log=bio.log_stderr ):
+    log( 'SamFilter: starting...' )
+    self.allowed_tags = allowed_tags
+    self.exclude = exclude
+    written = 0
+    pos = 0
+    for pos, line in enumerate(sam_fh):
+      if self.parse_line( line.strip() ):
+        target_fh.write( '%s\n' % line.strip() )
+        written += 1
+      if ( pos + 1 ) % 100000 == 0:
+        log( 'read %i lines, wrote %i lines...' % (pos+1, written) )
+    log( 'processed: read %i lines, wrote %i lines' % ( pos+1, written ) )
+
+  def parse_line( self, line ):
+    fields = line.split()
+    if len(fields) < 5 or line.startswith('@'):
+      return True  
+    else:
+      if fields[0] in self.allowed_tags:
+        return not self.exclude
+      else:
+        return self.exclude
+  
 class BamReaderExternal(object):
   '''
     sam handle interface using an external BamToSam
