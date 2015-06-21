@@ -20,7 +20,7 @@ allowed_tags = set()
 for line in sys.stdin:
   fields = line.strip().split(',')
   if len(fields) == 5 and fields[0].isdigit():
-    distance = int(fields[3])
+    distance = abs(int(fields[3]))
     mappable = int(fields[4]) == 0
     if distance >= args.min_distance and distance <= args.max_distance:
       if mappable and args.mappable or not mappable and not args.mappable:
