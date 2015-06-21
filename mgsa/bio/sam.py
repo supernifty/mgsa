@@ -430,7 +430,7 @@ class SamDiff(object):
     self.subset_detail = subset_detail
     self.mismatch_detail = None if mismatch_detail is None else 2 ** mismatch_detail 
     self.mismatch_stats = {}
-    self.stats = collections.defaultdict(int) # all sam entries with a binary collection showing which sam mapped it
+    self._stats = collections.defaultdict(int) # all sam entries with a binary collection showing which sam mapped it
     self._position_stats = collections.defaultdict(int) # all sam entries and positions, containing a binary collection of mapped sams
     self.mapq_stats = [] # overall mapq of a sample
     self.mapq_subsets = collections.defaultdict(list)  # mapq and the count of subsets that it is assigned to i.e. { 15: { '00': 12, '01': 14 ... etc } }
@@ -451,8 +451,11 @@ class SamDiff(object):
 
     log( 'analyzing...' )
     self.totals = collections.defaultdict(int)
-    for key, value in self.stats.items(): # readname, distribution
+    for key, value in self._stats.items(): # readname, distribution
       self.totals[value] += 1
+    # free up memory
+    del self._stats 
+
     if self.compare_position:
       log( 'analyzing positions...' )
       self.position_totals = collections.defaultdict(int)
@@ -497,13 +500,13 @@ class SamDiff(object):
       flag = int( fields[1] )
       mapq = int( fields[4] )
       if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
-        self.stats[fields[0]] |= 0 # unmapped read - don't change; set to 0 if not already present
+        self._stats[fields[0]] |= 0 # unmapped read - don't change; set to 0 if not already present
       else:
         self.mapq.append( mapq )
         if flag & 0x02 != 0: # mapped read
-          self.stats[fields[0]] |= bit_pos
+          self._stats[fields[0]] |= bit_pos
         else: # unknown mapping (assume mapped)
-          self.stats[fields[0]] |= bit_pos
+          self._stats[fields[0]] |= bit_pos
       if self.compare_position:
         position = int( fields[3] )
         ident = '%s-%i' % ( fields[0], position )
