@@ -16,15 +16,19 @@ parser.add_argument('--mappable', dest='mappable', type=bool, default=False, hel
 
 args = parser.parse_args()
 
+bio.log_stderr( 'Filtering based on min distance %i, max_distance %i, mappable %s' % ( args.min_distance, args.max_distance, args.mappable ) )
+
 allowed_tags = set()
+candidates = 0
 for line in sys.stdin:
   fields = line.strip().split(',')
   if len(fields) == 5 and fields[0].isdigit():
+    candidates += 1
     distance = abs(int(fields[3]))
     mappable = int(fields[4]) == 0
     if distance >= args.min_distance and distance <= args.max_distance:
       if mappable and args.mappable or not mappable and not args.mappable:
         allowed_tags.add( fields[2] )
-bio.log_stderr( '%i allowed tags' % len(allowed_tags) )
+bio.log_stderr( '%i allowed tags from %i possibles' % ( len(allowed_tags), candidates ) )
 
 bio.SamFilter( sam_fh=bio.BamReaderExternal( config.BAM_TO_SAM, args.bam ), target_fh=sys.stdout, allowed_tags=allowed_tags, log=bio.log_stderr )
