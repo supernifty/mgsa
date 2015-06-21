@@ -85,3 +85,21 @@ class TestMauveMap(unittest.TestCase):
     self.assertEqual( 'hello', target.getvalue().split( '\n' )[1].split('\t')[2] )
     self.assertEqual( 'hello', target.getvalue().split( '\n' )[2].split('\t')[2] )
             
+  def test_nearest( self ):
+    src = StringIO.StringIO( '> 1:1-10 +\n1234567890\n> 2:3-13 +\n3456789012\n=\n> 1:50-60 -\n0987654321\n> 2:80-90 +\n1234567890\n=' )
+    target = StringIO.StringIO()
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       3      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_5~0~0  0       generated       53      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    m = bio.MauveMap( src, src_strand=1, target_strand=2, new_reference='hello', log=bio.log_quiet )
+    self.assertEqual( 0, m.find_nearest( 1 ) )
+    self.assertEqual( -10, m.find_nearest( 20 ) )
+    self.assertEqual( 10, m.find_nearest( 41 ) )
+            
+  def test_nearest_target( self ):
+    src = StringIO.StringIO( '> 1:1-10 +\n1234567890\n> 2:3-13 +\n3456789012\n=\n> 1:50-60 -\n0987654321\n> 2:80-90 +\n1234567890\n=' )
+    target = StringIO.StringIO()
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       3      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_5~0~0  0       generated       53      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    m = bio.MauveMap( src, src_strand=1, target_strand=2, new_reference='hello', log=bio.log_quiet )
+    self.assertEqual( 2, m.find_nearest_target( 1 ) )
+    self.assertEqual( -8, m.find_nearest_target( 20 ) )
+    self.assertEqual( 10, m.find_nearest_target( 70 ) )
+  

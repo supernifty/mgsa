@@ -40,7 +40,7 @@ if args.subset_detail:
 
 if args.mismatch_detail > -1:
   print "\nmismatch details\n==================="
-  print "pos,alt"
+  print "pos,alt,read"
   mismatch_count = 0
   unpaired_count = 0
   for read, value in diff.mismatch_stats.items():

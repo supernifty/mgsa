@@ -12,6 +12,7 @@ class MauveMap( object ):
     '''
     self.log = log
     self.coverage = {}
+    self.target_map = None
     self.genome_stats = { 'xmin': 1e9, 'xmax': 0, 'ymin': 1e9, 'ymax': 0 }
     self.new_reference = new_reference
     current_sequence = [ '', '' ] # src, target
@@ -89,6 +90,31 @@ class MauveMap( object ):
     else:
       return sequence[reverse_pos]
 
+  def find_nearest_target( self, target_base, max_dist=100000 ):
+    if self.target_map is None:
+      self.target_map = set()
+      for source, dest in self.coverage.items():
+        self.target_map.add( dest )
+        
+    diff = 0
+    while diff < max_dist:
+      if target_base + diff in self.target_map:
+        return diff
+      if target_base - diff in self.target_map:
+        return -diff
+      diff += 1
+    return None
+ 
+  def find_nearest( self, src_base, max_dist=100000 ):
+    diff = 0
+    while diff < max_dist:
+      if src_base + diff in self.coverage:
+        return diff
+      if src_base - diff in self.coverage:
+        return -diff
+      diff += 1
+    return None
+    
   def remap( self, sam_fh, output ):
     '''
       writes a sam file with the locations remapped
