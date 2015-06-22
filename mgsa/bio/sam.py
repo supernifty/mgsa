@@ -572,6 +572,42 @@ class SamStats(object):
         self.mapped[ 'gc' ].append( feature.gc() )
         self.mapped[ 'entropy' ].append( feature.entropy() )
 
+class SamTags(object):
+  '''
+    find all tags in a sam file
+  '''
+  def __init__( self, sam_fh, log=bio.log_stderr ):
+    log( 'SamTags: starting...' )
+    self.tags = set()
+    pos = 0
+    for pos, line in enumerate(sam_fh):
+      fields = line.split()
+      if len(fields) > 5 and not line.startswith('@'):
+        self.tags.add( fields[0] )
+      if ( pos + 1 ) % 100000 == 0:
+        log( 'read %i lines...' % (pos+1) )
+    log( 'processed: read %i lines' % ( pos+1 ) )
+
+class SamFeatures(object):
+  '''
+    write out features along with class
+  '''
+  def __init__( self, sam_fh, target_fh, classes, log=bio.log_stderr ):
+    target_fh.write( 'class,mapq\n')
+    for pos, line in enumerate(sam_fh):
+      fields = line.split()
+      if len(fields) > 5 and not line.startswith('@'):
+        # which class is it in?
+        y = 0 # default class
+        for idx, tags in enumerate( classes ):
+          if fields[0] in tags:
+            y = idx + 1
+            break
+        # write out class along with
+        target_fh.write( '%i,%s\n' % (y, fields[4]) )
+      if ( pos + 1 ) % 100000 == 0:
+        log( 'read %i lines...' % (pos+1) )
+    
 class SamFilter(object):
   '''
     filter sam reads based on tag names
