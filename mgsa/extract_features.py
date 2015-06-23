@@ -23,4 +23,4 @@ for bam in opts.bams[:-1]:
 
 sys.stderr.write( "building feature file from %s...\n" % opts.bams[-1] )
 
-bio.SamFeatures( bio.BamReaderExternal( config.BAM_TO_SAM, opts.bams[-1] ), sys.stdout, classes, log=bio.log_stderr )
+bio.SamFeatures( bio.BamReaderExternal( config.BAM_TO_SAM, opts.bams[-1] ), sys.stdout, classes, exclude_unmapped=True, log=bio.log_stderr )

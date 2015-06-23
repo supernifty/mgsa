@@ -592,21 +592,25 @@ class SamFeatures(object):
   '''
     write out features along with class
   '''
-  def __init__( self, sam_fh, target_fh, classes, log=bio.log_stderr ):
+  def __init__( self, sam_fh, target_fh, classes, exclude_unmapped=True, log=bio.log_stderr ):
     target_fh.write( 'class,mapq\n')
+    written = 0
     for pos, line in enumerate(sam_fh):
       fields = line.split()
       if len(fields) > 5 and not line.startswith('@'):
-        # which class is it in?
-        y = 0 # default class
-        for idx, tags in enumerate( classes ):
-          if fields[0] in tags:
-            y = idx + 1
-            break
-        # write out class along with
-        target_fh.write( '%i,%s\n' % (y, fields[4]) )
+        flag = int(fields[1])
+        if not exclude_unmapped or flag & 0x04 == 0:
+          # which class is it in?
+          y = 0 # default class
+          for idx, tags in enumerate( classes ):
+            if fields[0] in tags:
+              y = idx + 1
+              break
+          # write out class along with
+          target_fh.write( '%i,%s\n' % (y, fields[4]) )
+          written += 1
       if ( pos + 1 ) % 100000 == 0:
-        log( 'read %i lines...' % (pos+1) )
+        log( 'read %i lines, wrote %i lines...' % (pos+1, written) )
     
 class SamFilter(object):
   '''
