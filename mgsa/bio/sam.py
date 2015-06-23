@@ -172,7 +172,7 @@ class SamToFasta(object):
     #8 326
     #9 AAATGTCTTCATTACTTACTTTATATATAAATCCTATGTTTATTTTTATTGTTGTTTTAGATGATACTTAGAATCGTGTTTAAAAAAAAGTTTCCTGCTG
     #10 BGG=77FGBGG?GDGB7GED@CEGECDA?EG3D8:D.??06GB?-GCDGCA9G#AG?=AAEFBFFG=@DAAD#EBD;EC5#GD#5DE##A#BF#B#?=##
-    #AS:i:192 #XN:i:0 #XM:i:2 #XO:i:0 #XG:i:0 #NM:i:2 #MD:Z:87G5G6 #YS:i:200 #YT:Z:CP
+    #11 AS:i:192 #XN:i:0 #XM:i:2 #XO:i:0 #XG:i:0 #NM:i:2 #MD:Z:87G5G6 #YS:i:200 #YT:Z:CP
 
     self.stats['lines'] += 1
     if line.startswith( '@' ): # skip header
@@ -593,7 +593,7 @@ class SamFeatures(object):
     write out features along with class
   '''
   def __init__( self, sam_fh, target_fh, classes, exclude_unmapped=True, log=bio.log_stderr ):
-    target_fh.write( 'class,mapq\n')
+    target_fh.write( 'class,mapq,match,nm,as,xs\n')
     written = 0
     for pos, line in enumerate(sam_fh):
       fields = line.split()
@@ -606,11 +606,29 @@ class SamFeatures(object):
             if fields[0] in tags:
               y = idx + 1
               break
-          # write out class along with
-          target_fh.write( '%i,%s\n' % (y, fields[4]) )
+          # write out class along with features
+          mapq = fields[4]
+          cigar = fields[5]
+          extra = ' '.join(fields[11:])
+          target_fh.write( '%i,%s,%i,%i,%i,%i\n' % (y, mapq, SamFeatures.matches(cigar), SamFeatures.extra(extra, 'NM'), SamFeatures.extra(extra, 'AS'), SamFeatures.extra(extra, 'XS') ) )
           written += 1
       if ( pos + 1 ) % 100000 == 0:
         log( 'read %i lines, wrote %i lines...' % (pos+1, written) )
+
+  @staticmethod
+  def extra(extra, field):
+    matches = re.findall( '%s:i:([0-9]+)' % field, extra )
+    if len(matches) == 1:
+      return int(matches[0])
+    else:
+      return 0
+
+  @staticmethod
+  def matches(cigar):
+    if 'M' in cigar:
+      return sum( [ int(x) for x in re.findall( '([0-9]+)M', cigar ) ] )
+    else:
+      return 0
     
 class SamFilter(object):
   '''

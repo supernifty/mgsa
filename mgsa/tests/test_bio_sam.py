@@ -294,19 +294,23 @@ class TestSamFeatures( unittest.TestCase ):
     bio.SamFeatures( sam, target, [ class1 ], log=bio.log_quiet )
     lines = target.getvalue().split( '\n' )
     self.assertEqual( 4, len(lines) )
-    self.assertEqual( '1,60', lines[1] )
-    self.assertEqual( '0,40', lines[2] )
+    self.assertEqual( '1,60,15,10,84,0', lines[1] )
+    self.assertEqual( '0,40,15,10,84,0', lines[2] )
 
   def test_unmapped(self):
-    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_7~0~0  4       generated       6      40      15M       *       0       0       AAGCATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:1', 'mgsa_seq_7~0~0  4       generated       6      40      15M       *       0       0       AAGCATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
     class1 = set( [ 'mgsa_seq_5~0~0' ] )
     target = StringIO.StringIO()
     bio.SamFeatures( sam, target, [ class1 ], log=bio.log_quiet )
     lines = target.getvalue().split( '\n' )
     self.assertEqual( 3, len(lines) )
-    self.assertEqual( '1,60', lines[1] )
+    self.assertEqual( '1,60,15,10,84,1', lines[1] )
     self.assertEqual( '', lines[2] )
 
+  def test_matches(self):
+    self.assertEqual( 50, bio.SamFeatures.matches( '50M' ) )
+    self.assertEqual( 50, bio.SamFeatures.matches( '12S50M3H' ) )
+    self.assertEqual( 0, bio.SamFeatures.matches( '12S3H' ) )
 
 class TestSamFilter( unittest.TestCase ):
   def test_simple(self):
