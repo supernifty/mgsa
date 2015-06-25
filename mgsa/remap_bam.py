@@ -16,6 +16,7 @@ parser.add_argument('--origin', type=int, default=1, help='index of fasta that b
 parser.add_argument('--target', type=int, default=2, help='index of fasta that bam should be mapped to')
 parser.add_argument('--output', required=True, help='sam output file')
 parser.add_argument('--new_reference', required=False, help='new reference name for sam output')
+parser.add_argument('--remap_cigar', required=False, default=False, help='attempt to remap the cigar string')
 
 args = parser.parse_args()
 
@@ -31,7 +32,7 @@ if args.bam.endswith( '.bam' ):
 else:
   sam_fh = open( args.bam, 'r' )
 
-mauve_map.remap( sam_fh, open( args.output, 'w' ) )
+mauve_map.remap( sam_fh, open( args.output, 'w' ), remap_cigar=args.remap_cigar )
  
 print "====== Mapping Stats ====="
 for key in mauve_map.genome_stats.keys():

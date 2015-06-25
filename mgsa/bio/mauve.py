@@ -1,5 +1,6 @@
 
 import re
+import itertools
 
 import bio
 
@@ -115,7 +116,7 @@ class MauveMap( object ):
       diff += 1
     return None
     
-  def remap( self, sam_fh, output ):
+  def remap( self, sam_fh, output, remap_cigar=False ):
     '''
       writes a sam file with the locations remapped
     '''
@@ -138,8 +139,11 @@ class MauveMap( object ):
           start_pos = int(fields[3])
           read_len = len(fields[9]) # TODO not always correct, not considering cigar
           if all( [ x in self.coverage for x in xrange( start_pos, start_pos + read_len ) ] ):
-            self.stats['reads_covered'] += 1 # read is completely mappable, TODO fully mapped is not necessarily contiguous
+            self.stats['reads_covered'] += 1 # read is completely mappable, TODO fully mapped is not necessarily contiguous, and what about deletions?
+            #self.log( 'read at %i -> %i covered: %s' % ( start_pos, start_pos + read_len, start_pos in self.coverage ) )
             # convert to target position
+            if remap_cigar:
+              fields[5] = self.calculate_cigar( int(fields[3]), len(fields[9]) )
             fields[3] = str( self.coverage[ start_pos ] )
             output.write( '\t'.join( fields ) )
             output.write( '\n' )
@@ -174,3 +178,37 @@ class MauveMap( object ):
       if pos < 10 or pos % 100000 == 0:
         self.log( "processed %i lines: %s..." % ( pos, self.stats ) )
  
+  @staticmethod
+  def run_length_encode( cigar ):
+    return ''.join( [ '%i%s' % (len(list(g)), k) for k,g in itertools.groupby(cigar)] )
+
+  def calculate_cigar( self, source_pos, read_len ):
+    '''
+      look at the mauve mapping of each individual base to come up with a new cigar string for the read
+    '''
+    source_end_pos = source_pos + read_len
+    cigar = []
+    #self.log( 'looking for coverage at %i' % source_pos )
+    expected_target_pos = self.coverage[ source_pos ] # assume 1st position covered
+    while source_pos < source_end_pos:
+      if source_pos in self.coverage:
+        actual_target_pos = self.coverage[ source_pos ] # where it maps to
+        diff = expected_target_pos - actual_target_pos
+        if diff == 0: # match
+          cigar.append( 'M' )
+          expected_target_pos += 1
+          source_pos += 1
+        elif diff > 0 and diff < source_end_pos - source_pos: # it's moved along the read (deletion)
+            cigar.extend( 'D' * diff )
+            expected_target_pos += diff + 1
+            source_pos += 1
+        else: # it's moved off the read (insertion)
+            cigar.append( 'I' )
+            source_pos += 1
+            # keep on same target pos
+      else: # not in coverage (insertion)
+        cigar.append( 'I' )
+        source_pos += 1
+
+    # compress into cigar
+    return MauveMap.run_length_encode( cigar )

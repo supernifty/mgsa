@@ -103,3 +103,31 @@ class TestMauveMap(unittest.TestCase):
     self.assertEqual( -8, m.find_nearest_target( 20 ) )
     self.assertEqual( 10, m.find_nearest_target( 70 ) )
   
+  def test_run_length_encode( self ):
+    self.assertEqual( '3A2B1C', bio.MauveMap.run_length_encode( ['A', 'A', 'A', 'B', 'B', 'C'] ) )
+
+  def test_cigar_remap_simple( self ):
+    src = StringIO.StringIO( '> 1:1-10 +\n1234567890\n> 2:3-13 +\n3456789012\n=\n> 1:50-60 -\n0987654321\n> 2:80-90 +\n1234567890\n=' )
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       3      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_5~0~0  0       generated       53      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    m = bio.MauveMap( src, src_strand=1, target_strand=2, new_reference='hello', log=bio.log_quiet )
+    self.assertEqual( '5M', m.calculate_cigar( 5, 5 ) )
+
+  def test_cigar_remap_insertion( self ):
+    src = StringIO.StringIO( '> 1:1-10 +\n1234567890\n> 2:3-13 +\n3456789012\n=\n> 1:11-20 -\n0987654321\n> 2:80-90 +\n1234567890\n=' )
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       8      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    m = bio.MauveMap( src, src_strand=1, target_strand=2, new_reference='hello', log=bio.log_quiet )
+    target = StringIO.StringIO()
+    m.remap( sam1, target, remap_cigar=True )
+    result = target.getvalue().split( '\n' )[1].split('\t')[5]
+    self.assertEqual( '3M2I', result )
+
+  def test_cigar_remap_deletion( self ):
+    src = StringIO.StringIO( '> 1:1-10 +\n1234567890\n> 2:3-13 +\n3456789012\n=\n> 1:11-12 -\n09\n> 2:80-81 +\n12\n=\n1:13-23 +\n1234567890\n> 2:20-30 +\n3456789012\n=' )
+    sam1 = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       9      60      5M       *       0       0       AACAA    ~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    m = bio.MauveMap( src, src_strand=1, target_strand=2, new_reference='hello', log=bio.log_quiet )
+    target = StringIO.StringIO()
+    m.remap( sam1, target, remap_cigar=True )
+    result = target.getvalue().split( '\n' )[1].split('\t')[5]
+    self.assertEqual( '*', result ) # TODO deletes don't map
+
+
