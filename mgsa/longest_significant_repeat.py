@@ -42,6 +42,6 @@ def find_repeat( l, p ):
 
     
 if __name__ == "__main__":
-  for l in (100, 200, 400, 800, 1600, 3200, 6400, 12800):
+  for l in (16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384):
     print l, find_repeat( l, 95 ) # prints length and longest repeat at 95th percentile
   
