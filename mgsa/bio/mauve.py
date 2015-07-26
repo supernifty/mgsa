@@ -197,18 +197,16 @@ class MauveMap( object ):
         if diff == 0: # match
           cigar.append( 'M' )
           expected_target_pos += 1
-          source_pos += 1
         elif diff > 0 and diff < source_end_pos - source_pos: # it's moved along the read (deletion)
             cigar.extend( 'D' * diff )
             expected_target_pos += diff + 1
-            source_pos += 1
         else: # it's moved off the read (insertion)
             cigar.append( 'I' )
-            source_pos += 1
             # keep on same target pos
       else: # not in coverage (insertion)
         cigar.append( 'I' )
-        source_pos += 1
+        # keep on same target pos
+      source_pos += 1
 
     # compress into cigar
     return MauveMap.run_length_encode( cigar )
