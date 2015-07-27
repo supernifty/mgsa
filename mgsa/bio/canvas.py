@@ -1,14 +1,15 @@
-import ImageDraw
 import os
+
+from PIL import Image, ImageDraw
 
 import fasta
 
 class BamDraw (object):
-  def __init__(self, size, target):
+  def __init__(self, size):
     self.size = size
-    self.target = target
-    self.draw = ImageDraw.Draw(target)
-    self.pixels = target.load()
+    self.target = Image.new( 'RGB', size, "white" )
+    self.draw = ImageDraw.Draw(self.target)
+    self.pixels = self.target.load()
 
   def add_refs( self, ref_names ):
     self.fasta_names = [ os.path.basename(name) for name in ref_names ]
