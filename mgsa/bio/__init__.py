@@ -1,6 +1,7 @@
 
 from bias import *
 from bio import *
+from canvas import *
 from chart import *
 from classify import *
 from distance import *

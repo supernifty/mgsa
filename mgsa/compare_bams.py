@@ -62,3 +62,4 @@ if args.mismatch_detail > -1:
       unpaired_count += 1
       #print "missing values", read, value
   bio.log_stderr( "%i mismatches with incorrect alternatives; %i unpaired reads" % ( mismatch_count, unpaired_count ) )
+

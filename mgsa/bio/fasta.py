@@ -401,6 +401,13 @@ class FastaDiff(object):
         self.errors[key] = 0
       self.errors[key] += 1
     
+class FastaLength(object):
+  def __init__(self, reader):
+    self.reader = reader
+    self.length = 0
+    for item in self.reader.items():
+       self.length += len(item)
+
 class Fasta(object):
   '''
     keeps the whole fasta in memory for random access
