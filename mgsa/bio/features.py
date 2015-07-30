@@ -2,6 +2,8 @@
 import collections
 import math
 
+import os
+
 WORD_SIZE = 3 # i.e. triplets
 
 class ReadFeature (object):

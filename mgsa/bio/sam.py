@@ -545,16 +545,23 @@ class SamWriter(object):
     self._fh.write( '%s\t%i\t%s\t%i\t%i\t%s\t%s\t%i\t%i\t%s\t%s\t%s\n' % ( name[1:], 0, 'generated', match + 1, 1, '%iM' % len(dna), '*', 0, 0, dna, confidence, '' ) )
 
 class SamStats(object):
-  def __init__( self, sam_fh, mapq_min=0, log=bio.log_stderr ):
+  def __init__( self, sam_fh, mapq_min=0, max_sample=-1, skip=0, log=bio.log_stderr ):
     self.log = log
     self.mapq_min = mapq_min
     self.unmapped = { 'gc': [], 'entropy': [] }
     self.mapped = { 'gc': [], 'entropy': [] }
+    self.count = { 'mapped': 0, 'unmapped': 0 }
+    self.max_sample = max_sample
 
     for pos, line in enumerate(sam_fh):
+      if skip > 0:
+        skip -= 1
+        continue
       self.parse_line( pos, line.strip() )
       if ( pos + 1 ) % 100000 == 0:
         log( 'processed %i lines...' % (pos+1) )
+      if max_sample > 0 and self.count['mapped'] > max_sample and self.count['unmapped'] > max_sample:
+        break
     log( 'processed: read %i lines' % ( pos+1 ) )
 
   def parse_line( self, pos, line ):
@@ -566,11 +573,15 @@ class SamStats(object):
       flag = int( fields[1] )
       mapq = int( fields[4] )
       if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
-        self.unmapped[ 'gc' ].append( feature.gc() )
-        self.unmapped[ 'entropy' ].append( feature.entropy() )
+        if self.max_sample < 0 or self.count['unmapped'] < self.max_sample:
+          self.unmapped[ 'gc' ].append( feature.gc() )
+          self.unmapped[ 'entropy' ].append( feature.entropy() )
+          self.count['unmapped'] += 1
       else:
-        self.mapped[ 'gc' ].append( feature.gc() )
-        self.mapped[ 'entropy' ].append( feature.entropy() )
+        if self.max_sample < 0 or self.count['unmapped'] < self.max_sample:
+          self.mapped[ 'gc' ].append( feature.gc() )
+          self.mapped[ 'entropy' ].append( feature.entropy() )
+          self.count['mapped'] += 1
 
 class SamTags(object):
   '''

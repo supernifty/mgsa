@@ -10,12 +10,15 @@ import config
 parser = argparse.ArgumentParser(description='Analyze BAM')
 parser.add_argument('bam', metavar='bam', help='bam file to analyze')
 parser.add_argument('--buckets', metavar='buckets', type=int, default=10, help='number of buckets')
+parser.add_argument('--max_sample', metavar='max_sample', type=int, default=-1, help='max number of samples in each group')
+parser.add_argument('--skip', metavar='skip', type=int, default=0, help='skip the first reads')
 
 args = parser.parse_args()
 bam = bio.BamReaderExternal( config.BAM_TO_SAM, args.bam )
 
+stats = bio.SamStats( bam, max_sample=args.max_sample, skip=skip )
+
 # gc
-stats = bio.SamStats( bam )
 buckets = numpy.linspace(0, 1, args.buckets + 1)
 mapped_buckets = bio.bucket( filter( None, stats.mapped['gc'] ), buckets )
 unmapped_buckets = bio.bucket( filter( None, stats.unmapped['gc'] ), buckets )
