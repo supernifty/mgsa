@@ -55,7 +55,7 @@ for idx, line in enumerate( sam_fh ):
       count -= 1
       if count == 0:
         break      
-  if idx % 1000 == 0:
+  if idx % 100000 == 0:
     print "processed %i lines: unmapped %i mapped %i still unmapped %i" % ( idx, unmapped, mapped, still_unmapped )
 
 print "==========================================================="
