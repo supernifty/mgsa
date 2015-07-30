@@ -21,6 +21,7 @@ unmapped = 0
 still_unmapped = 0
 mapped = 0
 scores = []
+best = ( 0, [] )
 
 for idx, line in enumerate( sam_fh ):
   fields = line.strip().split()
@@ -39,12 +40,17 @@ for idx, line in enumerate( sam_fh ):
       #print "executing", what
       p = subprocess.Popen(what, shell=True, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE) #, close_fds=True)
       found = False
+      current = []
       for line in p.stdout:
-        #print line
+        current.append( line )
         if line.find( 'Raw score' ) != -1:
-          scores.append( int( line.split(':')[1].strip() ) )
+          score = int( line.split(':')[1].strip() )
+          scores.append( score )
           found = True
-          break
+          if score > best[0]: # read the whole response
+            best = ( score, current )
+          else:
+            break
       if found:
         mapped += 1
       else:
@@ -62,3 +68,5 @@ print "==========================================================="
 print "processed %i lines: unmapped %i mapped %i still unmapped %i" % ( idx, unmapped, mapped, still_unmapped )
 if len(scores) > 0:
   print "mean %.2f max %i min %i hit %.2f%%" % ( 1. * sum(scores) / len(scores), max(scores), min(scores), 100. * mapped / unmapped )
+  print "==========================================================="
+  print "best alignment:\n", ''.join( best[1] )
