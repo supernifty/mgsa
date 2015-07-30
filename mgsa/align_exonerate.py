@@ -22,6 +22,7 @@ still_unmapped = 0
 mapped = 0
 scores = []
 best = ( 0, [] )
+worst = ( 1e9, [] )
 
 for idx, line in enumerate( sam_fh ):
   fields = line.strip().split()
@@ -49,8 +50,10 @@ for idx, line in enumerate( sam_fh ):
           found = True
           if score > best[0]: # read the whole response
             best = ( score, current )
+          elif score < worst[0]: # read the whole response
+            worst = ( score, current )
           else:
-            break
+            pass # break continue to check all raw score lines
       if found:
         mapped += 1
       else:
@@ -70,3 +73,6 @@ if len(scores) > 0:
   print "mean %.2f max %i min %i hit %.2f%%" % ( 1. * sum(scores) / len(scores), max(scores), min(scores), 100. * mapped / unmapped )
   print "==========================================================="
   print "best alignment:\n", ''.join( best[1] )
+  print "==========================================================="
+  print "worst alignment:\n", ''.join( worst[1] )
+
