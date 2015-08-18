@@ -398,5 +398,22 @@ class TestFasta( unittest.TestCase ):
     self.assertTrue( f.read_to( 10 ) )
     self.assertFalse( f.read_to( 11 ) )
    
+class TestSequenceGenerator( unittest.TestCase ):
+
+  def test_simple( self ):
+    self.assertEqual( 'AAAA', bio.SequenceGenerator( 4, (1.0, 0, 0, 0) ).sequence )
+    self.assertEqual( 'TTTT', bio.SequenceGenerator( 4, (0, 0, 0, 1.0) ).sequence )
+
+  def test_mutate( self ):
+    s = bio.SequenceGenerator( 4, (1.0, 0, 0, 0) )
+    s.mutate( 0 )
+    self.assertEqual( 'CAAA', s.sequence )
+    s.mutate( 3 )
+    self.assertEqual( 'CAAC', s.sequence )
+    s.mutate( 0 )
+    s.mutate( 0 )
+    s.mutate( 0 )
+    self.assertEqual( 'AAAC', s.sequence )
+
 if __name__ == '__main__':
   unittest.main()

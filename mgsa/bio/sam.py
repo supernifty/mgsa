@@ -604,8 +604,10 @@ class SamFeatures(object):
     write out features along with class
   '''
   def __init__( self, sam_fh, target_fh, classes, exclude_unmapped=True, log=bio.log_stderr ):
-    target_fh.write( 'class,mapq,match,nm,as,xs\n')
+    if target_fh is not None:
+      target_fh.write( 'class,mapq,match,nm,as,xs,gc,entropy\n')
     written = 0
+    self.result = []
     for pos, line in enumerate(sam_fh):
       fields = line.split()
       if len(fields) > 5 and not line.startswith('@'):
@@ -620,8 +622,13 @@ class SamFeatures(object):
           # write out class along with features
           mapq = fields[4]
           cigar = fields[5]
+          read = fields[9]
+          feature = features.ReadFeature( read )
           extra = ' '.join(fields[11:])
-          target_fh.write( '%i,%s,%i,%i,%i,%i\n' % (y, mapq, SamFeatures.matches(cigar), SamFeatures.extra(extra, 'NM'), SamFeatures.extra(extra, 'AS'), SamFeatures.extra(extra, 'XS') ) )
+          if target_fh is not None:
+            target_fh.write( '%i,%s,%i,%i,%i,%i,%i,%i\n' % (y, mapq, SamFeatures.matches(cigar), SamFeatures.extra(extra, 'NM'), SamFeatures.extra(extra, 'AS'), SamFeatures.extra(extra, 'XS'), 100 * feature.gc(), 100 * feature.entropy() ) )
+          else:
+            self.result.append( { 'y': y, 'mapq': mapq, 'matches': SamFeatures.matches(cigar), 'nm': SamFeatures.extra(extra, 'NM'), 'as': SamFeatures.extra(extra, 'AS'), 'xs': SamFeatures.extra(extra, 'XS'), 'gc': 100 * feature.gc(), 'entropy': 100 * feature.entropy(), 'pos': fields[3], 'cigar': cigar } )
           written += 1
       if ( pos + 1 ) % 100000 == 0:
         log( 'read %i lines, wrote %i lines...' % (pos+1, written) )

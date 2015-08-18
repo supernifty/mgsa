@@ -668,5 +668,24 @@ class RepeatedFastaGenerator( object ):
           out_fh.write( '%s\n' % item ) # write unmodified
        #sys.stdout.write( sequence )
 
+BASES = 'ACGT' 
+
+class SequenceGenerator( object ):
+  def __init__( self, length, probs=(0.25, 0.25, 0.25, 0.25) ):
+    result = []
+    for _ in xrange( length ):
+      x = random.random()
+      for prob_idx in xrange(len(probs)):
+        if x < sum(probs[:prob_idx+1]):
+          result.append(BASES[prob_idx])
+          break
+    self.sequence = ''.join(result)  
+
+  def mutate( self, position ):
+    current_base_index = BASES.index(self.sequence[position])
+    next_base_index = ( current_base_index + 1 ) % len(BASES)
+    new_base = BASES[ next_base_index ]
+    self.sequence = self.sequence[:position] + new_base + self.sequence[position+1:]
+
 if __name__ == "__main__":
   pass

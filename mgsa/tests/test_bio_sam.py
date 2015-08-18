@@ -294,8 +294,17 @@ class TestSamFeatures( unittest.TestCase ):
     bio.SamFeatures( sam, target, [ class1 ], log=bio.log_quiet )
     lines = target.getvalue().split( '\n' )
     self.assertEqual( 4, len(lines) )
-    self.assertEqual( '1,60,15,10,84,0', lines[1] )
-    self.assertEqual( '0,40,15,10,84,0', lines[2] )
+    self.assertEqual( '1,60,15,10,84,0,10,89', lines[1] )
+    self.assertEqual( '0,40,15,10,84,0,20,89', lines[2] )
+
+  def test_simple_dict(self):
+    sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', 'mgsa_seq_7~0~0  0       generated       6      40      15M       *       0       0       AAGCATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
+    class1 = set( [ 'mgsa_seq_5~0~0' ] )
+    sf = bio.SamFeatures( sam, None, [ class1 ], log=bio.log_quiet )
+    lines = sf.result
+    self.assertEqual( 2, len(lines) )
+    self.assertEqual( '60', lines[0]['mapq'] )
+    self.assertEqual( '40', lines[1]['mapq'] )
 
   def test_unmapped(self):
     sam = ( '@SQ     SN:generated    LN:4023', 'mgsa_seq_5~0~0  0       generated       6      60      15M       *       0       0       AACAATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:1', 'mgsa_seq_7~0~0  4       generated       6      40      15M       *       0       0       AAGCATTTTT    ~~~~~~~~~~~~~~~    NM:i:10 AS:i:84 XS:i:0', )
@@ -304,7 +313,7 @@ class TestSamFeatures( unittest.TestCase ):
     bio.SamFeatures( sam, target, [ class1 ], log=bio.log_quiet )
     lines = target.getvalue().split( '\n' )
     self.assertEqual( 3, len(lines) )
-    self.assertEqual( '1,60,15,10,84,1', lines[1] )
+    self.assertEqual( '1,60,15,10,84,1,10,89', lines[1] )
     self.assertEqual( '', lines[2] )
 
   def test_matches(self):

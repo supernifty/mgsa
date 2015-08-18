@@ -42,6 +42,8 @@ def _update_range( line, start, command_list ):
           command_list[i] = ( 'd', start + original_len, to_delete - ( original_len - command[1] + start ) )
         else:
           line = line[:command[1]-start] + line[command[1] - start + to_delete:]
+      else:
+        print "unknown command", command
   return line
   
 def fasta_edit( fh, out, commands, width=50 ):
