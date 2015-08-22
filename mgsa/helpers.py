@@ -4,6 +4,8 @@ import math
 import sys
 import zlib
 
+import numpy as np
+
 import bio
 # before error_bias_no_variation
 #y_map_old = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
@@ -256,7 +258,15 @@ if __name__ == '__main__':
   elif sys.argv[1] == 'quick_view': # pipeline batch output
     quick_view( sys.stdin )
   elif sys.argv[1] == 'fasta_stats':
-    print bio.fasta_stats( sys.stdin ).stats
+    s = bio.fasta_stats( sys.stdin )
+    stats = s.stats
+    bases = s.base_counter
+    print "%i bases" % stats['count']
+    print "Bases:\t%s" % bases
+    print "Measure\t| Mean\t| SD"
+    print "-------\t|-----\t|---"
+    print "GC %%\t| %.1f\t| %.1f" % ( np.mean( stats['gc'] ), np.std( stats['gc'] ) )
+    print "Entropy\t| %.1f\t| %.1f" % ( np.mean( stats['entropy'] ), np.std( stats['entropy'] ) )
   elif sys.argv[1] == 'fasta_width': # resize to a provided width
     bio.fasta_set_width( sys.stdin, sys.stdout, int(sys.argv[2]) )
   elif sys.argv[1] == 'fasta_edit':

@@ -9,7 +9,7 @@ import fasta
 #y_map_old = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
 
 def fasta_stats( fh, log=bio.log_stderr ):
-  return fasta.FastaStats( fh, log )
+  return fasta.FastaStats( fh, log=log )
 
 def fasta_set_width( fh, out, width=50, log=bio.log_stderr ):
   b = ''

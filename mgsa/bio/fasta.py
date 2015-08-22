@@ -546,6 +546,7 @@ class FastaStats(object):
       @fasta: file handle
     '''
     self.stats = { 'count': 0, 'gc': [], 'entropy': [] }
+    self.base_counter = collections.Counter()
     current = ''
     lines = 0
     for line in fasta:
@@ -553,6 +554,7 @@ class FastaStats(object):
       if not line.startswith( '>' ):
         self.stats['count'] += len(line) # total fasta length
         current += line
+        self.base_counter.update(line)
         if len(current) >= read_length:
           add = len(current) - read_length
           for idx in xrange(0, add):
@@ -564,6 +566,7 @@ class FastaStats(object):
       if lines % 1000 == 0:
         log( '%i lines processed' % lines )
     #log( self.stats )
+    log( '%i lines processed' % lines )
 
 class MultiFastaReaderContainer(object):
   def __init__(self, genome):
@@ -671,15 +674,24 @@ class RepeatedFastaGenerator( object ):
 BASES = 'ACGT' 
 
 class SequenceGenerator( object ):
-  def __init__( self, length, probs=(0.25, 0.25, 0.25, 0.25) ):
+  def __init__( self, length, probs=(0.25, 0.25, 0.25, 0.25), repeat_length=None ):
     result = []
-    for _ in xrange( length ):
+    if repeat_length is None:
+      repeat_length = length
+    for _ in xrange( repeat_length ):
       x = random.random()
       for prob_idx in xrange(len(probs)):
         if x < sum(probs[:prob_idx+1]):
           result.append(BASES[prob_idx])
           break
-    self.sequence = ''.join(result)  
+    if length > 0 and repeat_length > 0:
+      mult = length / repeat_length
+      if repeat_length % length != 0:
+        mult += 1
+      self.sequence = ''.join(result * mult)  
+      self.sequence = self.sequence[:length]
+    else:
+      self.sequence = ''
 
   def mutate( self, position ):
     current_base_index = BASES.index(self.sequence[position])

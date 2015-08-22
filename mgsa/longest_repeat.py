@@ -7,6 +7,7 @@ def lcp(a, b):
       break
   return a[:i]
 
+# build suffixes, sort them
 def lrs(s):
   suffixes = []
   print "building suffixes for %i..." % len(s)
