@@ -250,10 +250,11 @@ class SamAccuracyEvaluator(object):
   '''
     evaluate sam accuracy given the correct sequence marker
   '''  
-  def __init__( self, sam, variation_map=None, log=bio.log_stderr, verbose=False ):
+  def __init__( self, sam, variation_map=None, log=bio.log_stderr, verbose=False, min_mapq=-1 ):
     '''
       @sam: file like object
     '''
+    self.min_mapq = min_mapq
     self.verbose = verbose
     self.log = log
     self.variation_map = self.parse_variation_map( variation_map )
@@ -311,9 +312,10 @@ class SamAccuracyEvaluator(object):
         self.log( 'WARN: %i: unexpected format: %s' % ( self.stats['lines'], line.strip() ) )
       else:
         flag = int(fields[1])
+        mapq = int(fields[4])
         #if self.stats['lines'] < 100:
         #  log( 'flag is %i' % flag )
-        if flag & 0x04 != 0: # unmapped
+        if flag & 0x04 != 0 or mapq < self.min_mapq: # unmapped
           self.stats['unmapped'] += 1
         else:
           if flag & 0x02 != 0: # mapped

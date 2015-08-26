@@ -322,7 +322,7 @@ class VCFDiff(object):
     compare two vcfs (with 1 chromosome)
   '''
 
-  def __init__( self, vcf_correct, vcf_candidate, log=bio.log_stderr, generate_positions=False ):
+  def __init__( self, vcf_correct, vcf_candidate, log=bio.log_stderr, generate_positions=False, verbose=False ):
     '''
       generates self.stats and self.buckets, containing tp, fp, and fn
       @vcf_correct: the correct VCF()
@@ -334,6 +334,7 @@ class VCFDiff(object):
     self.generate_positions = generate_positions
     self.positions = { 'tp': [], 'fp': [], 'fn': [] }
     self.buckets = [ { 'tp': 0, 'fp': 0, 'fn': 0 } for _ in xrange(0, 20) ]
+    self.verbose = verbose
     max_snp_pos = 0
     if len( vcf_correct.snp_list ) > 0:
       max_snp_pos = max( max_snp_pos, vcf_correct.snp_list[-1]['pos'] )
@@ -367,7 +368,8 @@ class VCFDiff(object):
         self.buckets[bucket]['fn'] += 1
         if self.generate_positions:
           self.positions['fn'].append( true_snp['pos'] )
-        log( 'fn: %i' % true_snp['pos'] )
+        if self.verbose:
+          log( 'fn: %i' % true_snp['pos'] )
       
     for candidate_snp in vcf_candidate.snp_list:
       bucket = int( math.floor( candidate_snp['pos'] / bucket_size ) )
@@ -394,7 +396,8 @@ class VCFDiff(object):
       if vcf_candidate.manager.find_indel_match( true_indel ) is None:
         self.stats['fn'] += 1
         self.buckets[bucket]['fn'] += 1
-        log( 'fn: %s' % true_indel )
+        if self.verbose:
+          log( 'fn: %s' % true_indel )
       else:
         self.stats['tp'] += 1
         self.buckets[bucket]['tp'] += 1

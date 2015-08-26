@@ -141,7 +141,7 @@ def autolabel(ax, rects):
 
 ##########################################################################
 # run job
-def mutation_hiv( out_file ):
+def mutation_hiv( out_file, target_file, has_base=True ):
   #out_file = "out/pipeline_batch_mutation_hiv_%s.out" % datetime.datetime.now().strftime("%Y%m%d")
   #run( "python pipeline_batch.py batch/pipeline_batch_mutation_hiv.cfg %s" % out_file )
   
@@ -151,7 +151,8 @@ def mutation_hiv( out_file ):
   y_bow = []
   y_bwa = []
   for x in xrange(0, 11):
-    y_base.append( get_value( 'unmapped', fh ) )
+    if has_base:
+      y_base.append( get_value( 'unmapped', fh ) )
     y_bow.append( get_value( 'unmapped', fh ) )
     y_bwa.append( get_value( 'unmapped', fh ) )
   
@@ -159,14 +160,15 @@ def mutation_hiv( out_file ):
   x = np.linspace( 0, 10, 11 )
   fig = plt.figure()
   ax = fig.add_subplot(111)
-  ax.plot(x, y_base, label='Baseline', color='b', marker='s')
+  if has_base:
+    ax.plot(x, y_base, label='Baseline', color='b', marker='s')
   ax.plot(x, y_bow, label='Bowtie2', color='g', marker='^')
   ax.plot(x, y_bwa, label='BWA', color='r', marker='o')
   ax.set_ylabel('Unmapped %')
   ax.set_xlabel('Mutation %')
   leg = ax.legend(prop={'size':12})
   leg.get_frame().set_alpha(0.8)
-  fig.savefig('%s/mutation-hiv.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
   
 def mutation_hiv_snp_f1(out_file):
@@ -1757,7 +1759,44 @@ def error_unmapped_hiv():
   
   fig.savefig('%s/error-unmapped-hiv.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
 
-def plot_heatmap( out_file, x_field_name, y_field_name, z_field_name, target_file, y_label ):
+def plot_tandem( bwa, bowtie, bowtie_ecoli, target ):
+  x = np.linspace( 1, len(bwa), len(bwa) )
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  btm = [a * 100./44 for a in bowtie]
+  #btme = [a * 100./44 for a in bowtie_ecoli]
+  bwam = [a * 100./60 for a in bwa]
+  ax.plot(x, btm, label='Bowtie2', marker='^')
+  #ax.plot(x, btme, label='Bowtie2 Ecoli', marker='x')
+  ax.plot(x, bwam, label='BWA', marker='o')
+  
+  ax.set_ylabel('Mapping Quality (%)')
+  ax.set_xlabel('Repeat Period')
+  leg = ax.legend(prop={'size':12}, loc='lower right')
+  leg.get_frame().set_alpha(0.8)
+  
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target), format='pdf', dpi=1000)
+
+
+def plot_mutation_unmapped( bwa, bowtie, target ):
+  x = np.linspace( 0, len(bwa)-1, len(bwa) )
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  btm = [100-a for a in bowtie]
+  bwam = [100-a for a in bwa]
+  print x, btm, bwam
+  ax.plot(x, btm, label='Bowtie2', marker='^')
+  ax.plot(x, bwam, label='BWA', marker='o')
+  
+  ax.set_ylabel('Unmapped %')
+  ax.set_xlabel('Read Distance')
+  leg = ax.legend(prop={'size':12}, loc='lower right')
+  leg.get_frame().set_alpha(0.8)
+  
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target), format='pdf', dpi=1000)
+
+
+def plot_heatmap( out_file, x_field_name, y_field_name, z_field_name, target_file, y_label, x_label='Read Length', z_field=False ):
   bio.log_stderr( 'extracting values from %s...' % out_file )
   x_fields = set()
   y_fields = set()
@@ -1768,7 +1807,10 @@ def plot_heatmap( out_file, x_field_name, y_field_name, z_field_name, target_fil
       continue
     x_field = find_parameter( line, x_field_name )
     y_field = find_parameter( line, y_field_name )
-    z_field = find_column( line, z_field_name )
+    if z_field:
+      z_field = find_parameter( line, z_field_name )
+    else:
+      z_field = find_column( line, z_field_name )
     x_fields.add( int(x_field) )
     y_fields.add( int(y_field) )
     z_values[ '%s,%s' % ( x_field, y_field ) ] = z_field
@@ -1807,7 +1849,7 @@ def plot_heatmap( out_file, x_field_name, y_field_name, z_field_name, target_fil
   #fig.colorbar(im, cax=cbar_ax)
   #cb = mpl.colorbar.ColorbarBase(cbar_ax, cmap=plt.cm.RdYlGn, spacing='proportional')#, norm=norm, spacing='proportional', ticks=bounds, boundaries=bounds, format='%1i')
   ax.set_ylabel(y_label)
-  ax.set_xlabel('Read length' )
+  ax.set_xlabel(x_label)
 
   ax.set_yticks(np.arange(m.shape[0])+0.5, minor=False)
   ax.set_xticks(np.arange(m.shape[1])+0.5, minor=False)
@@ -1893,13 +1935,13 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_depth( 'out/read-depth-novel-150430-coverage-poisson-rd100.out', 'cicroviridae-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(2,), my_breakpoints_lines=(3,), legend='lower left', my_horizontal=(50, 70,) )
 # don't do this plot_depth( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-all', show_breakpoints=True, labels=('100bp',), my_depths=(0,), my_breakpoints_lines=(1,), legend='lower right', my_horizontal=(50, 70,) )
 #
-bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
-bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+#bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
+#bowtie_roc = plot_depth_predictor( 'out/read-depth-novel-150506-coverage-poisson-ecoli-bowtie.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-bowtie', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)')
 
-lr_fpr = [ 0.078876679, 0.050061050, 0.039316239, 0.033455433, 0.029304029, 0.022466422, 0.021245421, 0.018559219, 0.016849817, 0.015628816, 0.015140415, 0.013675214, 0.012454212, 0.011233211, 0.010744811, 0.009279609, 0.008302808, 0.006593407, 0.005372405, ]
-lr_tpr = [ 0.9801105, 0.9779006, 0.9767956, 0.9745856, 0.9701657, 0.9679558, 0.9624309, 0.9502762, 0.9469613, 0.9425414, 0.9303867, 0.9138122, 0.9027624, 0.8773481, 0.8541436, 0.8176796, 0.7690608, 0.6950276, 0.5624309, ]
-lr_roc = { 'fpr': lr_fpr, 'tpr': lr_tpr }
-plot_rocs( ( bwa_roc, bowtie_roc, lr_roc ), labels=('BWA', 'Bowtie', 'Regression'), short_name='bwa-vs-bowtie-vs-regression', xmax=0.5 )
+#lr_fpr = [ 0.078876679, 0.050061050, 0.039316239, 0.033455433, 0.029304029, 0.022466422, 0.021245421, 0.018559219, 0.016849817, 0.015628816, 0.015140415, 0.013675214, 0.012454212, 0.011233211, 0.010744811, 0.009279609, 0.008302808, 0.006593407, 0.005372405, ]
+#lr_tpr = [ 0.9801105, 0.9779006, 0.9767956, 0.9745856, 0.9701657, 0.9679558, 0.9624309, 0.9502762, 0.9469613, 0.9425414, 0.9303867, 0.9138122, 0.9027624, 0.8773481, 0.8541436, 0.8176796, 0.7690608, 0.6950276, 0.5624309, ]
+#lr_roc = { 'fpr': lr_fpr, 'tpr': lr_tpr }
+#plot_rocs( ( bwa_roc, bowtie_roc, lr_roc ), labels=('BWA', 'Bowtie', 'Regression'), short_name='bwa-vs-bowtie-vs-regression', xmax=0.5 )
 
 ###
 #bwa_roc = plot_depth_predictor( 'out/read-depth-novel-150430-coverage-poisson-ecoli.out', 'ecoli-depth-unique-insertion-rd100-150430-poisson-window5-norm', my_depths=0, my_breakpoints_lines=1, legend='upper right', my_max_depth=150, window=8, x_label='Min depth (16bp window)', normalize=False)
@@ -2026,6 +2068,15 @@ plot_rocs( ( bwa_roc, bowtie_roc, lr_roc ), labels=('BWA', 'Bowtie', 'Regression
 #plot_multi_zero_depth( 'out/read-depth-deletion-150416-depth-vs-errors.out', 'circoviridae-depth-vs-errors-zeros', ('1%', '2%', '4%', '8%', '16%'), colors=('blue', 'green', 'red', 'cyan', 'magenta') )#, 900, 1200, variation_label='Deletion' )
 
 #### in report
+# reference repeats etc
+#plot_heatmap( 'out/result-cand-100samples.fix', 'x', 'y', 'z', 'reference-read-candidate-distance', 'Candidate Distance', 'Read Distance', z_field=True )
+#plot_mutation_unmapped( bwa = [ 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 98.0, 95.0, 82.0, 79.0, 75.0, ], bowtie = [ 100.0, 100.0, 100.0, 100.0, 100.0, 98.0, 99.0, 92.0, 78.0, 76.0, 58.0, 53.0, ], target = 'reference-unmapped-distance' )
+# this is from result-tandem.out, which is circoviridae with 100 samples and from the 7 candidate column
+plot_tandem( bwa = [ 1.7, 2.0, 6.9, 7.2, 8.7, 8.3, 10.5, 13.7, 15.2, 15.7, 18.5, 18.9, 19.9, 21.6, 24.0, 25.3, 25.3, 27.0, 28.0, 28.3, 29.5, 30.6, 31.7, 33.9, 34.5, 36.0, 36.4, 38.0, 39.3, 40.5, 41.4, 42.5, 43.9, 45.3, 45.7, 48.0, 48.1, 49.8, 50.5, ], bowtie = [ 6.5, 9.3, 14.3, 13.4, 15.4, 16.4, 13.3, 14.7, 14.9, 15.7, 16.3, 16.9, 16.4, 16.7, 16.4, 21.8, 20.6, 21.1, 20.7, 22.9, 20.0, 19.5, 20.5, 22.9, 21.2, 23.0, 23.4, 23.4, 19.9, 20.1, 20.5, 21.2, 20.3, 20.3, 21.3, 21.5, 21.2, 20.9, 22.9, ], bowtie_ecoli = [8.5, 5.9, 13.4, 15.5, 14.4, 17.8, 13.4, 13.8, 14.7, 14.8, 14.9, 15.9, 18.8, 17.2, 17.9, 22.6, 19.7, 20.4, 20.7, 27.9, 19.0, 19.4, 20.2, 24.0, 24.9, 26.1, 23.7, 24.4, 20.3, 18.0, 20.3, 24.1, 20.1, 19.8, 20.7, 21.1, 21.0, 21.0, 23.0], target='reference-tandem-quality' )
+
+# this is from result-tandem.out, which is circoviridae with 100 samples
+#plot_tandem( bwa = [ ], bowtie = [ ], target='reference-tandem-quality-ecoli' )
+
 # combined unique with empty
 #plot_depth( 'out/ecoli-150424-depth-vs-repeats-uniform.out', 'e-coli-depth-vs-repeats-150424-deleted-unique-other-loc-uniform-combined', show_breakpoints=False, range_start=299000, range_stop=301000, my_depths=(0,1), my_breakpoints=( range(299999, 300200) ), variation_label='Deletion location', my_max=25, labels=('Without deletion', 'With deletion'), legend='upper right' ) # bps via sed -n 8p out/ecoli-150424-depth-vs-repeats.out
 # combined deletion with empty
@@ -2050,7 +2101,9 @@ plot_rocs( ( bwa_roc, bowtie_roc, lr_roc ), labels=('BWA', 'Bowtie', 'Regression
 #plot_heatmap( 'out/ecoli-insertion-heatmap-150309a.out', 'read_length', 'max_insertion_len', 'vcf_f1', 'ecoli-insertion-heatmap', 'Insertion length' )
 #plot_heatmap( 'out/circoviridae-deletion-heatmap-150309a.out', 'read_length', 'max_deletion_len', 'vcf_f1', 'circoviridae-deletion-heatmap', 'Deletion length' )
 
-#mutation_hiv('out/pipeline_batch_mutation_hiv_20140813.out') # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_hiv('out/pipeline_batch_mutation_hiv_20140813.out', 'mutation-hiv') # mutation-hiv.pdf (% unmapped as mutation rate increases)
+mutation_hiv('out/pipeline_batch_mutation_hiv_uniform.out', 'mutation-hiv', False) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_hiv_snp_f1('out/pipeline_batch_mutation_hiv_20140813.out' ) # mutation-f1-snp-hiv.pdf
 #mutation_hiv_snp_f1('out/pipeline_batch_mutation_hiv_20140813.out' ) # mutation-f1-snp-hiv.pdf
 #mutation_ecoli_snp_f1( 'out/pipeline_batch_mutation_ecoli_20140813.out' ) # ecoli-mutations-snps-2.pdf
 #plot_read_length_vs_alignment_ecoli_detailed()

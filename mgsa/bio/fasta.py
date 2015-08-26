@@ -319,6 +319,7 @@ class FastaMutate(object):
         # snp
         if random.uniform(0, 1) < self.snp_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ):
           new_c = self.add_snp( c )
+          self.log( 'added snp at %i' % self.pos )
           result += new_c
           self.last_variation_pos = self.pos
         # insert

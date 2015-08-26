@@ -21,7 +21,12 @@ if len(sys.argv) > 2:
 else:
   variation_map = None
 
-ev = bio.SamAccuracyEvaluator( sam=sys.stdin, verbose=True, variation_map=variation_map )
+if len(sys.argv) > 3:
+  min_mapq = int( sys.argv[3] )
+else:
+  min_mapq = -1j
+
+ev = bio.SamAccuracyEvaluator( sam=sys.stdin, verbose=True, variation_map=variation_map, min_mapq=min_mapq )
 for stat in ev.stats:
   print stat, ev.stats[stat]
 
