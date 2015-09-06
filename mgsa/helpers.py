@@ -11,7 +11,7 @@ import bio
 #y_map_old = { 'unmapped': -20, 'incorrect': -19, 'read_precision': -18, 'read_recall': -17, 'read_f1': -16, 'vcf_tp': -15, 'vcf_fp': -14, 'vcf_fn': -13, 'vcf_precision': -12, 'vcf_recall': -11, 'vcf_f1': -10, 'vcf_bucket_tp': -9, 'vcf_bucket_fp': -8, 'vcf_bucket_fn': -7, 'reference_bias': -6, 'error_bias': -5, 'unmapped_variations': -4, 'total_variations': -3, 'mean_reference': -2, 'mean_error': -1 }
 
 def make_ymap(bias_report, has_no_variation=False):
-  y_map = { 'unmapped': -21, 'incorrect': -20, 'read_precision': -19, 'read_recall': -18, 'read_f1': -17, 'vcf_tp': -16, 'vcf_fp': -15, 'vcf_fn': -14, 'vcf_precision': -13, 'vcf_recall': -12, 'vcf_f1': -11, 'vcf_bucket_tp': -10, 'vcf_bucket_fp': -9, 'vcf_bucket_fn': -8, 'reference_bias': -7, 'error_bias': -6, 'unmapped_variations': -5, 'total_variations': -4, 'mean_reference': -3, 'mean_error': -2, 'error_bias_no_variation': -1 }
+  y_map = { 'unmapped': -22, 'incorrect': -21, 'read_precision': -20, 'read_recall': -19, 'read_f1': -18, 'vcf_tp': -17, 'vcf_fp': -16, 'vcf_fn': -15, 'vcf_precision': -14, 'vcf_recall': -13, 'vcf_f1': -12, 'vcf_covered': -11, 'vcf_bucket_tp': -10, 'vcf_bucket_fp': -9, 'vcf_bucket_fn': -8, 'reference_bias': -7, 'error_bias': -6, 'unmapped_variations': -5, 'total_variations': -4, 'mean_reference': -3, 'mean_error': -2, 'error_bias_no_variation': -1 }
   if not bias_report:
     for key in y_map:
       y_map[key] += 6

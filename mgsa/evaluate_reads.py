@@ -26,7 +26,12 @@ if len(sys.argv) > 3:
 else:
   min_mapq = -1j
 
-ev = bio.SamAccuracyEvaluator( sam=sys.stdin, verbose=True, variation_map=variation_map, min_mapq=min_mapq )
+if len(sys.argv) > 4:
+  vcf_file = sys.argv[4]
+else:
+  vcf_file = None
+
+ev = bio.SamAccuracyEvaluator( sam=sys.stdin, verbose=True, variation_map=variation_map, min_mapq=min_mapq, with_coverage=True, vcf_file=vcf_file )
 for stat in ev.stats:
   print stat, ev.stats[stat]
 
@@ -35,6 +40,10 @@ for incorrect in ev.incorrect:
 
 for incorrect in ev.incorrect_diff:
   print 'diff:', incorrect, ' frequency:', ev.incorrect_diff[incorrect]
+
+if vcf_file is not None:
+  print "vcf-variations-total %i" % ev.variations_total()
+  print "vcf-variations-covered %i" % ev.variations_covered()
 
 # calculate some stuff
 total = ev.stats['unmapped'] + ev.stats['incorrect'] + ev.stats['correct']

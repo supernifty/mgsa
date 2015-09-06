@@ -28,8 +28,15 @@ def lrs(s):
   return best
 
 s = []
+name = ''
 for line in sys.stdin:
   if line.startswith('>'):
+    if len(s) > 0:
+      best = lrs( ''.join(s) )
+      print best
+      print name, len(best)
+      s = []
+    name = line[1:]
     continue
   s.append( line.strip() )
 

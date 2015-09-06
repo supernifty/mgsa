@@ -92,7 +92,7 @@ class ProbabilisticFasta(object):
       probabilities[count] = ( counts[count] + 1.0 ) / denominator
     return probabilities
 
-  def consensus_at( self, i=0 ):
+  def consensus_at( self, i=0, call_strategy='consensus' ):
     '''
       returns the majority base at given position i, or N if no coverage (move, best, confidence, coverage)
       @return move, result, best, coverage
@@ -125,7 +125,7 @@ class ProbabilisticFasta(object):
         if best_insertion is None or self.insertions[i][insertion] > best_insertion_value:
           best_insertion = insertion
           best_insertion_value = self.insertions[i][insertion] 
-      if best_insertion is not None and best_insertion_value > ( coverage - insertion_coverage ):
+      if best_insertion is not None and ( call_strategy == 'aggressive' or best_insertion_value > ( coverage - insertion_coverage ) ):
         result = best_insertion
         self.inserted[i] = best_insertion
         #if self.log:
@@ -319,19 +319,19 @@ class FastaMutate(object):
         # snp
         if random.uniform(0, 1) < self.snp_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ):
           new_c = self.add_snp( c )
-          self.log( 'added snp at %i' % self.pos )
+          #self.log( 'added snp at %i' % self.pos )
           result += new_c
           self.last_variation_pos = self.pos
         # insert
         elif random.uniform(0, 1) < self.insert_prob and self.pos >= self.min_variation_start and self.pos > self.max_insert_len and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): # TODO reads can get -ve reference
           new_c = self.add_insertion( c, fragment_pos, len(fragment) )
-          self.log( 'added insertion at %i' % self.pos )
+          #self.log( 'added insertion at %i' % self.pos )
           result += new_c + c # insertion gets placed before current base
           self.last_variation_pos = self.pos - 1 # -1 because insertion is placed before current
         # delete
         elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): 
           self.add_deletion( c )
-          self.log( 'added deletion at %i' % self.pos )
+          #self.log( 'added deletion at %i' % self.pos )
           self.last_variation_pos = self.pos + self.deletion_remain
         # no mutation
         else: 

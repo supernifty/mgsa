@@ -13,11 +13,12 @@
 # see bio.Config for full list...
 #####################################
 
-import bio
 import config
 import datetime
 import os
 import sys
+
+import bio
 
 def run( cmd ):
   '''
@@ -33,7 +34,7 @@ if len(sys.argv) < 3:
 # open config file
 # if a field is added, update helpers.py
 target = open( sys.argv[2], 'w' )
-target.write( '# cfg, unmapped, incorrect, read_precision, read_recall, read_f1, vcf_tp, vcf_fp, vcf_fn, vcf_precision, vcf_recall, vcf_f1, vcf_bucket_tp, vcf_bucket_fp, vcf_bucket_fn' )
+target.write( '# cfg, unmapped, incorrect, read_precision, read_recall, read_f1, vcf_tp, vcf_fp, vcf_fn, vcf_precision, vcf_recall, vcf_f1, vcf_covered, vcf_bucket_tp, vcf_bucket_fp, vcf_bucket_fn' )
 target.write( ', reference_bias, error_bias, unmapped_variations, total_variations, mean_reference, mean_error, error_bias_no_variation' ) # part of BiasReport
 target.write( '\n' )
 first = True
@@ -80,8 +81,9 @@ for line in open( config_file, 'r' ):
 
   # generates reads from the donor sequence
   variation_map_file = '../../data/%s_%s_x%s.vmap' % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
+  vcf_file = '../../data/%s_%s_x%s.vcf' % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'] )
   if cfg['command'] == 'reads':  
-    run( "python generate_reads.py %s ../../data/%s_%s_x%s.vcf %s < ../../data/%s_%s_x%s.fasta > ../../data/%s_%s_x%s.fastq" % ( cfg_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], variation_map_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
+    run( "python generate_reads.py %s %s %s < ../../data/%s_%s_x%s.fasta > ../../data/%s_%s_x%s.fastq" % ( cfg_file, vcf_file, variation_map_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['fasta'], cfg['mutation_type'], cfg['mult'] ) )
     continue
 
   # if sam not provided, run an aligner and evaluate read alignment
@@ -89,14 +91,16 @@ for line in open( config_file, 'r' ):
   unmapped = 0
   incorrect = 0
   recall = 0
+  vcf_variations_total = 1
+  vcf_variations_covered = 0
 
   if cfg['sam_source'] == 'generated':
     sam_file =  "../../data/%s_%s_x%s_%s.sam" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'] )
-    run( "python mapper_selector.py %s %s ../../data/%s_%s_x%s.fastq %s" % ( cfg['mapper'], fasta_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], sam_file ) )
+    run( "python mapper_selector.py %s %s ../../data/%s_%s_x%s.fastq %s %s" % ( cfg['mapper'], fasta_file, cfg['fasta'], cfg['mutation_type'], cfg['mult'], sam_file, cfg['seed_length'] ) )
 
     # evaluates the alignment accuracy
     eval_file = "../../data/%s_%s_x%s_%s_%s_evaluation.txt" % ( cfg['fasta'], cfg['mutation_type'], cfg['mult'], cfg['mapper'], when )
-    run( "python evaluate_reads.py %s %s %i < %s > %s" % ( cfg_file, variation_map_file, cfg['min_mapq'], sam_file, eval_file ) )
+    run( "python evaluate_reads.py %s %s %i %s < %s > %s" % ( cfg_file, variation_map_file, cfg['min_mapq'], vcf_file, sam_file, eval_file ) )
     # parse results
     for eval_line in open( eval_file, 'r' ):
       if eval_line.startswith( '%mapped_unmapped' ):
@@ -105,10 +109,15 @@ for line in open( config_file, 'r' ):
         incorrect = float( eval_line.strip().split()[1] )
       if eval_line.startswith( '%mapped_recall' ):
         recall = float( eval_line.strip().split()[1] ) / 100.
+      if eval_line.startswith( 'vcf-variations-total' ):
+        vcf_variations_total = int( eval_line.strip().split()[1] )
+      if eval_line.startswith( 'vcf-variations-covered' ):
+        vcf_variations_covered = int( eval_line.strip().split()[1] )
 
   else:
     sam_file =  "../../data/%s" % cfg['sam_source'] # existing sam file
 
+  bio.log_stderr( "total, covered %i, %i" % ( vcf_variations_total, vcf_variations_covered ) )
   # calculate extra stats
   precision = ( 100 - incorrect ) / 100.
   f1 = 0
@@ -194,7 +203,9 @@ for line in open( config_file, 'r' ):
       vcf_recall = 1. * vcf_diff.stats['tp'] / ( vcf_diff.stats['tp'] + vcf_diff.stats['fn'] )
     if vcf_precision != 0 or vcf_recall != 0:
       vcf_f1 = 2. * ( vcf_precision * vcf_recall ) / ( vcf_precision + vcf_recall ) 
-    target.write( '%s,%f,%f,%f,%f,%f,%i,%i,%i,%f,%f,%f' % ( line.strip(), unmapped, incorrect, precision * 100, recall * 100, f1 * 100, vcf_diff.stats['tp'], vcf_diff.stats['fp'], vcf_diff.stats['fn'], vcf_precision * 100, vcf_recall * 100, vcf_f1 * 100 ) )
+    if vcf_variations_total == 0:
+      vcf_variations_total = 1
+    target.write( '%s,%f,%f,%f,%f,%f,%i,%i,%i,%f,%f,%f,%f' % ( line.strip(), unmapped, incorrect, precision * 100, recall * 100, f1 * 100, vcf_diff.stats['tp'], vcf_diff.stats['fp'], vcf_diff.stats['fn'], vcf_precision * 100, vcf_recall * 100, vcf_f1 * 100, 100. * vcf_variations_covered / vcf_variations_total ) )
     target.write( ',%s,%s,%s' % ( '|'.join( [ str( x['tp'] ) for x in vcf_diff.buckets ] ), '|'.join( [ str( x['fp'] ) for x in vcf_diff.buckets ] ),'|'.join( [ str( x['fn'] ) for x in vcf_diff.buckets ] ) ) )
 
   # bias report - may as well always have this on (?)

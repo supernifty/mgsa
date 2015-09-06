@@ -13,6 +13,7 @@ import bio
 import fasta
 import features
 import statistics
+import vcf
 
 SOFT_CLIP_CONFIDENCE = 0.0
 
@@ -52,7 +53,7 @@ class SamToVCF(object):
       @sam_to_fasta: sam to fasta object
       @fasta_reader_reference: fasta_reader
       @target: VCF object
-      @call_strategy: consensus|conservative|aggressive TODO not implemented
+      @call_strategy: consensus|conservative|aggressive consensus takes majority, aggressive always calls
     '''
     self.sam_to_fasta = sam_to_fasta
     candidate = self.sam_to_fasta.fasta # ProbabilisticFasta
@@ -64,7 +65,7 @@ class SamToVCF(object):
       actual_base = reference.base_at( candidate_pos )
       if actual_base is None:
         break # reference is done
-      candidate_move, candidate_variation, evidence, coverage = candidate.consensus_at( candidate_pos )
+      candidate_move, candidate_variation, evidence, coverage = candidate.consensus_at( candidate_pos, call_strategy=call_strategy )
       #log( 'SamToVCF: candidate_pos %i move %i base %s evidence %s coverage %f actual_base %s' % ( candidate_pos, candidate_move, candidate_variation, evidence, coverage, actual_base ) ) # testing
 
       if candidate_move > 0 and delete_start: # the end of a delete
@@ -88,7 +89,7 @@ class SamToVCF(object):
         if candidate_variation != actual_base and candidate_variation != 'N':
           confidence = 1. * evidence / coverage
           target_vcf.snp( pos=candidate_pos, ref=actual_base, alt=candidate_variation, coverage=coverage, confidence=confidence ) # mutation
-          log( 'SamToVCF: snp at %i with confidence %f due to %s' % ( candidate_pos, confidence, candidate.count(candidate_pos) ) )
+          #log( 'SamToVCF: snp at %i with confidence %f due to %s' % ( candidate_pos, confidence, candidate.count(candidate_pos) ) )
       candidate_pos += 1 # next base
 
     # check for sequence finishing early
@@ -250,13 +251,19 @@ class SamAccuracyEvaluator(object):
   '''
     evaluate sam accuracy given the correct sequence marker
   '''  
-  def __init__( self, sam, variation_map=None, log=bio.log_stderr, verbose=False, min_mapq=-1 ):
+  def __init__( self, sam, variation_map=None, log=bio.log_stderr, verbose=False, min_mapq=-1, with_coverage=False, vcf_file=None ):
     '''
       @sam: file like object
     '''
+    self.log = log
+    self.with_coverage = with_coverage
+    if vcf_file is not None:
+      self.log( 'loading VCF file %s' % vcf_file )
+      self.vcf = vcf.VCF( reader=open( vcf_file, 'r' ) )
+      self.log( 'variation total %i' % self.variations_total() )
+    self.coverage = set()
     self.min_mapq = min_mapq
     self.verbose = verbose
-    self.log = log
     self.variation_map = self.parse_variation_map( variation_map )
     if verbose:
       self.log( "SamAccuracyEvaluator: variation map contains %i items" % ( len(self.variation_map) ) )
@@ -336,7 +343,7 @@ class SamAccuracyEvaluator(object):
           elif self.variation_map is not None and variation_map_field_name in self.variation_map:
             variations = re.sub( '([SID0-9,-]*).*', '\\1', self.variation_map[variation_map_field_name] ).split(',')
           else:
-            #print "SamAccuracyEvaluator: warning: variation %s not found" % variation_map_field_name
+            print "SamAccuracyEvaluator: warning: variation %s not found" % variation_map_field_name
             variations = ()
           for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ): # match description
             cigar_len = int(cigar_match[0])
@@ -397,6 +404,8 @@ class SamAccuracyEvaluator(object):
               if 'correct_%s' % c[0] not in self.stats:
                 self.stats['correct_%s' % c[0] ] = 0
               self.stats['correct_%s' % c[0] ] += 1
+            if self.with_coverage:
+              self.update_coverage( pos, cigar )
           else:
             #print "incorrect: pos", pos, " correct pos", correct_pos, " correct offset", correct_offset
             self.stats['incorrect'] += 1
@@ -423,6 +432,30 @@ class SamAccuracyEvaluator(object):
             if diff not in self.incorrect_diff:
               self.incorrect_diff[ diff ] = 0
             self.incorrect_diff[ diff ] += 1
+
+  def variations_total( self ):
+    return len(self.vcf.snp_map)
+
+  def variations_covered( self ):
+    snps = set( self.vcf.snp_map.keys() )
+    return len( snps.intersection( self.coverage ) )
+
+  def update_coverage( self, pos, cigar ):
+    ref = pos
+    for cigar_match in re.findall( '([0-9]+)([MIDNSHP=X])', cigar ): # match description
+      cigar_len = int(cigar_match[0])
+      if cigar_match[1] == 'M':
+        self.coverage.update( range(ref, ref + cigar_len) )
+        ref += cigar_len
+      elif cigar_match[1] == 'S':
+        pass #ref += cigar_len
+      elif cigar_match[1] == 'H':
+        pass #ref += cigar_len
+      elif cigar_match[1] == 'I':
+        pass
+      elif cigar_match[1] == 'D':
+        ref += cigar_len
+    
  
 class SamDiff(object):
   def __init__( self, sam_fhs, mapq_min=-1, compare_position=False, subset_detail=False, mismatch_detail=None, log=bio.log_stderr ):

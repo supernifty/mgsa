@@ -4,15 +4,25 @@
 import os
 import sys
 
-def get_mapper( config, name, fasta_file ):
+def get_mapper( config, name, fasta_file, seed_length=None ):
   if name == 'baseline':
     return baseline_map( config, fasta_file )
   elif name == 'bowtie2':
-    return bowtie_map( config, fasta_file, '--local' )
+    if seed_length is None or seed_length == '0':
+      return bowtie_map( config, fasta_file, '--local' )
+    else:
+      return bowtie_map( config, fasta_file, '--local -D 15 -R 2 -N 0 -L %s -i S,1,0.75' % seed_length )
+  elif name == 'bowtie2_exhaustive':
+    return bowtie_map( config, fasta_file, '--local -D 1000 -R 2 -N 0 -L 20 -i S,1,0' )
   elif name == 'bowtie2_e2e':
     return bowtie_map( config, fasta_file, '--end-to-end' )
   elif name == 'bwa':
-    return bwa_map( config, fasta_file, 'mem' )
+    if seed_length is None or seed_length == '0':
+      return bwa_map( config, fasta_file, 'mem' )
+    else:
+      return bwa_map( config, fasta_file, 'mem -k %s' % seed_length )
+  elif name == 'bwa_indel':
+    return bwa_map( config, fasta_file, 'mem -w 1000' )
   elif name == 'bwasw':
     return bwa_map( config, fasta_file, 'bwasw' )
   elif name == 'soap':

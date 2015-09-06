@@ -53,7 +53,7 @@ def run( cmd ):
 def is_numeric( field ):
   return re.match( '^[0-9\\-.]+$', field ) is not None
 
-columns = [ 'unmapped', 'incorrect', 'read_precision', 'read_recall', 'read_f1', 'vcf_tp', 'vcf_fp', 'vcf_fn', 'vcf_precision', 'vcf_recall', 'vcf_f1', 'vcf_bucket_tp', 'vcf_bucket_fp', 'vcf_bucket_fn', 'reference_bias', 'error_bias', 'unmapped_variations', 'total_variations', 'mean_reference', 'mean_error' ]
+columns = [ 'unmapped', 'incorrect', 'read_precision', 'read_recall', 'read_f1', 'vcf_tp', 'vcf_fp', 'vcf_fn', 'vcf_precision', 'vcf_recall', 'vcf_f1', 'vcf_covered', 'vcf_bucket_tp', 'vcf_bucket_fp', 'vcf_bucket_fn', 'reference_bias', 'error_bias', 'unmapped_variations', 'total_variations', 'mean_reference', 'mean_error' ]
 def find_column( line, name ):
   fields = line.split(',')
   # find first numeric
@@ -77,10 +77,29 @@ def find_parameter( line, name ):
       return keyvalue[1]
   return None
   
+def get_column_values( columns, fh, default=None ):
+  while True:
+    line = fh.readline()
+    if line == "":
+      print "get_value", column, "returning None"
+      return None
+    if line.startswith( '#' ):
+      continue
+    values = []
+    for column in columns:
+      value = find_column( line, column )
+      if value is not None:
+        if default is not None and default[0] == float(value):
+          values.append( default[1] )
+        else:
+          values.append( value )
+    return values
+
 def get_value( column, fh, default=None ):
   while True:
     line = fh.readline()
     if line == "":
+      print "get_value", column, "returning None"
       return None
     if line.startswith( '#' ):
       continue
@@ -141,6 +160,166 @@ def autolabel(ax, rects):
 
 ##########################################################################
 # run job
+def mutation_unmapped( out_file, target_file, has_base=True, x_dist=[], x_bwa=19, x_bowtie=20, include_incorrect=True ):
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  fh = open( out_file, 'r' )
+  y_base = []
+  y_bow = []
+  y_bwa = []
+  for x in xrange(len(x_dist)):
+    if include_incorrect:
+      values = get_column_values( ['unmapped', 'incorrect'], fh )
+      y_bow.append( 100 - float( values[0] ) - float( values[1] ))
+      values = get_column_values( ['unmapped', 'incorrect'], fh )
+      y_bwa.append( 100 - float( values[0] ) - float( values[1] ))
+    else:
+      if has_base:
+        y_base.append( 100 - float( get_value( 'unmapped', fh ) ) )
+      y_bow.append( 100 - float( get_value( 'unmapped', fh ) ) )
+      y_bwa.append( 100 - float( get_value( 'unmapped', fh ) ) )
+  
+  # draw graph
+  #x = np.linspace( 0, 10, 11 )
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  if has_base:
+    ax.plot(x_dist, y_base, label='Bowtie2 exhaustive', color='b', marker='s')
+  ax.plot(x_dist, y_bow, label='Bowtie2 local', color='g', marker='^')
+  ax.plot(x_dist, y_bwa, label='BWA', color='r', marker='o')
+
+  ax.axvline(x=x_bwa, color='black', alpha=0.2)#, label='BWA k')
+  ax.axvline(x=x_bowtie, color='black', alpha=0.2)#, label='Bowtie2 k')
+
+  ax.set_ylabel('Mapped %')
+  ax.set_xlabel('Distance between mutations')
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+
+  ax.text(x_bwa - 1.4, 3,'BWA\nseed',rotation=0, color='gray')
+  ax.text(x_bowtie + 0.2, 3,'Bowtie2\nseed',rotation=0, color='gray')
+
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def mutation_seed( out_file, target_file, x_dist=[] ):
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  fh = open( out_file, 'r' )
+  y_bwa = []
+  for x in xrange(len(x_dist)):
+      y_bwa.append( 100 - float( get_value( 'unmapped', fh ) ) )
+  
+  # draw graph
+  #x = np.linspace( 0, 10, 11 )
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x_dist, y_bwa, label='BWA', color='r', marker='o')
+
+  ax.set_ylabel('Mapped %')
+  ax.set_xlabel('Seed Length')
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def mutation_seed_2( out_file, target_file, x_dist=[] ):
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  fh = open( out_file, 'r' )
+  y_bwa = []
+  y_bwa_2 = []
+  for x in xrange(len(x_dist)):
+      y_bwa.append( 100 - float( get_value( 'unmapped', fh ) ) )
+      y_bwa_2.append( 100 - float( get_value( 'unmapped', fh ) ) )
+  
+  # draw graph
+  #x = np.linspace( 0, 10, 11 )
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x_dist, y_bwa, label='Seed length 20', color='r', marker='o')
+  ax.plot(x_dist, y_bwa_2, label='Seed length 8', color='b', marker='s')
+
+  ax.set_ylabel('Mapped %')
+  ax.set_xlabel('Mutation %')
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def mutation_covered_variation( out_file, target_file, x_dist ):
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  fh = open( out_file, 'r' )
+  y_bwa = []
+  for x in xrange(len(x_dist)):
+      y_bwa.append( float( get_value( 'vcf_covered', fh ) ) )
+  
+  print y_bwa
+  # draw graph
+  #x = np.linspace( 0, 10, 11 )
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x_dist, y_bwa, label='BWA', color='r', marker='o')
+
+  ax.set_ylabel('Covered %')
+  ax.set_xlabel('Mutation %')
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+
+
+def mutations_unmapped_random( target_file, y_predict, y, mapper_name ):
+  # e-coli vs unmapped
+  # from pipeline_batch_mutation_ecoli-140805.out
+  #x = np.linspace( 2, 16, 8 )
+  x = np.linspace( 1, 10, 10 )
+  print x
+  print y_predict
+  print y
+  #ybase = [39.362935, 63.848565, 78.354124, 86.817800, 92.319459, 95.545825, 97.332601, 98.467877, 99.101603, 99.497479]
+  #ybow = [ 100 - z for z in (0.982743, 4.099772, 9.130041, 15.653223, 23.007691, 31.118041, 39.108282, 46.678516, 53.948746, 60.810065) ]
+  #ybow = [ 100 - z for z in () ]
+  #0.000000 0.000000 0.000000 0.000000 1.072125 3.216374 5.360624 7.407407 12.670565 16.666667 20.760234
+
+  # calculated using pipeline_batch.py batch/pipeline_batch_mutation_hiv.cfg out/pipeline_batch_mutation_hiv_150830.out
+  #ybwa = [ 100 - z for z in (0.430347, 2.065667, 5.465788, 10.584389, 17.202473, 25.366899, 34.136181, 43.066400, 51.827064, 60.169230) ]
+  #ybow_predict = [ 100 - 100. * z for z in ( 0.000307166262346, 0.00594893896531, 0.0277733871657, 0.0731128114326, 0.141654810427, 0.227446007244, 0.322403441667, 0.418934270243, 0.511219584631, 0.595502841535, ) ] # k=22
+  #ybow_predict = [ 100 - 100. * z for z in ( 0.000307166262346, 0.00594893896531, 0.0277733871657, 0.0731128114326, 0.141654810427, 0.227446007244, 0.322403441667, 0.418934270243, 0.511219584631, 0.595502841535, ) ] # k=22
+  #ybow_predict = [ 100 - 100. * z for z in ( 0.000200201348861, 0.00405744832828, 0.0197607458106, 0.0540955478139, 0.108650306444, 0.180287987205, 0.263309530458, 0.351499923261, 0.43942862253, 0.523021264566, ) ] # k=20
+
+  # calculated using expected_unmapped
+  #ybwa_predict = [ 100 - 100. * z for z in ( 2.75910996713e-05, 0.0010491635715, 0.00719589559447, 0.0246796454746, 0.0582705179043, 0.109216203632, 0.175332840799, 0.252272694499, 0.334955622291, 0.418639358939, ) ] # k=19
+  #ybwa_predict = [ 100 - 100. * z for z in (0, 0.000158723357544, 0.0032913141409, 0.0163771142189, 0.0457385540111, 0.0935852486123, 0.157969252687, 0.234361386071, 0.317364640847, 0.4019352168, 0.484023796648, ) ] # k=19
+  #ybwa = [ 100 - z for z in (14.814815, 14.814815, 14.717349, 14.814815, 15.399610, 16.666667, 16.861598, 18.518519, 22.027290, 25.146199, 34.600390,) ]
+  #ybwa = [ 100 - z for z in (0.000000, 0.000000, 0.000000, 0.000000, 0.255102, 1.020408, 1.530612, 5.612245, 16.836735, 16.071429, 14.030612,) ]
+  
+
+
+  #bowfit = np.poly1d(np.polyfit(x, ybow, 3))(x)
+  #bwafit = np.poly1d(np.polyfit(x, ybwa, 1))(x)
+  #yave = [ (z[0]+z[1])/2. for z in zip(ybow,ybwa) ]
+  #avefit = np.poly1d(np.polyfit(x, yave, 1))(x)
+  
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+
+  #ax.plot(x, ybase, label='Baseline', color='b', marker='s')
+  #ax.plot(x, ybow_predict, label='Bowtie2 Prediction', color='b', marker='s')
+  ax.plot(x, y_predict, label='%s Prediction' % mapper_name, color='b', marker='s')
+  #ax.plot(x, ybow, label='Bowtie2 Actual', color='g', marker='^')
+  ax.plot(x, y, label='%s Actual' % mapper_name, color='r', marker='o')
+  #ax.plot(x, avefit, '--', label='Linear Fit', color='#a0a0a0')
+  #plt.plot(x, linear, label='Linear', color='#cccccc')
+  #ax.set_ylim(ymin=0.0)
+  
+  ax.set_ylabel('Mapped %')
+  ax.set_xlabel('Mutation %')
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/%s' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
+ 
 def mutation_hiv( out_file, target_file, has_base=True ):
   #out_file = "out/pipeline_batch_mutation_hiv_%s.out" % datetime.datetime.now().strftime("%Y%m%d")
   #run( "python pipeline_batch.py batch/pipeline_batch_mutation_hiv.cfg %s" % out_file )
@@ -288,32 +467,36 @@ def mutation_ecoli_snp_histogram():
 
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
-def coverage_ecoli(out_file):
+def coverage_ecoli(out_file, target, measure, y_axis, depths=(5, 10, 20)):
   #out_file = "out/pipeline_batch_coverage_ecoli_%s.out" % datetime.datetime.now().strftime("%Y%m%d")
   #run( "python pipeline_batch.py batch/pipeline_batch_coverage_ecoli.cfg %s" % out_file )
+  colors = ('b', 'g', 'r', 'orange')
+  markers = ('s', '^', 'o', '+')
   
   bio.log_stderr( 'extracting values from %s...' % out_file )
   fh = open( out_file, 'r' )
-  b5 = []
-  b10 = []
-  b20 = []
+  results = [ [] for _ in depths ] 
+  print results
   for x in xrange(0, 11):
-    b5.append( get_value( 'vcf_f1', fh, default=(0,100) ) )
-    b10.append( get_value( 'vcf_f1', fh, default=(0,100) ) )
-    b20.append( get_value( 'vcf_f1', fh, default=(0,100) ) )
+    for i, depth in enumerate(depths):
+      value = get_value( measure, fh, default=(0,100) )
+      results[i].append( value )
 
   # draw graph
   x = np.linspace( 1, 10, 10 )
   fig = plt.figure()
   ax = fig.add_subplot(111)
-  ax.plot(x, b5[1:], label='5x coverage', color='b', marker='s')
-  ax.plot(x, b10[1:], label='10x coverage', color='g', marker='^')
-  ax.plot(x, b20[1:], label='20x coverage', color='r', marker='o')
-  ax.set_ylabel('F1-Score')
+  for i, depth in enumerate(depths):
+    print x, results[i][1:]
+    ax.plot(x, results[i][1:], label='%ix coverage' % depth, color=colors[i], marker=markers[i])
+  #ax.plot(x, b10[1:], label='10x coverage', color='g', marker='^')
+  #ax.plot(x, b20[1:], label='20x coverage', color='r', marker='o')
+  ax.set_ylabel(y_axis)
   ax.set_xlabel('Mutation %')
   leg = ax.legend(prop={'size':12})
+  leg = ax.legend(loc='lower left', prop={'size':12})
   leg.get_frame().set_alpha(0.8)
-  fig.savefig('%s/ecoli-coverage-snp.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target), format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
  
 def read_length_ecoli():
@@ -606,6 +789,41 @@ def plot_read_length_vs_alignment_ecoli():
   leg = ax.legend(loc='lower right', prop={'size':12})
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/ecoli-read-length-vs-alignment-ecoli.pdf' % REPORT_DIRECTORY, format='pdf', dpi=1000)
+  bio.log_stderr( 'extracting values from %s: done' % out_file )
+
+def plot_read_length( out_file, target, show_covered=True, start_from=0 ):
+  bio.log_stderr( 'extracting values from %s...' % out_file )
+  x = []
+  y_mapped = []
+  y_covered = []
+  # python find_repeats.py 50 < ../../data/hiv.fasta
+  # 50, 100, 150, 200, 300, 400, 500, 750, 1000
+  repeated = [ 1.352169, 1.140607, 1.019120, 0.928980, 0.792520, 0.684024, 0.592569, 0.388655, 0.226665 ]
+  #hiv = [ 7.780674, 
+  fh = open( out_file, 'r' )
+  for line in fh:
+    if line.startswith( '#' ):
+      continue
+    x.append( find_parameter( line, 'read_length' ) )
+    y_mapped.append( 100 - float( find_column( line, 'unmapped' ) ) )
+    #y_incorrect.append( find_column( line, 'incorrect' ) )
+    y_covered.append( find_column( line, 'vcf_covered' ) )
+
+  print "x", x
+  #print "y", y
+  # draw graph
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x[start_from:], y_mapped[start_from:], label='Mapped %', color='r', marker='o')
+  if show_covered:
+    ax.plot(x[start_from:], y_covered[start_from:], label='Covered %', color='b', marker='s')
+  ax.plot(x[start_from:], [ 100 - x for x in repeated ][start_from:], label='Unrepeated Content', color='g', marker='+')
+  ax.set_ylabel('%')
+  ax.set_xlabel('Read Length')
+  #ax.set_ylim(ymin=90)
+  leg = ax.legend(loc='lower right', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target), format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
 def plot_read_length_vs_alignment_ecoli_detailed():
@@ -1917,6 +2135,21 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
   fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
   bio.log_stderr( 'extracting values from %s: done' % out_file )
 
+def plot_indels( target_file ):
+  x = (100, 200, 300, 400, 500, 750, 1000)
+  bwa_ins = (28,  59,  94,  122, 163, 267, 365 )
+  bowtie_ins = ( 23,   48,  73, 98, 123, 182, 245 )
+  bwa_del = ( 45,  94,  130, 132, 156, 211, 273 )
+  bowtie_del = ( 30 , 50 , 70 , 90 , 107, 159, 195)
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  ax.plot(x, bwa_ins, label='BWA Insertion Length', color='r', alpha=0.8, marker='s' )
+  ax.plot(x, bowtie_ins, label='Bowtie2 Insertion Length', color='g', alpha=0.8, marker='o' )
+  ax.plot(x, bwa_del, label='BWA Deletion Length', color='b', alpha=0.8, marker='^' )
+  ax.plot(x, bowtie_del, label='Bowtie2 Deletion Length', color='orange', alpha=0.8, marker='+' )
+  leg = ax.legend(loc='upper left', prop={'size':12})
+  leg.get_frame().set_alpha(0.8)
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
 
 #### experimental
 #plot_vcf_parent_vs_child( 'e-coli-bw2952.vcf', 'e-coli-mg1655.vcf', 'e-coli-bw2952-mg1655', 'K12', 'MG1655', highlight_differences=True, legend='lower left' )
@@ -2072,7 +2305,7 @@ def plot_comparison( out_file, positions, names, x_field, x_name, y_field, y_nam
 #plot_heatmap( 'out/result-cand-100samples.fix', 'x', 'y', 'z', 'reference-read-candidate-distance', 'Candidate Distance', 'Read Distance', z_field=True )
 #plot_mutation_unmapped( bwa = [ 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 98.0, 95.0, 82.0, 79.0, 75.0, ], bowtie = [ 100.0, 100.0, 100.0, 100.0, 100.0, 98.0, 99.0, 92.0, 78.0, 76.0, 58.0, 53.0, ], target = 'reference-unmapped-distance' )
 # this is from result-tandem.out, which is circoviridae with 100 samples and from the 7 candidate column
-plot_tandem( bwa = [ 1.7, 2.0, 6.9, 7.2, 8.7, 8.3, 10.5, 13.7, 15.2, 15.7, 18.5, 18.9, 19.9, 21.6, 24.0, 25.3, 25.3, 27.0, 28.0, 28.3, 29.5, 30.6, 31.7, 33.9, 34.5, 36.0, 36.4, 38.0, 39.3, 40.5, 41.4, 42.5, 43.9, 45.3, 45.7, 48.0, 48.1, 49.8, 50.5, ], bowtie = [ 6.5, 9.3, 14.3, 13.4, 15.4, 16.4, 13.3, 14.7, 14.9, 15.7, 16.3, 16.9, 16.4, 16.7, 16.4, 21.8, 20.6, 21.1, 20.7, 22.9, 20.0, 19.5, 20.5, 22.9, 21.2, 23.0, 23.4, 23.4, 19.9, 20.1, 20.5, 21.2, 20.3, 20.3, 21.3, 21.5, 21.2, 20.9, 22.9, ], bowtie_ecoli = [8.5, 5.9, 13.4, 15.5, 14.4, 17.8, 13.4, 13.8, 14.7, 14.8, 14.9, 15.9, 18.8, 17.2, 17.9, 22.6, 19.7, 20.4, 20.7, 27.9, 19.0, 19.4, 20.2, 24.0, 24.9, 26.1, 23.7, 24.4, 20.3, 18.0, 20.3, 24.1, 20.1, 19.8, 20.7, 21.1, 21.0, 21.0, 23.0], target='reference-tandem-quality' )
+#plot_tandem( bwa = [ 1.7, 2.0, 6.9, 7.2, 8.7, 8.3, 10.5, 13.7, 15.2, 15.7, 18.5, 18.9, 19.9, 21.6, 24.0, 25.3, 25.3, 27.0, 28.0, 28.3, 29.5, 30.6, 31.7, 33.9, 34.5, 36.0, 36.4, 38.0, 39.3, 40.5, 41.4, 42.5, 43.9, 45.3, 45.7, 48.0, 48.1, 49.8, 50.5, ], bowtie = [ 6.5, 9.3, 14.3, 13.4, 15.4, 16.4, 13.3, 14.7, 14.9, 15.7, 16.3, 16.9, 16.4, 16.7, 16.4, 21.8, 20.6, 21.1, 20.7, 22.9, 20.0, 19.5, 20.5, 22.9, 21.2, 23.0, 23.4, 23.4, 19.9, 20.1, 20.5, 21.2, 20.3, 20.3, 21.3, 21.5, 21.2, 20.9, 22.9, ], bowtie_ecoli = [8.5, 5.9, 13.4, 15.5, 14.4, 17.8, 13.4, 13.8, 14.7, 14.8, 14.9, 15.9, 18.8, 17.2, 17.9, 22.6, 19.7, 20.4, 20.7, 27.9, 19.0, 19.4, 20.2, 24.0, 24.9, 26.1, 23.7, 24.4, 20.3, 18.0, 20.3, 24.1, 20.1, 19.8, 20.7, 21.1, 21.0, 21.0, 23.0], target='reference-tandem-quality' )
 
 # this is from result-tandem.out, which is circoviridae with 100 samples
 #plot_tandem( bwa = [ ], bowtie = [ ], target='reference-tandem-quality-ecoli' )
@@ -2102,13 +2335,38 @@ plot_tandem( bwa = [ 1.7, 2.0, 6.9, 7.2, 8.7, 8.3, 10.5, 13.7, 15.2, 15.7, 18.5,
 #plot_heatmap( 'out/circoviridae-deletion-heatmap-150309a.out', 'read_length', 'max_deletion_len', 'vcf_f1', 'circoviridae-deletion-heatmap', 'Deletion length' )
 
 #mutation_hiv('out/pipeline_batch_mutation_hiv_20140813.out', 'mutation-hiv') # mutation-hiv.pdf (% unmapped as mutation rate increases)
-mutation_hiv('out/pipeline_batch_mutation_hiv_uniform.out', 'mutation-hiv', False) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_sensitivity('out/pipeline_batch_mutation_hiv_uniform_1.out', 'mutation-hiv-sensitivity-1', False, [35,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15]) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_unmapped('out/pipeline_batch_mutation_hiv_uniform_nomapq.out', 'mutation-hiv-sensitivity-nomapq', False, [35,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15]) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_unmapped('out/pipeline_batch_mutation_hiv_poisson.out', 'mutation-hiv-unmapped-poisson', False, [35,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15]) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+
+#mutation_unmapped('out/pipeline_batch_mutation_ecoli_uniform.out', 'mutation-ecoli-unmapped-nomapq', False, [35,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15]) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_unmapped('out/pipeline_batch_mutation_ecoli_uniform_rl88.out', 'mutation-ecoli-unmapped-nomapq-rl88', False, [35,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15]) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_unmapped('out/pipeline_batch_mutation_hiv_uniform_mapq_rl44.out', 'mutation-hiv-44-mapq', False, [35,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15], include_incorrect=False) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_unmapped('out/pipeline_batch_mutation_hiv_uniform_mapq_rl100.out', 'mutation-hiv-mapq-rl100', False, [30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15], include_incorrect=False) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_unmapped('out/pipeline_batch_mutation_hiv_uniform_150830.out', 'mutation-hiv-uniform-150830', True, [30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15], include_incorrect=False) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutation_seed( 'out/pipeline_batch_mutation_hiv_random_seed_150830.out', 'mutation-hiv-random-seed-150830', [19, 18, 17, 15, 14, 13, 12, 11, 10, 9])
+#mutation_seed_2( 'out/pipeline_batch_mutation_ecoli_bwa_seed_compare.out', 'mutation-ecoli-random-seed-compare-150830', [2,4,6,8,10,12,14,16])
+#mutation_covered_variation( 'out/pipeline_coverage_ecoli_poisson.out', 'mutation-covered-variation-ecoli-poisson', [2, 4, 6, 8, 10, 12, 14, 16] )
+#plot_read_length( 'out/pipeline_batch_many_read_lengths_ecoli_150830.out', 'read-length-ecoli-150830', start_from=1 )
+#plot_read_length( 'out/pipeline_batch_many_read_lengths_ecoli_150831.out', 'read-length-ecoli-150831', start_from=1 )
+#plot_read_length( 'out/pipeline_batch_many_read_lengths_ecoli_error_free_150830.out', 'read-length-ecoli-error-free-150830', show_covered=False )
+#mutations_unmapped_random( 'ecoli-mutations-unmapped-random-bowtie2.pdf' ) # in report
+#mutations_unmapped_random( 'hiv-mutations-unmapped-random-bwa.pdf' ) # in report
+#mutation_unmapped('out/pipeline_batch_mutation_hiv_uniform_150830.out', 'mutation-hiv-mapq-rl100', True, [30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15], include_incorrect=False) # mutation-hiv.pdf (% unmapped as mutation rate increases)
+#mutations_unmapped_random( 'ecoli-mutations-unmapped-random-bwa.pdf', \
+#  [ 100 * z for z in ( 1.0, 1.0, 1.0, 0.998, 0.997, 0.983, 0.967, 0.927, 0.876, 0.826,) ], \
+#  [ 100 - z for z in ( 0.000431, 0.010772, 0.087255, 0.376814, 1.109974, 2.603872, 4.867555, 8.536803, 13.033793, 18.754443,) ], \
+#  'BWA' )
+
 #mutation_hiv_snp_f1('out/pipeline_batch_mutation_hiv_20140813.out' ) # mutation-f1-snp-hiv.pdf
 #mutation_hiv_snp_f1('out/pipeline_batch_mutation_hiv_20140813.out' ) # mutation-f1-snp-hiv.pdf
 #mutation_ecoli_snp_f1( 'out/pipeline_batch_mutation_ecoli_20140813.out' ) # ecoli-mutations-snps-2.pdf
 #plot_read_length_vs_alignment_ecoli_detailed()
 #plot_coverage_vs_alignment_ecoli_high_errors()
-#coverage_ecoli('out/pipeline_batch_coverage_ecoli_20140813.out' ) # ecoli-coverage-snp.pdf
+#coverage_ecoli('out/pipeline_batch_coverage_ecoli_20140813.out', 'ecoli-coverage-snp-sensitivity', 'vcf_recall', 'Sensitivity' ) # ecoli-coverage-snp.pdf
+#coverage_ecoli('out/pipeline_batch_coverage_ecoli_150905.out', 'ecoli-coverage-snp-sensitivity-poisson-150906', 'vcf_recall', 'Sensitivity', depths=(2,5,50,100) ) # ecoli-coverage-snp.pdf
+#coverage_ecoli('out/pipeline_batch_coverage_ecoli_uniform_150906.out', 'ecoli-coverage-snp-sensitivity-uniform-150906', 'vcf_recall', 'Sensitivity', depths=(2,5,50,100) ) # ecoli-coverage-snp.pdf
+#coverage_ecoli('out/pipeline_batch_coverage_ecoli_20140813.out', 'ecoli-coverage-snp-specificity', 'vcf_precision', 'Precision' ) # ecoli-coverage-snp.pdf
 #snp_vs_map_ecoli( 'out/pipeline_batch_read_length_ecoli_20140813_inchworm.out' ) # ecoli-map_vs_snp-400.pdf plot of f1-scores of snps found and mapping accuracy, vs mutation rate, for e-coli
 #plot_insertion_vs_readlength( "out/insert_readlength_ecoli_detailed_150304.out", "ecoli-insertion-vs-readlength")
 #plot_insertion_vs_readlength( "out/delete_readlength_ecoli_detailed_150304.out", "ecoli-deletion-vs-readlength")
@@ -2249,3 +2507,5 @@ mutation_hiv('out/pipeline_batch_mutation_hiv_uniform.out', 'mutation-hiv', Fals
 
 #plot_reference_bias( 'out/hiv_reference_bias_vs_repeats_150212.out', 'hiv' )
 #plot_reference_bias( 'out/ecoli_reference_bias_vs_repeats_150212.out', 'ecoli' )
+
+plot_indels( 'indel-max' )

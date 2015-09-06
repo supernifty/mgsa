@@ -83,9 +83,13 @@ class VCF(object):
       if len(ref) == 1 and len(alt) == 1:
         self.snp_map[pos] = len(self.snp_list)
         self.snp_list.append( { 'pos': pos, 'ref': ref, 'alt': alt, 'conf': confidence, 'chr': self.chromosome } )
+        #self.log( 'VCF added snp' )
       else:
+        #self.log( 'VCF added indel' )
         self.manager.indel_map[int(pos)] = len(self.manager.indel_list)
         self.manager.indel_list.append( variation.IndelVariation( pos, ref, alt ) )
+    else:
+      pass#self.log( 'VCF skipped: %s' % line )
  
   def snp( self, pos, ref, alt, coverage=None, confidence=0.5 ):
     '''

@@ -3,8 +3,11 @@
   classes to calculate biasses
 '''
 import datetime
+import itertools
 import os
 import sys
+
+import numpy as np
 
 import bio
 import features
@@ -78,3 +81,30 @@ class Mappability (object):
     if calculate_mappability and remove_files:
       os.remove( target_fq_fn )
       os.remove( target_sam_fn )
+
+def expected_unmapped( error_rate, segment_size, read_length, segments=None ):
+  if segments is None:
+    segments = read_length / segment_size #+ 1
+  segment_ok = ( 1 - error_rate ) ** segment_size
+  all_segments_not_ok = ( 1 - segment_ok ) ** segments
+  return all_segments_not_ok
+
+# any run of length
+def run_probability( error_rate, run_size, read_length ):
+  # solve by trial
+  trials = 1000
+  found = 0
+  for _ in xrange(trials):
+    sample = np.random.binomial( 1, 1-error_rate, read_length )
+    longest = 0
+    for n, l in itertools.groupby(sample):
+      li = list(l)
+      if len(li) > longest and li[0] == 1:
+        longest = len(li)
+    if longest >= run_size:
+      found += 1
+  return 1. * found / trials
+
+def false_positive_rate( error_rate, mutation_rate, coverage ):
+  return error_rate / ( mutation_rate + error_rate ) * ( error_rate / 4 ) ** (coverage-1) * 100
+
