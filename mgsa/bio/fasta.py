@@ -189,7 +189,7 @@ class FastaMutate(object):
     change a reference fasta
   '''
 
-  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, min_variation_start=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AACCCTTGGG', tandem_count=1 ):
+  def __init__( self, reader, log=bio.log_stderr, vcf_file=None, snp_prob=0.01, insert_prob=0.01, delete_prob=0.01, min_insert_len=1, max_insert_len=1, min_delete_len=1, max_delete_len=1, min_variation_dist=0, min_variation_start=0, probabilistic=True, insert_source='random', allow_end_mutate=False, probabilities='AACCCTTGGG', tandem_count=1, max_variation_count=1e6 ):
     '''
       @reader: FastaReader
       @vcf_file: write mutations to vcf
@@ -211,6 +211,8 @@ class FastaMutate(object):
     self.probabilities = probabilities
     self.insert_source = insert_source
     self.tandem_count = tandem_count
+    self.max_variation_count = max_variation_count
+    self.variation_count = 0
     self.insert_source_data = ''
     if vcf_file is not None:
       self.vcf = vcf.VCF( writer=vcf.VCFWriter(vcf_file) )
@@ -317,22 +319,25 @@ class FastaMutate(object):
         self.continue_deletion( c )
       elif self.probabilistic:
         # snp
-        if random.uniform(0, 1) < self.snp_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ):
+        if self.variation_count < self.max_variation_count and random.uniform(0, 1) < self.snp_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ):
           new_c = self.add_snp( c )
           #self.log( 'added snp at %i' % self.pos )
           result += new_c
           self.last_variation_pos = self.pos
+          self.variation_count += 1
         # insert
-        elif random.uniform(0, 1) < self.insert_prob and self.pos >= self.min_variation_start and self.pos > self.max_insert_len and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): # TODO reads can get -ve reference
+        elif self.variation_count < self.max_variation_count and random.uniform(0, 1) < self.insert_prob and self.pos >= self.min_variation_start and self.pos > self.max_insert_len and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): # TODO reads can get -ve reference
           new_c = self.add_insertion( c, fragment_pos, len(fragment) )
           #self.log( 'added insertion at %i' % self.pos )
           result += new_c + c # insertion gets placed before current base
           self.last_variation_pos = self.pos - 1 # -1 because insertion is placed before current
+          self.variation_count += 1
         # delete
-        elif self.pos > 0 and random.uniform(0, 1) < self.delete_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): 
+        elif self.variation_count < self.max_variation_count and self.pos > 0 and random.uniform(0, 1) < self.delete_prob and self.pos >= self.min_variation_start and ( self.last_variation_pos is None or self.last_variation_pos + self.min_variation_dist <= self.pos ): 
           self.add_deletion( c )
           #self.log( 'added deletion at %i' % self.pos )
           self.last_variation_pos = self.pos + self.deletion_remain
+          self.variation_count += 1
         # no mutation
         else: 
           result += c
@@ -414,6 +419,9 @@ class Fasta(object):
     keeps the whole fasta in memory for random access
   '''
   def __init__(self, reader):
+    '''
+      @reader: FastaReader
+    '''
     self.reader = reader
     self._length = None
     self.fasta = ''
