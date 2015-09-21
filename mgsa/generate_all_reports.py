@@ -2151,6 +2151,21 @@ def plot_indels( target_file ):
   leg.get_frame().set_alpha(0.8)
   fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target_file), format='pdf', dpi=1000)
 
+def mappability_boxplot( src, target, variation_type='Insertion' ):
+  result = []
+  for line in open( src, 'r' ):
+    fields = line.strip().split( ':' )
+    values = [ int(x) for x in fields[1].split(',') ]
+    result.append( values )
+
+  fig = plt.figure()
+  ax = fig.add_subplot(111)
+  bp = ax.boxplot(result)
+  ax.set_ylabel('% reads affected')
+  ax.set_xlabel('%s length' % variation_type)
+  ax.set_ylim(ymax=100)
+  fig.savefig('%s/%s.pdf' % (REPORT_DIRECTORY, target), format='pdf', dpi=1000)
+    
 #### experimental
 #plot_vcf_parent_vs_child( 'e-coli-bw2952.vcf', 'e-coli-mg1655.vcf', 'e-coli-bw2952-mg1655', 'K12', 'MG1655', highlight_differences=True, legend='lower left' )
 #plot_vcf_parent_vs_child( 'e-coli-iai39.vcf', 'e-coli-mg1655.vcf', 'e-coli-iai39-mg1655', 'IAI39', 'MG1655', highlight_differences=True, legend='lower left' )
@@ -2508,4 +2523,9 @@ def plot_indels( target_file ):
 #plot_reference_bias( 'out/hiv_reference_bias_vs_repeats_150212.out', 'hiv' )
 #plot_reference_bias( 'out/ecoli_reference_bias_vs_repeats_150212.out', 'ecoli' )
 
-plot_indels( 'indel-max' )
+#plot_indels( 'indel-max' )
+
+#mappability_boxplot( 'human_pms2_insertion.result', 'pms2-insertions', 'Insertion' )
+#mappability_boxplot( 'human_pms2_deletion.result', 'pms2-deletions', 'Deletion' )
+#mappability_boxplot( 'human_chr21_insertion.result', 'chr21-insertions', 'Insertion' )
+mappability_boxplot( 'human_chr21_deletion.result', 'chr21-deletion', 'Deletion' )
