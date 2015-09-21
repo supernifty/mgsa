@@ -124,7 +124,8 @@ class MauveMap( object ):
     self.stats = { 'total': 0, 'unmapped': 0, 'mapped': 0, 'reads_covered': 0, 'reads_notcovered': 0, 'reads_partial': 0 }
     for pos, line in enumerate(sam_fh):
       line = line.strip()
-      if line.startswith('@'):
+      if line.startswith('@') and self.new_reference is None:
+        output.write( '%s\n' % line )
         continue
       fields = line.split()
       if len(fields) > 9:

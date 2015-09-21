@@ -10,8 +10,9 @@ def lcp(a, b):
 # build suffixes, sort them
 def lrs(s):
   suffixes = []
-  print "building suffixes for %i..." % len(s)
-  for i in xrange(len(s)):
+  total = len(s)
+  print "building suffixes for %i..." % total
+  for i in xrange(total):
     #suffixes.append( s[i:] )
     suffixes.append( buffer( s, i ) )
     if i % 10000 == 0:
@@ -20,12 +21,14 @@ def lrs(s):
   suffixes.sort()
   print "searching longest..."
   best = ''
-  for i in xrange(0, len(s) - 1):
+  best_pos = None
+  for i in xrange(0, total - 1):
     cand = lcp(suffixes[i], suffixes[i+1]);
     if len(cand) > len(best):
       best = cand
+      best_pos = (total - len(suffixes[i]), total - len(suffixes[i+1]))
       print "new best: %i" % len(best)
-  return best
+  return best, best_pos
 
 s = []
 name = ''
@@ -40,6 +43,6 @@ for line in sys.stdin:
     continue
   s.append( line.strip() )
 
-best = lrs( ''.join(s) )
+best, best_pos = lrs( ''.join(s) )
 print best
-print len(best)
+print len(best), best_pos

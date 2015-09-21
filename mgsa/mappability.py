@@ -18,6 +18,12 @@ fasta_finish = 40000000
 step = 1000
 prefix = 'human_chr21'
 
+# pms2
+#fasta_start = 6012800
+#fasta_finish = 6049000
+#step = 100
+#prefix = 'human_pms2'
+
 # drosophila
 #fasta_start = 10000
 #fasta_finish = 20000000
@@ -76,7 +82,7 @@ with open( fastq_file, 'w' ) as fastq_fh:
 
 # do alignment
 sam_file = 'tmp%i.sam' % idx
-run( 'bwa mem %s %s > %s' % ( fasta_file, fastq_file, sam_file ) )
+run( 'bwa mem -t 8 %s %s > %s' % ( fasta_file, fastq_file, sam_file ) )
 
 # save original
 #run( "samtools view -bS tmp%i.sam > original.bam" % idx )
@@ -189,9 +195,14 @@ for fasta_pos in xrange( fasta_start, fasta_finish, step ):
   if var_tp[fasta_pos] < var_worst_tp:
     var_worst_tp = var_tp[fasta_pos]
     var_worst_pos = fasta_pos
-  change_tp.append( base_tp[fasta_pos] - var_tp[fasta_pos] )
+  change = base_tp[fasta_pos] - var_tp[fasta_pos]
+  change_tp.append( change )
   keep_highest( change_tp[-1], fasta_pos, change_worst_tp, change_worst_pos )
   total += 1
+
+# add result to file
+with open( '%s.result' % prefix, 'a' ) as fh:
+  fh.write( '%s: %s\n' % ( variation, ','.join( [ str(s) for s in change_tp ] ) ) )
 
 print "unmapped before %i/%i after %i/%i" % ( base_unmapped, total, var_unmapped, total )
 print "worst tp before %i at %i after %i at %i biggest change %s at %s" % ( base_worst_tp, base_worst_pos, var_worst_tp, var_worst_pos, change_worst_tp, change_worst_pos )
