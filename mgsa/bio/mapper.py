@@ -14,6 +14,8 @@ def get_mapper( config, name, fasta_file, seed_length=None ):
       return bowtie_map( config, fasta_file, '--local -D 15 -R 2 -N 0 -L %s -i S,1,0.75' % seed_length )
   elif name == 'bowtie2_exhaustive':
     return bowtie_map( config, fasta_file, '--local -D 1000 -R 2 -N 0 -L 20 -i S,1,0' )
+  elif name == 'bowtie2_indel':
+    return bowtie_map( config, fasta_file, '--local --rdg 6,1 --rfg 6,1' )
   elif name == 'bowtie2_e2e':
     return bowtie_map( config, fasta_file, '--end-to-end' )
   elif name == 'bwa':

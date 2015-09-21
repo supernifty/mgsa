@@ -31,6 +31,7 @@ class Config(object):
     * min_deletion_len: if a deletion added, at least this many bases deleted
     * max_deletion_len: if a deletion added, at most this many bases deleted
     * min_variation_distance: minimum distance between variations
+    * max_variation_count: max number of variations
     * min_variation_start: minimum start for any variation
     * mult
     * mult_snp_prob
@@ -59,9 +60,9 @@ class Config(object):
     * vcf_source: generated or filename; generated means the vcf has been created by an earlier "mutation" command. filename means there's an existing vcf of correct mutations
   '''
   floats = ( 'insert_prob', 'delete_prob', 'snp_prob', 'error_prob', 'inversion_prob', 'mult_snp_prob' )
-  ints = ( 'min_insertion_len', 'min_mapq', 'max_insertion_len', 'min_deletion_len', 'max_deletion_len', 'min_variation_distance', 'min_variation_start', 'read_length', 'coverage', 'mult', 'bias_report_buckets')
+  ints = ( 'min_insertion_len', 'min_mapq', 'max_insertion_len', 'min_deletion_len', 'max_deletion_len', 'min_variation_distance', 'max_variation_count', 'min_variation_start', 'read_length', 'coverage', 'mult', 'bias_report_buckets')
   # insertion_source: novel (from another genome), repeated (from this genome), random (generated)
-  default_config = { 'fastq_source': 'generated', 'insert_prob': 0, 'delete_prob': 0, 'seed_length': 0, 'snp_prob': 0, 'min_insertion_len': 1, 'min_mapq': -1, 'max_insertion_len': 1, 'min_deletion_len': 1, 'max_deletion_len': 1, 'min_variation_distance': 1, 'min_variation_start': 0, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 100, 'fasta': 'circoviridae', 'coverage': 10, 'coverage_dist': 'uniform', 'error_prob': 0, 'error_type': 'snv', 'command': '', 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '-', 'bias_report_buckets': 10, 'insertion_source': 'random', 'tandem_count': 1, 'call_strategy': 'consensus', 'sam_source': 'generated', 'fasta_reference': 'generated', 'vcf_source': 'generated', 'vcf_exclude': 'none', 'chromosomes': 'false', 'vcf_out': 'generated' }
+  default_config = { 'fastq_source': 'generated', 'insert_prob': 0, 'delete_prob': 0, 'seed_length': 0, 'snp_prob': 0, 'min_insertion_len': 1, 'min_mapq': -1, 'max_insertion_len': 1, 'min_deletion_len': 1, 'max_deletion_len': 1, 'min_variation_distance': 1, 'max_variation_count': 1e6, 'min_variation_start': 0, 'mult': 1, 'mult_snp_prob': 0, 'mapper': 'bowtie2', 'mutation_type': '', 'read_length': 100, 'fasta': 'circoviridae', 'coverage': 10, 'coverage_dist': 'uniform', 'error_prob': 0, 'error_type': 'snv', 'command': '', 'inversion_prob': 0, 'paired_end_length': 0, 'paired_end_sd': 0, 'reports': '-', 'bias_report_buckets': 10, 'insertion_source': 'random', 'tandem_count': 1, 'call_strategy': 'consensus', 'sam_source': 'generated', 'fasta_reference': 'generated', 'vcf_source': 'generated', 'vcf_exclude': 'none', 'chromosomes': 'false', 'vcf_out': 'generated' }
 
   def __init__( self ):
     pass

@@ -7,16 +7,18 @@ import sys
 import bio
 
 # set these
-insertion = False
-mapper = 'bwa_indel' # bowtie2
-fasta = 'e-coli-mg1655'
+insertion = True
+mapper = 'bwa'
+#mapper = 'bwa_indel'
+#mapper = 'bowtie2_indel'
+fasta = 'hiv'
 
 # all good
 if insertion:
-  tmpl = 'batch/find_longest_indel.cfg'
+  tmpl = 'batch/find_longest_indel_tandem.cfg'
   start = 20
 else:
-  tmpl = 'batch/find_longest_deletion.cfg'
+  tmpl = 'batch/find_longest_deletion_tandem.cfg'
   start = 20
 cfg = 'tmp.cfg'
 target = 'tmp.out'
@@ -32,8 +34,8 @@ def run( cmd ):
   bio.log_stderr( cmd )
   os.system( cmd )
 
-for rl in (100, 200, 300, 400, 500, 750, 1000):
-#for rl in (200, 300, 400, 500, ):
+#for rl in (100, 200, 300, 400, 500, 750, 1000):
+for rl in (100, 150, 200, ):
   while True:
     run( "sed 's/read_length 100/read_length %i/g' < %s > %s" % ( rl, tmpl, cfg ) )
     #start += 1

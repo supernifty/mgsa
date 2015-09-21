@@ -8,6 +8,7 @@ import random
 def poisson( genome_len, read_len, depth, trials=100 ):
   results = []
   for trial in xrange(trials):
+    print "trial", trial, "of", trials
     genome = [0] * genome_len
     count = 0
     bases = 0
@@ -30,9 +31,10 @@ def poisson( genome_len, read_len, depth, trials=100 ):
 def no_gaps( genome_len, read_len, reads ):
   return math.exp( -reads * math.exp( -reads * 1. * read_len / genome_len ) )
 
+#gl = 4600000
 gl = 4600000
 rl = 100
-depth = 2
+depth = 5
 trials = 10
 bases = poisson( gl, rl, depth, trials )
 coverage = [ 1. * b / gl for b in bases ] #[ 1. * y * rl / gl for y in x ]
