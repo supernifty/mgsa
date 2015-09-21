@@ -14,7 +14,7 @@ class MauveMap( object ):
     self.log = log
     self.coverage = {}
     self.target_map = None
-    self.genome_stats = { 'xmin': 1e9, 'xmax': 0, 'ymin': 1e9, 'ymax': 0 }
+    self.genome_stats = { 'xmin': 1e9, 'xmax': 0, 'ymin': 1e9, 'ymax': 0, 'blocks': 0 }
     self.new_reference = new_reference
     current_sequence = [ '', '' ] # src, target
     src_range = [ 0, 0 ] # src, target
@@ -43,6 +43,7 @@ class MauveMap( object ):
         else:
           current = -1
       elif line == '=':
+        self.genome_stats['blocks'] += 1
         if len( current_sequence[0] ) == len( current_sequence[1] ):
           self.log( "adding coverage for %s -> %s" % ( src_range, target_range ) )
           target_pos = 0 
@@ -116,13 +117,15 @@ class MauveMap( object ):
       diff += 1
     return None
     
-  def remap( self, sam_fh, output, remap_cigar=False ):
+  def remap( self, sam_fh, output, remap_cigar=False, not_covered_output=None ):
     '''
       writes a sam file with the locations remapped
     '''
     self.stats = { 'total': 0, 'unmapped': 0, 'mapped': 0, 'reads_covered': 0, 'reads_notcovered': 0, 'reads_partial': 0 }
     for pos, line in enumerate(sam_fh):
       line = line.strip()
+      if line.startswith('@'):
+        continue
       fields = line.split()
       if len(fields) > 9:
         #print fields
@@ -160,6 +163,9 @@ class MauveMap( object ):
             output.write( '\n' )
           else:
             self.stats['reads_notcovered'] += 1 # no part of the read is mappable
+            # write if desiredd
+            if not_covered_output is not None:
+                not_covered_output.write( '%s\n' % line ) # write unmapped reads verbatim
             # convert to unmapped read
             fields[1] = str( flag & 0x04 )
             fields[2] = '*'

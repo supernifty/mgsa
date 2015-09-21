@@ -17,6 +17,7 @@ parser.add_argument('--target', type=int, default=2, help='index of fasta that b
 parser.add_argument('--output', required=True, help='sam output file')
 parser.add_argument('--new_reference', required=False, help='new reference name for sam output')
 parser.add_argument('--remap_cigar', required=False, default=False, help='attempt to remap the cigar string')
+parser.add_argument('--output_not_covered', required=False, help='sam output file for aligned reads with no map')
 
 args = parser.parse_args()
 
@@ -32,12 +33,15 @@ if args.bam.endswith( '.bam' ):
 else:
   sam_fh = open( args.bam, 'r' )
 
-mauve_map.remap( sam_fh, open( args.output, 'w' ), remap_cigar=args.remap_cigar )
+if args.output_not_covered:
+    mauve_map.remap( sam_fh, open( args.output, 'w' ), remap_cigar=args.remap_cigar, not_covered_output=open( args.output_not_covered, 'w' ) )
+else:
+    mauve_map.remap( sam_fh, open( args.output, 'w' ), remap_cigar=args.remap_cigar )
  
-print "====== Mapping Stats ====="
+sys.stdout.write( "====== Mapping Stats =====\n" )
 for key in mauve_map.genome_stats.keys():
-  print "%20s: %i" % ( key, mauve_map.genome_stats[key] )
+  sys.stdout.write( "%20s: %i\n" % ( key, mauve_map.genome_stats[key] ) )
 
-print "====== Coverage Stats ====="
+sys.stdout.write( "====== Coverage Stats =====\n" )
 for key in mauve_map.stats.keys():
-  print "%20s: %i" % ( key, mauve_map.stats[key] )
+  sys.stdout.write( "%20s: %i\n" % ( key, mauve_map.stats[key] ) )
