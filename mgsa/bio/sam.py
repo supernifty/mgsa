@@ -1,7 +1,7 @@
 
 import collections
 import datetime
-import numpy
+#pypy import numpy
 import random
 import re
 import struct
@@ -458,8 +458,9 @@ class SamAccuracyEvaluator(object):
     
  
 class SamDiff(object):
-  def __init__( self, sam_fhs, mapq_min=-1, compare_position=False, subset_detail=False, mismatch_detail=None, log=bio.log_stderr ):
+  def __init__( self, sam_fhs, mapq_min=-1, compare_position=False, subset_detail=False, mismatch_detail=None, log=bio.log_stderr, mapq_stats=False ):
     self.log = log
+    self.use_mapq = mapq_stats
     self.mapq_min = mapq_min
     self.compare_position = compare_position
     self.subset_detail = subset_detail
@@ -478,15 +479,17 @@ class SamDiff(object):
         self.parse_line( pos, bit_pos, line.strip() )
         if ( pos + 1 ) % 100000 == 0:
           log( 'processed %i lines...' % (pos+1) )
-      if len(self.mapq) > 0:
-        self.mapq_stats.append( { 'mapped': len(self.mapq), 'max': max(self.mapq), 'min': min(self.mapq), 'mean': numpy.mean( self.mapq ), 'sd': numpy.std( self.mapq ) } )
-      else:
-        self.mapq_stats.append( { 'mapped': 0, 'max': 0, 'min': 0, 'mean': 0, 'sd': 0 } )
-      log( 'processed file %i (bit_pos %i): read %i lines: %s' % ( idx, bit_pos, pos+1, self.mapq_stats[-1] ) )
+      if mapq_stats:
+        if len(self.mapq) > 0:
+          #pypyself.mapq_stats.append( { 'mapped': len(self.mapq), 'max': max(self.mapq), 'min': min(self.mapq), 'mean': numpy.mean( self.mapq ), 'sd': numpy.std( self.mapq ) } )
+          self.mapq_stats.append( { 'mapped': len(self.mapq), 'max': max(self.mapq), 'min': min(self.mapq) } )#, 'mean': numpy.mean( self.mapq ), 'sd': numpy.std( self.mapq ) } )
+        else:
+          self.mapq_stats.append( { 'mapped': 0, 'max': 0, 'min': 0, 'mean': 0, 'sd': 0 } )
+      log( 'processed file %i (bit_pos %i): read %i lines' % ( idx, bit_pos, pos+1 ) )
 
     log( 'analyzing...' )
     self.totals = collections.defaultdict(int)
-    for key, value in self._stats.items(): # readname, distribution
+    for key, value in self._stats.iteritems(): # readname, distribution
       self.totals[value] += 1
     # free up memory
     del self._stats 
@@ -495,9 +498,9 @@ class SamDiff(object):
       log( 'analyzing positions...' )
       self.position_totals = collections.defaultdict(int)
       self.mapq_totals = collections.defaultdict(list)
-      for key, value in self._position_stats.items(): # readname-pos, distribution
+      for key, value in self._position_stats.iteritems(): # readname-pos, distribution
         self.position_totals[value] += 1
-        if self.subset_detail:
+        if self.use_mapq and self.subset_detail:
           self.mapq_totals[value].extend( self.mapq_subsets[key] )
         if self.mismatch_detail is not None and self.mismatch_detail == value: # mismatch_detail exactly
           name, pos = key.split( '-' )
@@ -505,7 +508,7 @@ class SamDiff(object):
           #log( 'found %s at %i' % (name, int(pos)) )
       log( 'analyzing mismatches...' )
       if self.mismatch_detail is not None: # 2nd pass for mismatch updates
-        for key, value in self._position_stats.items(): # readname-pos, distribution
+        for key, value in self._position_stats.iteritems(): # readname-pos, distribution
           if value != 0 and value & self.mismatch_detail == 0: # mismatch not present
             name, pos = key.split( '-' )
             if name in self.mismatch_stats:
@@ -518,14 +521,16 @@ class SamDiff(object):
       del self._position_stats 
         
       # now generate stats
-      log( 'analyzing mapq distribution...' )
-      self.mapq_subset_stats = {}
-      buckets = (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60)
-      for key, value in self.mapq_totals.items():
-        if len(value) > 0:
-          min_val = min(value)
-          max_val = max(value)
-          self.mapq_subset_stats[key] = { 'max': max_val, 'min': min_val, 'mean': numpy.mean(value), 'sd': numpy.std(value), 'hist': statistics.bucket(value, buckets)  }
+      if self.use_mapq:
+        log( 'analyzing mapq distribution...' )
+        self.mapq_subset_stats = {}
+        buckets = (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60)
+        for key, value in self.mapq_totals.iteritems():
+          if len(value) > 0:
+            min_val = min(value)
+            max_val = max(value)
+            #pypyself.mapq_subset_stats[key] = { 'max': max_val, 'min': min_val, 'mean': numpy.mean(value), 'sd': numpy.std(value), 'hist': statistics.bucket(value, buckets)  }
+            self.mapq_subset_stats[key] = { 'max': max_val, 'min': min_val, 'hist': statistics.bucket(value, buckets)  }
  
   def parse_line( self, pos, bit_pos, line ):
     fields = line.split()
@@ -537,7 +542,8 @@ class SamDiff(object):
       if flag & 0x04 != 0 or mapq < self.mapq_min: # unmapped
         self._stats[fields[0]] |= 0 # unmapped read - don't change; set to 0 if not already present
       else:
-        self.mapq.append( mapq )
+        if self.use_mapq:
+          self.mapq.append( mapq )
         if flag & 0x02 != 0: # mapped read
           self._stats[fields[0]] |= bit_pos
         else: # unknown mapping (assume mapped)
@@ -553,7 +559,7 @@ class SamDiff(object):
             self._position_stats[ident] |= bit_pos
           else: # unknown mapping (assume mapped)
             self._position_stats[ident] |= bit_pos
-          if self.subset_detail:
+          if self.use_mapq and self.subset_detail:
             self.mapq_subsets[ident].append( mapq )
  
 class SamWriter(object):

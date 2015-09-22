@@ -124,7 +124,12 @@ class MauveMap( object ):
     self.stats = { 'total': 0, 'unmapped': 0, 'mapped': 0, 'reads_covered': 0, 'reads_notcovered': 0, 'reads_partial': 0 }
     for pos, line in enumerate(sam_fh):
       line = line.strip()
-      if line.startswith('@') and self.new_reference is None:
+      if self.new_reference is not None and line.startswith( '@SQ' ) and line.find( 'SN:') != -1:
+        line = re.sub(r"SN:[^\s]*", "SN:%s" % self.new_reference, line )
+        line = re.sub(r"LN:[^\s]*", "LN:%i" % self.genome_stats['ymax'], line ) # also sub in ymax
+        output.write( '%s\n' % line )
+        continue
+      if line.startswith('@'):
         output.write( '%s\n' % line )
         continue
       fields = line.split()
@@ -176,10 +181,6 @@ class MauveMap( object ):
             fields[6] = '*'
             output.write( '\t'.join( fields ) )
             output.write( '\n' )
-      elif self.new_reference is not None and line.startswith( '@SQ' ) and line.find( 'SN:') != -1:
-        line = re.sub(r"SN:[^\s]*", "SN:%s" % self.new_reference, line )
-        line = re.sub(r"LN:[^\s]*", "LN:%i" % self.genome_stats['ymax'], line ) # also sub in ymax
-        output.write( '%s\n' % line )
       else: # write non-reads verbatim
         output.write( '%s\n' % line )
       if pos < 10 or pos % 100000 == 0:

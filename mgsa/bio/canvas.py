@@ -1,6 +1,6 @@
 import os
 
-from PIL import Image, ImageDraw
+#pypy from PIL import Image, ImageDraw
 
 import fasta
 

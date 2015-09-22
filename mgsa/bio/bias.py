@@ -7,7 +7,7 @@ import itertools
 import os
 import sys
 
-import numpy as np
+#pypy import numpy as np
 
 import bio
 import features

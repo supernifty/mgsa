@@ -18,6 +18,8 @@ parser.add_argument('--target', type=int, default=2, help='index of fasta that b
 
 args = parser.parse_args()
 
+mapq_stats = False
+
 diff = bio.SamDiff( [ bio.BamReaderExternal( config.BAM_TO_SAM, sam_file ) for sam_file in args.bams ], mapq_min=args.mapq_min, compare_position=args.compare_position, subset_detail=args.subset_detail, mismatch_detail=None if args.mismatch_detail == -1 else args.mismatch_detail )
 
 sys.stdout.write( "mapq stats\n==========\n" )
@@ -34,7 +36,7 @@ if args.compare_position:
   for key in sorted( diff.position_totals.keys() ):
     sys.stdout.write( ( "{0:0%ib}: {1}\n" % ( len(args.bams) ) ).format( key, diff.position_totals[key] ) )
 
-if args.subset_detail:
+if mapq_stats and args.subset_detail:
   sys.stdout.write( "\nmapq vs position differences\n===================\n" )
   sys.stdout.write( "i:\tmax\tmin\tmean\tsd\thist\n" )
   for key, value in diff.mapq_subset_stats.items():
