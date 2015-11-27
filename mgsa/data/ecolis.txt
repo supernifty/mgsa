@@ -1,0 +1,63 @@
+>gi|15829254|ref|NC_002695.1| Escherichia coli O157:H7 str. Sakai chromosome, complete genome
+>gi|16445223|ref|NC_002655.2| Escherichia coli O157:H7 EDL933, complete genome
+>gi|26245917|ref|NC_004431.1| Escherichia coli CFT073, complete genome
+>gi|30061571|ref|NC_004741.1| Shigella flexneri 2a str. 2457T, complete genome
+>gi|82542618|ref|NC_007613.1| Shigella boydii Sb227, complete genome
+>gi|82775382|ref|NC_007606.1| Shigella dysenteriae Sd197 chromosome, complete genome
+>gi|85674274|dbj|AP009048.1| Escherichia coli str. K12 substr. W3110 DNA, complete genome
+>gi|91209055|ref|NC_007946.1| Escherichia coli UTI89, complete genome
+>gi|110640213|ref|NC_008253.1| Escherichia coli 536, complete genome
+>gi|110804074|ref|NC_008258.1| Shigella flexneri 5 str. 8401, complete genome
+>gi|117622295|ref|NC_008563.1| Escherichia coli APEC O1, complete genome
+>gi|157154711|ref|NC_009801.1| Escherichia coli E24377A, complete genome
+>gi|157159467|ref|NC_009800.1| Escherichia coli HS, complete genome
+>gi|170018061|ref|NC_010468.1| Escherichia coli ATCC 8739, complete genome
+>gi|170079663|ref|NC_010473.1| Escherichia coli str. K12 substr. DH10B, complete genome
+>gi|170679574|ref|NC_010498.1| Escherichia coli SMS-3-5, complete genome
+>gi|187730020|ref|NC_010658.1| Shigella boydii CDC 3083-94, complete genome
+>gi|188491671|gb|AAKB00000000.2|AAKB02000000 Escherichia coli 53638, whole genome shotgun sequencing project
+>gi|209395693|ref|NC_011353.1| Escherichia coli O157:H7 str. EC4115, complete genome
+>gi|209917191|ref|NC_011415.1| Escherichia coli SE11 DNA, complete genome
+>gi|215485161|ref|NC_011601.1| Escherichia coli 0127:H6 E2348/69 complete genome, strain E2348/69
+>gi|218552585|ref|NC_011741.1| Escherichia coli IAI1 chromosome, complete genome
+>gi|218687878|ref|NC_011745.1| Escherichia coli ED1a chromosome, complete genome
+>gi|218693476|ref|NC_011748.1| Escherichia coli 55989 chromosome, complete genome
+>gi|218698419|ref|NC_011750.1| Escherichia coli IAI39 chromosome, complete genome
+>gi|218703261|ref|NC_011751.1| Escherichia coli UMN026 chromosome, complete genome
+>gi|222031834|emb|CU651637.1| Escherichia coli LF82 chromosome, complete sequence
+>gi|223884978|gb|CM000662.1| Escherichia coli O157:H7 str. TW14588 chromosome, whole genome shotgun sequence
+>gi|238899406|ref|NC_012759.1| Escherichia coli BW2952, complete genome
+>gi|253771435|ref|NC_012947.1| Escherichia coli 'BL21-Gold(DE3)pLysS AG', complete genome
+>gi|254160123|ref|NC_012967.1| Escherichia coli B str. REL606, complete genome
+>gi|254791136|ref|NC_013008.1| Escherichia coli O157:H7 str. TW14359, complete genome
+>gi|260447279|gb|CP001637.1| Escherichia coli DH1, complete genome
+>gi|260842239|ref|NC_013353.1| Escherichia coli O103:H2 str. 12009 DNA, complete genome
+>gi|260853213|ref|NC_013361.1| Escherichia coli O26:H11 str. 11368 DNA, complete genome
+>gi|260866153|ref|NC_013364.1| Escherichia coli O111:H- str. 11128 DNA, complete genome
+>gi|281177210|dbj|AP009378.1| Escherichia coli SE15 DNA, complete genome
+>gi|284919779|emb|FN554766.1| Escherichia coli 042 complete genome
+>gi|291280824|ref|NC_013941.1| Escherichia coli O55:H7 str. CB9615, complete genome
+>gi|294489418|gb|CP001969.1| Escherichia coli IHE3034, complete genome
+>gi|307551844|gb|CP001671.1| Escherichia coli ABU 83972, complete genome
+>gi|307625127|gb|CP002167.1| Escherichia coli UM146, complete genome
+>gi|309700213|emb|FN649414.1| Escherichia coli ETEC H10407, complete genome
+>gi|312944605|gb|CP001855.1| Escherichia coli O83:H1 str. NRG 857C, complete genome
+>gi|313848522|emb|AM946981.2| Escherichia coli BL21(DE3), complete genome
+>gi|315059226|gb|CP002185.1| Escherichia coli W, complete genome
+>gi|323376397|gb|CP002516.1| Escherichia coli KO11, complete genome
+>gi|332341332|gb|CP002729.1| Escherichia coli UMNK88, complete genome
+>gi|344915202|ref|NC_004337.2| Shigella flexneri 2a str. 301 chromosome, complete genome
+>gi|349736152|gb|CP003034.1| Escherichia coli O7:K1 str. CE10, complete genome
+>gi|355423321|gb|CP002212.1| Escherichia coli str. 'clone D i14', complete genome
+>gi|356601232|gb|CP002797.2| Escherichia coli NA114, complete genome
+>gi|374269796|emb|HE616528.1| Shigella sonnei 53G main chromosome, complete genome
+>gi|374356928|gb|CP003109.1| Escherichia coli O55:H7 str. RM12579, complete genome
+>gi|383101383|gb|CP002291.1| Escherichia coli P12b, complete genome
+>gi|383465594|gb|CM001474.1| Shigella flexneri 5a str. M90T chromosome, whole genome shotgun sequence
+>gi|386794017|gb|CP001925.1| Escherichia coli Xuzhou21, complete genome
+>gi|406775301|gb|CP003297.1| Escherichia coli O104:H4 str. 2009EL-2050, complete genome
+>gi|407051884|gb|CP003289.1| Escherichia coli O104:H4 str. 2011C-3493, complete genome
+>gi|407062746|gb|CP003301.1| Escherichia coli O104:H4 str. 2009EL-2071, complete genome
+>gi|418300889|ref|NZ_AGTD01000001.1| Escherichia coli UMNF18 chromosome, whole genome shotgun sequence
+>gi|443615330|ref|NC_020163.1| Escherichia coli APEC O78, complete genome
+>gi|471332236|ref|NC_020518.1| Escherichia coli str. K-12 substr. MDS42 DNA, complete genome
