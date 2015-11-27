@@ -141,7 +141,10 @@ class MauveMap( object ):
         self.stats['total'] += 1
         if flag & 0x04 != 0:
           self.stats['unmapped'] += 1
-          output.write( '%s\n' % line ) # write unmapped reads verbatim
+          #output.write( '%s\n' % line ) # write unmapped reads verbatim
+          fields[2] = '*' # make sure it's unmapped!
+          output.write( '\t'.join( fields ) )
+          output.write( '\n' )
         else:
           self.stats['mapped'] += 1
           # assess coverage

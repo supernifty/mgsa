@@ -32,9 +32,10 @@ for key in sorted( diff.totals.keys() ):
   sys.stdout.write( ( "{0:0%ib}: {1}\n" % ( len(args.bams) ) ).format( key, diff.totals[key] ) )
 
 if args.compare_position:
-  sys.stdout.write( "\nmapped vs unmapped commonality including position differences\n===================\n" )
-  for key in sorted( diff.position_totals.keys() ):
-    sys.stdout.write( ( "{0:0%ib}: {1}\n" % ( len(args.bams) ) ).format( key, diff.position_totals[key] ) )
+  pass
+  #sys.stdout.write( "\nmapped vs unmapped commonality including position differences\n===================\n" )
+  #for key in sorted( diff.position_totals.keys() ):
+  #  sys.stdout.write( ( "{0:0%ib}: {1}\n" % ( len(args.bams) ) ).format( key, diff.position_totals[key] ) )
 
 if mapq_stats and args.subset_detail:
   sys.stdout.write( "\nmapq vs position differences\n===================\n" )

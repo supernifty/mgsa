@@ -54,7 +54,8 @@ if __name__ == '__main__':
   stage += 1 # 2
   # alignment (aln)
   if start <= stage:
-    run( '%s mem -t 8 %s %s > %s/donor%i.sam' % ( config.BWA_PATH, args.donor, args.fastq, tmpdir, idx ) )
+    #run( '%s mem -t 8 %s %s > %s/donor%i.sam' % ( config.BWA_PATH, args.donor, args.fastq, tmpdir, idx ) )
+    run( 'ln -s %s/donor.sam %s/donor%i.sam' % ( tmpdir, tmpdir, idx ) )
     bio.log_stderr( 'Stage %i: Donor alignment completed' % stage )
 
   stage += 1 # 3
@@ -78,10 +79,12 @@ if __name__ == '__main__':
   # converto to bam
   stage += 1 # 6
   if start <= stage:
-    run( 'samtools view -bS %s/donor%i.sam > %s/donor%i.bam' % ( tmpdir, idx, tmpdir, idx ) )
-    run( 'samtools view -bS %s/reference%i.sam > %s/reference%i.bam' % ( tmpdir, idx, tmpdir, idx ) )
+    #run( 'samtools view -bS %s/donor%i.sam > %s/donor%i.bam' % ( tmpdir, idx, tmpdir, idx ) )
+    run( 'ln -s %s/donor.bam %s/donor%i.bam' % ( tmpdir, tmpdir, idx ) ) 
+    run( 'samtools view -bS %s/reference%i.sam > %s/reference%i.bam' % ( tmpdir, idx, tmpdir, idx ) ) 
     # fix remapped
-    with open( '%s/donor%i.sam' % ( tmpdir, idx ), 'r' ) as dfh:
+    #with open( '%s/donor%i.sam' % ( tmpdir, idx ), 'r' ) as dfh:
+    with open( '%s/donor.sam' % ( tmpdir, ), 'r' ) as dfh:
       l = (dfh.readline(), dfh.readline())
     with open( '%s/remapped%i.head' % ( tmpdir, idx ), 'w' ) as rfh:
       rfh.write( l[0] )
@@ -116,7 +119,7 @@ if __name__ == '__main__':
 
   stage += 1 # 8
   if start <= stage:
-    #run( 'python compare_bams.py --compare_position True --subset_detail True --mismatch_detail 1 --xmfa %s/mauve%i --origin 2 --target 1 %s/donor%i.bam %s/remapped%i.bam > %s/compare_bams%i.log' % ( tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx ) )
+    run( 'pypy compare_bams.py --compare_position True --subset_detail True --mismatch_detail 1 --xmfa %s/mauve%i --origin 2 --target 1 %s/donor%i.bam %s/remapped%i.bam > %s/compare_bams%i.log' % ( tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx ) )
     run( 'python extract_mismatched_reads.py --min_distance 50 %s/remapped%i.bam < %s/compare_bams%i.log > %s/mismatched%i.sam' % ( tmpdir, idx, tmpdir, idx, tmpdir, idx ) )
     run( 'python extract_mismatched_reads.py --min_distance 1 --max_distance 49 %s/remapped%i.bam < %s/compare_bams%i.log > %s/almost%i.sam' % ( tmpdir, idx, tmpdir, idx, tmpdir, idx ) )
     run( 'samtools view -bS %s/mismatched%i.sam > %s/mismatched%i.bam' % ( tmpdir, idx, tmpdir, idx ) )
@@ -237,11 +240,15 @@ if __name__ == '__main__':
 
     print "\n-- Remapped incorrectly > 50bp --"
     xf = open( '%s/mismatched%i.cov' % ( tmpdir, idx ), 'r' ).readline().strip().split()
+    if len(xf) < 5:
+      xf = [ '0', '0', '0', '0', '0', '0' ]
     print "Bases affected by mismatch: %s" % xf[5]
     print "Max mismatch coverage: %s" % xf[2]
 
     print "\n-- Off target (outside mappable region) --"
     nf = open( '%s/notcovered%i.cov' % ( tmpdir, idx ), 'r' ).readline().strip().split()
+    if len(nf) < 5:
+      nf = [ '0', '0', '0', '0', '0', '0' ]
     print "Off target bases: %s" % nf[5]
     print "Max coverage of off target: %s" % nf[2]
 
@@ -275,8 +282,9 @@ if __name__ == '__main__':
     bio.log_stderr( 'Stage %i: Finished' % stage )
 
   stage += 1 # 11
-  if start == stage:
-    run( 'rm %s/almost%i.sam %s/reference%i.sam %s/mismatched%i.sam %s/remapped%i.sam %s/notcovered%i.sam %s/donor%i.sam' % ( tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx ) )
+  #if start == stage:
+  if start <= stage:
+    run( 'rm %s/almost%i.sam %s/reference%i.sam %s/mismatched%i.sam %s/remapped%i.sam %s/notcovered%i.sam %s/donor%i.sam %s/donor%i.bam' % ( tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx, tmpdir, idx ) )
     bio.log_stderr( 'Stage %i: Cleanup finished' % stage )
   
 

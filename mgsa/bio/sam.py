@@ -496,10 +496,10 @@ class SamDiff(object):
 
     if self.compare_position:
       log( 'analyzing positions...' )
-      self.position_totals = collections.defaultdict(int)
+      #self.position_totals = collections.defaultdict(int)
       self.mapq_totals = collections.defaultdict(list)
       for key, value in self._position_stats.iteritems(): # readname-pos, distribution
-        self.position_totals[value] += 1
+        #self.position_totals[value] += 1
         if self.use_mapq and self.subset_detail:
           self.mapq_totals[value].extend( self.mapq_subsets[key] )
         if self.mismatch_detail is not None and self.mismatch_detail == value: # mismatch_detail exactly
